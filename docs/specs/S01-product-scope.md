@@ -107,6 +107,8 @@ the reason.
 | Low | later, or no date |
 
 For a plan item "due" is its end date; an item that should have started and has not moves up one level.
+What is done or dropped needs no attention and counts as Low. "Today" is the date where the wedding takes place.
+The level is worked out each time an entry is shown, so it is never out of date and nothing has to run overnight.
 A deadline found in an e-mail ("please confirm by Friday") becomes the due date, so it goes through the same rule.
 An AI that ranks entries is left out of v1.
 

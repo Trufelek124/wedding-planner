@@ -46,7 +46,8 @@ public final class TestGoogle {
         private RSAKey signer = KEY;
 
         private IdToken(String email) {
-            Instant now = Instant.now();
+            // Issued at the moment the application believes it is, so that tests can move time.
+            Instant now = TestClock.now();
             this.claims = new JWTClaimsSet.Builder()
                     .issuer("https://accounts.google.com")
                     .audience(CLIENT_ID)

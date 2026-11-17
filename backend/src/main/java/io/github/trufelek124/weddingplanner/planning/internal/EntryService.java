@@ -15,14 +15,19 @@ import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Prio
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Sort;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Status;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.TasksOnDelete;
+import io.github.trufelek124.weddingplanner.planning.internal.PriorityRule.Assessment;
+import io.github.trufelek124.weddingplanner.planning.internal.PriorityRule.Facts;
+import io.github.trufelek124.weddingplanner.planning.internal.PriorityRule.Reason;
 import io.github.trufelek124.weddingplanner.wedding.Membership;
 import io.github.trufelek124.weddingplanner.wedding.Weddings;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,9 +51,24 @@ class EntryService {
     @Transactional
     List<EntryRow> list(UserId user, Filter filter, Sort sort) {
         Membership membership = weddings.membershipOf(user);
-        List<EntryRow> rows = entries.list(membership.weddingId(), filter, sort);
-        rows.forEach(row -> inMemberOrder(row, membership));
-        return rows;
+        return entries.list(membership.weddingId(), filter).stream()
+                .map(row -> asSeenToday(row, membership))
+                .sorted(order(sort))
+                .toList();
+    }
+
+    /** Each order ends in the id, so that equal entries never swap places between two requests. */
+    private static Comparator<EntryRow> order(Sort sort) {
+        Comparator<EntryRow> byDueDate = Comparator.comparing(EntryRow::dueDate, Comparator.nullsLast(Comparator.naturalOrder()));
+        Comparator<EntryRow> byPriority = Comparator.comparing(EntryRow::priority);
+        Comparator<EntryRow> byTitle = Comparator.comparing(row -> row.title().toLowerCase(Locale.ROOT));
+        Comparator<EntryRow> byId = Comparator.comparing(EntryRow::id);
+        return switch (sort) {
+            case DUE_DATE -> byDueDate.thenComparing(byPriority).thenComparing(byTitle).thenComparing(byId);
+            case PRIORITY -> byPriority.thenComparing(byDueDate).thenComparing(byTitle).thenComparing(byId);
+            case TITLE -> byTitle.thenComparing(byId);
+            case CREATED -> Comparator.comparing(EntryRow::createdAt).thenComparing(byId);
+        };
     }
 
     @Transactional
@@ -105,7 +125,7 @@ class EntryService {
         EntryRow after = new EntryRow(
                 before.id(), to, before.title(), before.notes(), before.categoryId(),
                 to == Kind.TASK ? null : before.startDate(), before.dueDate(), before.status(), before.completedAt(),
-                before.priorityMode(), before.priority(), to == Kind.PLAN_ITEM ? null : before.parentId(),
+                before.priorityMode(), before.priority(), before.priorityReason(), to == Kind.PLAN_ITEM ? null : before.parentId(),
                 before.assigneeIds(), before.taskCount(), before.version(), before.createdAt(), now);
         save(weddingId, after, before.version(), now);
         return existing(membership, id);
@@ -144,13 +164,24 @@ class EntryService {
     private EntryRow existing(Membership membership, UUID id) {
         EntryRow row = entries.find(membership.weddingId(), id)
                 .orElseThrow(() -> new ApiException(ProblemCode.NOT_FOUND, "There is no such entry."));
-        inMemberOrder(row, membership);
-        return row;
+        return asSeenToday(row, membership);
     }
 
-    /** The people of an entry are always listed in the wedding's own order of its two members. */
-    private static void inMemberOrder(EntryRow row, Membership membership) {
+    /**
+     * An entry as it is shown: its people in the wedding's own order, and its priority for today.
+     * The automatic priority depends on the date, so it is worked out here, at the moment of asking,
+     * with "today" being the date where the wedding takes place.
+     */
+    private EntryRow asSeenToday(EntryRow row, Membership membership) {
         row.assigneeIds().sort(Comparator.comparingInt(membership.memberIds()::indexOf));
+        if (row.priorityMode() == PriorityMode.MANUAL) {
+            return row.assessed(row.priority(), Reason.SET_BY_HAND);
+        }
+        LocalDate today = LocalDate.now(clock.withZone(membership.timeZone()));
+        // Payments (epic 6) and dependencies (WP-TS-19) do not exist yet.
+        Assessment assessment = PriorityRule.assess(
+                new Facts(row.kind(), row.status(), row.startDate(), row.dueDate(), false, null), today);
+        return row.assessed(assessment.priority(), assessment.reason());
     }
 
     /** Applies the rules to what a person sent and returns the entry as it will be stored. */
@@ -190,12 +221,12 @@ class EntryService {
             throw new ApiException(ProblemCode.BAD_REQUEST, "The request is not valid.", problems);
         }
 
-        // Until the automatic rule exists (WP-TS-17) an entry left to the planner counts as normal.
-        Priority priority = request.priorityMode() == PriorityMode.MANUAL ? request.priority() : Priority.NORMAL;
+        // Only a level a person chose is kept; the automatic one is worked out whenever the entry is read.
+        Priority chosen = request.priorityMode() == PriorityMode.MANUAL ? request.priority() : null;
         return new EntryRow(
                 id, kind, request.title().strip(), request.notes().strip(), request.categoryId(), request.startDate(),
                 request.dueDate(), request.status(), completedAt(request.status(), before, now), request.priorityMode(),
-                priority, request.parentId(), assignees, taskCount, before == null ? 0 : before.version(), createdAt, now);
+                chosen, null, request.parentId(), assignees, taskCount, before == null ? 0 : before.version(), createdAt, now);
     }
 
     /** "Done" remembers when it was done; a change that leaves it done keeps that moment. */
@@ -209,7 +240,8 @@ class EntryService {
     private static EntryRow with(EntryRow entry, Kind kind, Status status, Instant completedAt) {
         return new EntryRow(
                 entry.id(), kind, entry.title(), entry.notes(), entry.categoryId(), entry.startDate(), entry.dueDate(),
-                status, completedAt, entry.priorityMode(), entry.priority(), entry.parentId(), entry.assigneeIds(),
+                status, completedAt, entry.priorityMode(), entry.priority(), entry.priorityReason(), entry.parentId(),
+                entry.assigneeIds(),
                 entry.taskCount(), entry.version(), entry.createdAt(), entry.updatedAt());
     }
 }

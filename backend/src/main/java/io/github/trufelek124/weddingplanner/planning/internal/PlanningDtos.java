@@ -5,6 +5,7 @@ import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Kind
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Priority;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.PriorityMode;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Status;
+import io.github.trufelek124.weddingplanner.planning.internal.PriorityRule.Reason;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -97,7 +98,8 @@ final class PlanningDtos {
             Status status,
             @Schema(description = "When it was marked done; null otherwise.", nullable = true) Instant completedAt,
             PriorityMode priorityMode,
-            Priority priority,
+            @Schema(description = "The level chosen by a person (MANUAL) or worked out for today (AUTO).") Priority priority,
+            @Schema(description = "Why the entry has this level.") Reason priorityReason,
             @Schema(description = "The members who do it: none, one or both.") List<UUID> assigneeIds,
             @Schema(description = "Tasks only: the plan item it belongs to.", nullable = true) UUID parentId,
             @Schema(description = "For a plan item: how many tasks belong to it.") int taskCount,
@@ -108,7 +110,7 @@ final class PlanningDtos {
         static EntryResponse of(EntryRow row) {
             return new EntryResponse(
                     row.id(), row.kind(), row.title(), row.notes(), row.categoryId(), row.startDate(), row.dueDate(),
-                    row.status(), row.completedAt(), row.priorityMode(), row.priority(), row.assigneeIds(),
+                    row.status(), row.completedAt(), row.priorityMode(), row.priority(), row.priorityReason(), row.assigneeIds(),
                     row.parentId(), row.taskCount(), row.version(), row.createdAt(), row.updatedAt());
         }
     }

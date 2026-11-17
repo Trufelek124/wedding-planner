@@ -3,7 +3,7 @@ package io.github.trufelek124.weddingplanner.planning.internal;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Kind;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Priority;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.PriorityMode;
-import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Sort;
+import io.github.trufelek124.weddingplanner.planning.internal.PriorityRule.Reason;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Status;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -37,12 +37,21 @@ class EntryRepository {
             Instant completedAt,
             PriorityMode priorityMode,
             Priority priority,
+            Reason priorityReason,
             UUID parentId,
             List<UUID> assigneeIds,
             int taskCount,
             int version,
             Instant createdAt,
-            Instant updatedAt) {}
+            Instant updatedAt) {
+
+        /** The same entry with its priority as worked out for today. */
+        EntryRow assessed(Priority priority, Reason reason) {
+            return new EntryRow(
+                    id, kind, title, notes, categoryId, startDate, dueDate, status, completedAt, priorityMode, priority,
+                    reason, parentId, assigneeIds, taskCount, version, createdAt, updatedAt);
+        }
+    }
 
     /** What a list may be narrowed down by; null means "any". */
     record Filter(Kind kind, List<Status> statuses, UUID categoryId, UUID assigneeId, UUID parentId, Boolean scheduled) {}
@@ -54,9 +63,6 @@ class EntryRepository {
                    ARRAY(SELECT a.member_id FROM entry_assignee a WHERE a.entry_id = e.id) AS assignee_ids
             FROM entry e
             """;
-
-    private static final String BY_PRIORITY =
-            "CASE e.priority WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'NORMAL' THEN 2 ELSE 3 END";
 
     private final JdbcClient jdbc;
 
@@ -71,7 +77,8 @@ class EntryRepository {
                 .optional();
     }
 
-    List<EntryRow> list(UUID weddingId, Filter filter, Sort sort) {
+    /** In the order they were created; the service puts them in the order asked for. */
+    List<EntryRow> list(UUID weddingId, Filter filter) {
         StringBuilder where = new StringBuilder(" WHERE e.wedding_id = :wedding");
         Map<String, Object> params = new HashMap<>();
         params.put("wedding", weddingId);
@@ -98,14 +105,7 @@ class EntryRepository {
         if (filter.scheduled() != null) {
             where.append(filter.scheduled() ? " AND e.due_date IS NOT NULL" : " AND e.due_date IS NULL");
         }
-        // Each order ends in the id, so that equal entries never swap places between two requests.
-        String order = switch (sort) {
-            case DUE_DATE -> " ORDER BY e.due_date NULLS LAST, " + BY_PRIORITY + ", lower(e.title), e.id";
-            case PRIORITY -> " ORDER BY " + BY_PRIORITY + ", e.due_date NULLS LAST, lower(e.title), e.id";
-            case TITLE -> " ORDER BY lower(e.title), e.id";
-            case CREATED -> " ORDER BY e.created_at, e.id";
-        };
-        return jdbc.sql(SELECT + where + order).params(params).query(EntryRepository::row).list();
+        return jdbc.sql(SELECT + where + " ORDER BY e.created_at, e.id").params(params).query(EntryRepository::row).list();
     }
 
     void insert(UUID weddingId, UUID createdBy, EntryRow entry) {
@@ -182,7 +182,8 @@ class EntryRepository {
         fields.put("status", entry.status().name());
         fields.put("completed", at(entry.completedAt()));
         fields.put("mode", entry.priorityMode().name());
-        fields.put("priority", entry.priority().name());
+        // Only a level a person chose is stored; the automatic one is worked out when asked for.
+        fields.put("priority", entry.priorityMode() == PriorityMode.MANUAL ? entry.priority().name() : null);
         fields.put("parent", entry.parentId());
         return fields;
     }
@@ -200,7 +201,8 @@ class EntryRepository {
                 Status.valueOf(row.getString("status")),
                 instant(row.getObject("completed_at", OffsetDateTime.class)),
                 PriorityMode.valueOf(row.getString("priority_mode")),
-                Priority.valueOf(row.getString("priority")),
+                row.getString("priority") == null ? null : Priority.valueOf(row.getString("priority")),
+                null,
                 row.getObject("parent_id", UUID.class),
                 new ArrayList<>(Arrays.asList(assignees)),
                 row.getInt("task_count"),

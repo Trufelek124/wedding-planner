@@ -300,10 +300,18 @@ export interface components {
              * @description Tasks only: the plan item it belongs to.
              */
             parentId: string | null;
-            /** @enum {string} */
+            /**
+             * @description The level chosen by a person (MANUAL) or worked out for today (AUTO).
+             * @enum {string}
+             */
             priority: "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
             /** @enum {string} */
             priorityMode: "AUTO" | "MANUAL";
+            /**
+             * @description Why the entry has this level.
+             * @enum {string}
+             */
+            priorityReason: "OVERDUE" | "DUE_WITHIN_3_DAYS" | "PAYMENT_DUE_WITHIN_7_DAYS" | "DUE_WITHIN_14_DAYS" | "NEEDED_BY_ANOTHER" | "DUE_WITHIN_60_DAYS" | "DUE_LATER" | "NO_DATE" | "SHOULD_HAVE_STARTED" | "FINISHED" | "SET_BY_HAND";
             /**
              * Format: date
              * @description Plan items only; null for a task.

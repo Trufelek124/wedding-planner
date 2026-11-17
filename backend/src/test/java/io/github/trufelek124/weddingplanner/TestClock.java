@@ -14,6 +14,12 @@ public final class TestClock extends Clock {
 
     private static volatile Duration offset = Duration.ZERO;
 
+    private final ZoneId zone;
+
+    private TestClock(ZoneId zone) {
+        this.zone = zone;
+    }
+
     public static void advance(Duration by) {
         offset = offset.plus(by);
     }
@@ -22,19 +28,24 @@ public final class TestClock extends Clock {
         offset = Duration.ZERO;
     }
 
-    @Override
-    public Instant instant() {
+    /** The moment the application believes it is. */
+    public static Instant now() {
         return Instant.now().plus(offset);
     }
 
     @Override
+    public Instant instant() {
+        return now();
+    }
+
+    @Override
     public ZoneId getZone() {
-        return ZoneOffset.UTC;
+        return zone;
     }
 
     @Override
     public Clock withZone(ZoneId zone) {
-        return this;
+        return new TestClock(zone);
     }
 
     @TestConfiguration
@@ -43,7 +54,7 @@ public final class TestClock extends Clock {
         @Bean
         @Primary
         Clock testClock() {
-            return new TestClock();
+            return new TestClock(ZoneOffset.UTC);
         }
     }
 }

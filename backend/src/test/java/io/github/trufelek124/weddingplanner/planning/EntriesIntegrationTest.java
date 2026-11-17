@@ -7,6 +7,8 @@ import io.github.trufelek124.weddingplanner.TestHttp;
 import io.github.trufelek124.weddingplanner.TestWedding;
 import java.net.http.HttpResponse;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -335,10 +337,13 @@ class EntriesIntegrationTest extends PostgresIntegrationTest {
 
     @Test
     void listsCanBeOrderedByDateByPriorityByTitleAndByAge() throws Exception {
-        created(with(task("Delta"), "dueDate", "2027-03-01", "priorityMode", "MANUAL", "priority", "LOW"));
+        // Dates relative to today, so that the level the planner works out for "Charlie" (normal) does not drift.
+        String inFortyDays = LocalDate.now(ZoneId.of("Europe/Warsaw")).plusDays(40).toString();
+        String inNinetyDays = LocalDate.now(ZoneId.of("Europe/Warsaw")).plusDays(90).toString();
+        created(with(task("Delta"), "dueDate", inNinetyDays, "priorityMode", "MANUAL", "priority", "LOW"));
         created(with(task("alpha"), "priorityMode", "MANUAL", "priority", "CRITICAL"));
-        created(with(task("Charlie"), "dueDate", "2027-01-01"));
-        created(with(task("bravo"), "dueDate", "2027-01-01", "priorityMode", "MANUAL", "priority", "HIGH"));
+        created(with(task("Charlie"), "dueDate", inFortyDays));
+        created(with(task("bravo"), "dueDate", inFortyDays, "priorityMode", "MANUAL", "priority", "HIGH"));
 
         assertThat(titles(list("sort=DUE_DATE"))).as("earliest first, undated last; the more urgent first on the same day")
                 .containsExactly("bravo", "Charlie", "Delta", "alpha");
