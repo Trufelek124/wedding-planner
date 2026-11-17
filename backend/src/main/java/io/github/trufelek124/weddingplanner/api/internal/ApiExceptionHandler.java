@@ -1,13 +1,17 @@
 package io.github.trufelek124.weddingplanner.api.internal;
 
 import io.github.trufelek124.weddingplanner.api.ApiException;
+import io.github.trufelek124.weddingplanner.api.FieldProblem;
 import io.github.trufelek124.weddingplanner.api.ProblemCode;
+import java.util.Comparator;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -21,12 +25,29 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+    private static final String FIELDS = "fieldProblems";
 
     @ExceptionHandler(ApiException.class)
     ResponseEntity<Object> known(ApiException exception, WebRequest request) {
         ProblemCode code = exception.code();
         ProblemDetail body = ProblemDetail.forStatusAndDetail(code.status(), exception.getMessage());
+        if (!exception.fields().isEmpty()) {
+            body.setProperty(FIELDS, exception.fields());
+        }
         return handleExceptionInternal(exception, body, new HttpHeaders(), code.status(), request);
+    }
+
+    /** A request body that fails its declared rules: say which fields, so a form can show it. */
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException exception, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        List<FieldProblem> fields = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> new FieldProblem(error.getField(), error.getDefaultMessage()))
+                .sorted(Comparator.comparing(FieldProblem::field).thenComparing(FieldProblem::message))
+                .toList();
+        ProblemDetail body = ProblemDetail.forStatusAndDetail(status, "The request is not valid.");
+        body.setProperty(FIELDS, fields);
+        return handleExceptionInternal(exception, body, headers, status, request);
     }
 
     @ExceptionHandler(Exception.class)

@@ -44,6 +44,13 @@ springdoc:
     enabled: ${API_DOCS_ENABLED:false}
   paths-to-match: /api/**
 
+logging:
+  level:
+    # These two write whole request and response bodies at DEBUG. They stay at INFO even when
+    # someone turns debug logging on for the rest of the web layer: bodies hold personal data.
+    org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor: INFO
+    org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor: INFO
+
 management:
   endpoints:
     web:

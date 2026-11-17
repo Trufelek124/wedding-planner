@@ -47,6 +47,19 @@ public final class TestHttp {
         return send(request, headers);
     }
 
+    public HttpResponse<String> postJsonAs(String accessToken, String path, String body)
+            throws IOException, InterruptedException {
+        return postJson(path, body, Map.of("Authorization", "Bearer " + accessToken));
+    }
+
+    public HttpResponse<String> putJsonAs(String accessToken, String path, String body)
+            throws IOException, InterruptedException {
+        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(base + path))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(body));
+        return send(request, Map.of("Authorization", "Bearer " + accessToken));
+    }
+
     /** A POST without a body, as a browser makes when its cookie says everything. */
     public HttpResponse<String> post(String path, Map<String, String> headers) throws IOException, InterruptedException {
         return send(HttpRequest.newBuilder(URI.create(base + path)).POST(HttpRequest.BodyPublishers.noBody()), headers);

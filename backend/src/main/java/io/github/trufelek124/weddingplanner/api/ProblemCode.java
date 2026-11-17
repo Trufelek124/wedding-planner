@@ -18,6 +18,12 @@ public enum ProblemCode {
     /** The account is genuine but is not one of the planner's owners. */
     ACCOUNT_NOT_ALLOWED(HttpStatus.FORBIDDEN, "account-not-allowed", "This account may not use this planner"),
     NOT_FOUND(HttpStatus.NOT_FOUND, "not-found", "Not found"),
+    /** Nobody has set the wedding up yet: show the setup. */
+    WEDDING_NOT_SET_UP(HttpStatus.NOT_FOUND, "wedding-not-set-up", "The wedding is not set up yet"),
+    /** The setup was sent a second time. */
+    WEDDING_ALREADY_SET_UP(HttpStatus.CONFLICT, "wedding-already-set-up", "The wedding is already set up"),
+    /** A third person signed in: a wedding has two members. */
+    WEDDING_FULL(HttpStatus.FORBIDDEN, "wedding-full", "The wedding already has its two members"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "method-not-allowed", "Method not allowed"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "internal-error", "Something went wrong on the server");
 

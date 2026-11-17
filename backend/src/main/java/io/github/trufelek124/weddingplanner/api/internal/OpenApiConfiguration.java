@@ -4,6 +4,7 @@ import io.github.trufelek124.weddingplanner.api.ProblemCode;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.IntegerSchema;
 import io.swagger.v3.oas.models.media.MediaType;
@@ -75,6 +76,12 @@ class OpenApiConfiguration {
                 .addProperty("status", new IntegerSchema().description("The HTTP status of the response."))
                 .addProperty("detail", new StringSchema().description("What went wrong this time, if there is more to say."))
                 .addProperty("instance", new StringSchema().description("The path that was asked for."))
+                .addProperty("fieldProblems", new ArraySchema()
+                        .description("For a request that is not valid: what is wrong with which field.")
+                        .items(new ObjectSchema()
+                                .addProperty("field", new StringSchema().description("The field's name as the request spells it."))
+                                .addProperty("message", new StringSchema().description("What is wrong, in words."))
+                                .required(List.of("field", "message"))))
                 .required(List.of("status", "title", "type"));
     }
 

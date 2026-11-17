@@ -116,6 +116,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/wedding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get"];
+        put: operations["update"];
+        post: operations["setUp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/wedding/members/{memberId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["rename"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -146,10 +178,20 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
+        MemberName: {
+            displayName: string;
+        };
         /** @description An error, as RFC 9457 problem details. */
         Problem: {
             /** @description What went wrong this time, if there is more to say. */
             detail?: string;
+            /** @description For a request that is not valid: what is wrong with which field. */
+            fieldProblems?: {
+                /** @description The field's name as the request spells it. */
+                field: string;
+                /** @description What is wrong, in words. */
+                message: string;
+            }[];
             /** @description The path that was asked for. */
             instance?: string;
             /**
@@ -163,7 +205,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -181,6 +223,54 @@ export interface components {
             /** @description Exchanged for a new session when the access token expires; used once. Null for a browser: there it travels in a cookie that scripts cannot read. */
             refreshToken: string | null;
             user: components["schemas"]["Me"];
+        };
+        Wedding: {
+            currency: string;
+            /**
+             * Format: date
+             * @description The wedding day; null while it is not fixed.
+             */
+            date: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description The two people, in the order of the setup. */
+            members: components["schemas"]["WeddingMember"][];
+            timeZone: string;
+        };
+        WeddingDetails: {
+            currency: string;
+            /**
+             * Format: date
+             * @description The wedding day; null while it is not fixed.
+             */
+            date: string | null;
+            timeZone: string;
+        };
+        /** @description One of the two people the wedding belongs to. */
+        WeddingMember: {
+            displayName: string;
+            /** Format: uuid */
+            id: string;
+            /** @description Whether this person has signed in to the planner yet. */
+            signedIn: boolean;
+            /** @description Whether this is the person asking. */
+            you: boolean;
+        };
+        /** @description The first owner's answers at the setup. */
+        WeddingSetup: {
+            /** @description ISO 4217 code of the currency all amounts are in, for example PLN. */
+            currency: string;
+            /**
+             * Format: date
+             * @description The wedding day; null while it is not fixed.
+             */
+            date: string | null;
+            /** @description What the planner calls the other person. */
+            partnerName: string;
+            /** @description IANA time zone the wedding's dates are read in, for example Europe/Warsaw. */
+            timeZone: string;
+            /** @description What the planner calls the person setting it up. */
+            yourName: string;
         };
     };
     responses: never;
@@ -399,6 +489,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Wedding"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeddingDetails"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Wedding"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setUp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeddingSetup"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Wedding"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberName"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Wedding"];
                 };
             };
             /** @description Any error. */

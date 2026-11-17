@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 
 /**
  * Base class for tests that need the running application. One real PostgreSQL 18 is
@@ -18,6 +19,14 @@ import org.springframework.test.context.DynamicPropertySource;
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @Import(TestClock.Configuration.class)
+// Settings a test class may replace with its own @TestPropertySource. (What is registered in
+// database() below cannot be replaced that way: dynamic properties win.)
+@TestPropertySource(properties = {
+    "APP_JWT_SECRET=a-test-secret-that-is-long-enough-0123456789",
+    // Written differently from what Google will say, as an owner might type it into the configuration.
+    "ALLOWED_EMAILS=anna@example.com , Piotr@Example.com",
+    "GOOGLE_OAUTH_WEB_CLIENT_ID=" + TestGoogle.CLIENT_ID
+})
 public abstract class PostgresIntegrationTest {
 
     /** The two owners of the planner in tests; anyone else is a stranger. */
@@ -45,10 +54,6 @@ public abstract class PostgresIntegrationTest {
         registry.add("DATABASE_URL", () -> POSTGRES.getJdbcUrl("postgres", "postgres"));
         registry.add("DATABASE_USER", () -> "postgres");
         registry.add("DATABASE_PASSWORD", () -> "");
-        registry.add("APP_JWT_SECRET", () -> "a-test-secret-that-is-long-enough-0123456789");
-        // Written differently from what Google will say, as an owner might type it into the configuration.
-        registry.add("ALLOWED_EMAILS", () -> " " + ANNA + ", Piotr@Example.com ");
-        registry.add("GOOGLE_OAUTH_WEB_CLIENT_ID", () -> TestGoogle.CLIENT_ID);
         registry.add("app.identity.google-jwks-uri", TestGoogle::jwksUri);
     }
 }

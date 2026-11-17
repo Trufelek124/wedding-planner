@@ -69,12 +69,41 @@
         "required" : [ "displayName", "email", "id" ],
         "type" : "object"
       },
+      "MemberName" : {
+        "properties" : {
+          "displayName" : {
+            "maxLength" : 80,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName" ],
+        "type" : "object"
+      },
       "Problem" : {
         "description" : "An error, as RFC 9457 problem details.",
         "properties" : {
           "detail" : {
             "description" : "What went wrong this time, if there is more to say.",
             "type" : "string"
+          },
+          "fieldProblems" : {
+            "description" : "For a request that is not valid: what is wrong with which field.",
+            "items" : {
+              "properties" : {
+                "field" : {
+                  "description" : "The field's name as the request spells it.",
+                  "type" : "string"
+                },
+                "message" : {
+                  "description" : "What is wrong, in words.",
+                  "type" : "string"
+                }
+              },
+              "required" : [ "field", "message" ],
+              "type" : "object"
+            },
+            "type" : "array"
           },
           "instance" : {
             "description" : "The path that was asked for.",
@@ -91,9 +120,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -132,6 +161,109 @@
           }
         },
         "required" : [ "accessToken", "accessTokenExpiresAt", "refreshToken", "user" ],
+        "type" : "object"
+      },
+      "Wedding" : {
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "date" : {
+            "description" : "The wedding day; null while it is not fixed.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "members" : {
+            "description" : "The two people, in the order of the setup.",
+            "items" : {
+              "$ref" : "#/components/schemas/WeddingMember"
+            },
+            "type" : "array"
+          },
+          "timeZone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "currency", "date", "id", "members", "timeZone" ],
+        "type" : "object"
+      },
+      "WeddingDetails" : {
+        "properties" : {
+          "currency" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "date" : {
+            "description" : "The wedding day; null while it is not fixed.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "timeZone" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "currency", "date", "timeZone" ],
+        "type" : "object"
+      },
+      "WeddingMember" : {
+        "description" : "One of the two people the wedding belongs to.",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "signedIn" : {
+            "description" : "Whether this person has signed in to the planner yet.",
+            "type" : "boolean"
+          },
+          "you" : {
+            "description" : "Whether this is the person asking.",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "displayName", "id", "signedIn", "you" ],
+        "type" : "object"
+      },
+      "WeddingSetup" : {
+        "description" : "The first owner's answers at the setup.",
+        "properties" : {
+          "currency" : {
+            "description" : "ISO 4217 code of the currency all amounts are in, for example PLN.",
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "date" : {
+            "description" : "The wedding day; null while it is not fixed.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "partnerName" : {
+            "description" : "What the planner calls the other person.",
+            "maxLength" : 80,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "timeZone" : {
+            "description" : "IANA time zone the wedding's dates are read in, for example Europe/Warsaw.",
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "yourName" : {
+            "description" : "What the planner calls the person setting it up.",
+            "maxLength" : 80,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "currency", "date", "partnerName", "timeZone", "yourName" ],
         "type" : "object"
       }
     }
@@ -383,6 +515,153 @@
           }
         },
         "tags" : [ "me-controller" ]
+      }
+    },
+    "/api/wedding" : {
+      "get" : {
+        "operationId" : "get",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Wedding"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "wedding-controller" ]
+      },
+      "post" : {
+        "operationId" : "setUp",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WeddingSetup"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Wedding"
+                }
+              }
+            },
+            "description" : "Created"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "wedding-controller" ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WeddingDetails"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Wedding"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "wedding-controller" ]
+      }
+    },
+    "/api/wedding/members/{memberId}" : {
+      "put" : {
+        "operationId" : "rename",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "memberId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MemberName"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Wedding"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "wedding-controller" ]
       }
     }
   },

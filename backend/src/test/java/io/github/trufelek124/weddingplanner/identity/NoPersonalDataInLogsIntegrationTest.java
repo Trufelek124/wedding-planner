@@ -44,6 +44,9 @@ class NoPersonalDataInLogsIntegrationTest extends PostgresIntegrationTest {
         Tokens renewed = TestSignIn.tokens(http.postJson("/api/auth/refresh", TestHttp.jsonOf(Map.of("refreshToken", session.refreshToken()))));
         TestClock.advance(Duration.ofMinutes(5));
         http.postJson("/api/auth/refresh", TestHttp.jsonOf(Map.of("refreshToken", session.refreshToken())));
+        http.postJsonAs(renewed.accessToken(), "/api/wedding", "{\"date\":\"2027-06-19\",\"currency\":\"PLN\","
+                + "\"timeZone\":\"Europe/Warsaw\",\"yourName\":\"Anusia\",\"partnerName\":\"Piotrus\"}");
+        http.getAs(renewed.accessToken(), "/api/wedding");
         http.postJson("/api/auth/sign-out", TestHttp.jsonOf(Map.of("refreshToken", renewed.refreshToken())));
 
         String log = output.getAll();
@@ -55,6 +58,8 @@ class NoPersonalDataInLogsIntegrationTest extends PostgresIntegrationTest {
                 .doesNotContain("nosy.stranger")
                 .doesNotContain("Kowalska")
                 .doesNotContain("Nosy Stranger")
+                .doesNotContain("Anusia")
+                .doesNotContain("Piotrus")
                 .doesNotContain(idToken)
                 .doesNotContain(strangersIdToken)
                 .doesNotContain(session.accessToken())
