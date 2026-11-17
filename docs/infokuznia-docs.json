@@ -17,6 +17,12 @@
    "id": "3b912d99-f4d4-44ea-95e7-01b011c12d10",
    "sha256": "5886cdb690656a485f574ce24b1e90c7bf29f3aebba5c2b7b9f74e5679a64c28",
    "commit": "f71a444"
+  },
+  "docs/decisions.md#D-001": {
+   "publicId": "WP-DOC-2",
+   "id": "f25db488-f761-46b9-82da-a6be2de1d54a",
+   "sha256": "204d243af3c914731ff723baba24968d82ee79930d1f756e36cdabf0a9b4c7f4",
+   "commit": "f00fe65"
   }
  }
 }
