@@ -34,6 +34,12 @@
    "id": "a3fa59cf-6b77-4714-a7c3-696dc073d3cc",
    "sha256": "39bef3e44f82c52df27c666634277b54cecbf794a8c4f3fc04d27e7c10c1f0f5",
    "commit": "0f5152a"
+  },
+  "docs/decisions.md#D-002": {
+   "publicId": "WP-DOC-4",
+   "id": "b6f887c3-dba3-43ea-b92f-c401fc709073",
+   "sha256": "099343db9d70dcf6823609cf2f9bf88831c8d0c8afe0bc1c33de1ed156f647ce",
+   "commit": "67f5509"
   }
  }
 }
