@@ -103,6 +103,182 @@ No time zone setting is needed: every date is read in the wedding's own time zon
   decided by `ALLOWED_EMAILS` alone.
 - Do not publish port 8080 on the server; let the proxy reach it over a private network.
 
+## Runbook
+
+For whoever looks after the running planner. The commands are run on the server, in the directory that holds the
+planner's `compose.yaml` and its `.env`. They use the names of `deploy/compose.yaml`: the services `postgres` and
+`app`, the database `weddingplanner`. If the server's file names them differently, use its names.
+
+Several commands need the database account's name. Take it from `.env` once per terminal:
+
+```bash
+set -a; . ./.env; set +a
+```
+
+### What runs
+
+| | |
+|---|---|
+| `app` | The planner's image: the backend and the web app. Keeps nothing but the files under `/data/media`. |
+| `postgres` | PostgreSQL 18 with everything else: both accounts, the wedding, the plan, the tasks. |
+| In front | The proxy that ends TLS and passes requests to `app` on port 8080. Not part of this project. |
+| `.env` | The settings and the secrets, filled in by hand. It exists on the server only. |
+
+```bash
+docker compose ps
+```
+
+shows both services; `app` must say `healthy`. Which commit is running:
+
+```bash
+docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$(docker compose ps -q app)"
+```
+
+Both services restart by themselves after the server restarts (`restart: unless-stopped`).
+
+### An update
+
+1. On the Mac, from a checkout of `main`: `scripts/publish-image.sh` (see "Publishing the image").
+2. On the server:
+
+```bash
+docker compose pull app
+```
+
+```bash
+docker compose up -d app
+```
+
+3. `docker compose ps` until `app` is `healthy`, usually within half a minute. Then the commit shown by the
+   command above is the one just published.
+
+The database is brought up to date by the new image as it starts. If `app` does not become healthy, read its
+logs, and roll back.
+
+### Rolling back
+
+Every published commit keeps a tag of its own: the full commit id. Rolling back means running an earlier one.
+
+1. Find the commit to go back to. On the Mac, `git log --oneline main` lists them, newest first; the commit
+   that ran before the update is the one to take. `git rev-parse <short id>` prints its full id.
+2. On the server, in `.env`, set the tag to that full id:
+
+```bash
+IMAGE_TAG=<the full commit id>
+```
+
+3. Then, as for an update:
+
+```bash
+docker compose pull app
+```
+
+```bash
+docker compose up -d app
+```
+
+4. `docker compose ps` until `app` is `healthy`, and check the running commit with the command under "What runs".
+
+To follow `main` again later, set `IMAGE_TAG=latest` and repeat step 3.
+
+**When the update changed the database.** An older image starts in front of a database that a newer one has
+already changed; it says so in a warning and carries on. Whether it then works depends on the change: something
+added does no harm, something removed or given a new meaning does. To see whether an update touched the database:
+
+```bash
+git diff --stat <older commit> <newer commit> -- backend/src/main/resources/db/migration
+```
+
+No output means the two fit the same database and the rollback is safe. Otherwise prefer a fix published as a
+new commit; if it has to be the old image, restore the backup taken before the update as well.
+
+### Logs
+
+```bash
+docker compose logs --since 1h app
+```
+
+Add `--follow` to watch. People appear by id only. A start that failed ends with the reason, usually a setting
+that is missing or a database that cannot be reached. What the health check last saw:
+
+```bash
+docker inspect --format '{{json .State.Health}}' "$(docker compose ps -q app)"
+```
+
+### Backup
+
+Two things hold data: the database, and from epic 5 on the files under `/data/media`. Both, every night, kept
+somewhere that is not this server. The settings in `.env` are not in any backup: keep a copy of that file in a
+password manager.
+
+The database, as one file:
+
+```bash
+docker compose exec -T postgres pg_dump --username "$DATABASE_USER" --format=custom weddingplanner > planner-$(date +%F).dump
+```
+
+The files:
+
+```bash
+docker compose cp app:/data/media ./media-$(date +%F)
+```
+
+### Proving that a backup can be restored
+
+Into a scratch database next to the real one, which is not touched:
+
+```bash
+docker compose exec -T postgres createdb --username "$DATABASE_USER" scratch
+```
+
+```bash
+docker compose exec -T postgres pg_restore --username "$DATABASE_USER" --dbname scratch --no-owner < planner-<date>.dump
+```
+
+```bash
+docker compose exec -T postgres psql --username "$DATABASE_USER" --dbname scratch --command "select count(*) from entry"
+```
+
+The count is the number of plan items and tasks at the time of the backup. Then remove the scratch database:
+
+```bash
+docker compose exec -T postgres dropdb --username "$DATABASE_USER" scratch
+```
+
+### Restoring for real
+
+This replaces everything in the database with the backup. Whatever was entered after the backup is gone.
+
+```bash
+docker compose stop app
+```
+
+```bash
+docker compose exec -T postgres dropdb --username "$DATABASE_USER" weddingplanner
+```
+
+```bash
+docker compose exec -T postgres createdb --username "$DATABASE_USER" weddingplanner
+```
+
+```bash
+docker compose exec -T postgres pg_restore --username "$DATABASE_USER" --dbname weddingplanner --no-owner < planner-<date>.dump
+```
+
+```bash
+docker compose start app
+```
+
+Putting the files back is written down when there are files to keep (epic 5); until then the directory is empty.
+
+### Small things
+
+- **Who may sign in** is `ALLOWED_EMAILS` in `.env`. After a change: `docker compose up -d app`.
+- **Signing everyone out**, for instance after a phone was lost: give `APP_JWT_SECRET` a new random value, then
+  `docker compose up -d app`. Both owners sign in again.
+- **The development login** must stay off on the server: `DEV_LOGIN_ENABLED=false`. If the log of a start says
+  that it is ON, turn it off at once.
+
 ## How this was checked
 
 On 2026-11-17, in the session that wrote it:
@@ -115,5 +291,11 @@ On 2026-11-17, in the session that wrote it:
   the commit under both tags, and the image pulled back from that registry ran healthy: once built for x86-64,
   and once for `linux/arm64`, the server's kind, run under emulation. Each of its refusals was tried: another
   branch, uncommitted changes, a commit the repository does not have, a name with a tag, Docker not running.
+- The runbook's commands were run in order against two images published to that registry: start from `latest`,
+  an update, a rollback by commit id, the logs, a backup, a restore into a scratch database with the counts
+  compared, a deliberate loss put right by a full restore, an older image started in front of a database marked
+  as changed by a newer one, and a restart of both containers.
 
-Not done yet: a run on the owner's Mac that pushes to the real registry, and the server pulling from it.
+Not done yet: a run of the publishing script on the owner's Mac that pushes to the real registry; the server
+pulling from it; the nightly backup on the server and a restore from one of its files; and the owner rolling
+back from this text alone.
