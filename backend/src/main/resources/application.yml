@@ -1,0 +1,25 @@
+# Every value that differs between installations comes from an environment variable.
+# The variables are listed in docs/deployment.md (arrives with WP-TS-26).
+spring:
+  application:
+    name: wedding-planner
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      # Give up on the database after 5 s instead of the default 30 s, so that the health
+      # endpoint answers "down" before a container health check times out.
+      connection-timeout: 5000
+      validation-timeout: 2000
+
+server:
+  port: 8080
+  # The app runs behind a proxy that terminates TLS.
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

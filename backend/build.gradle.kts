@@ -1,0 +1,58 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    java
+    id("org.springframework.boot") version "4.1.2"
+}
+
+group = "io.github.trufelek124"
+version = "0.1.0"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation(platform(SpringBootPlugin.BOM_COORDINATES))
+    implementation(platform("org.springframework.modulith:spring-modulith-bom:2.1.2"))
+
+    implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
+    implementation("org.springframework.modulith:spring-modulith-starter-core")
+    runtimeOnly("org.flywaydb:flyway-database-postgresql")
+    runtimeOnly("org.postgresql:postgresql")
+
+    // Tests run against a real PostgreSQL 18 that the test run starts itself (no Docker needed).
+    testImplementation(enforcedPlatform("io.zonky.test.postgres:embedded-postgres-binaries-bom:18.7.0"))
+    testImplementation("io.zonky.test:embedded-postgres:2.2.2")
+    // The library brings the binaries for Intel only; these let the tests run on ARM machines too.
+    testRuntimeOnly("io.zonky.test.postgres:embedded-postgres-binaries-darwin-arm64v8")
+    testRuntimeOnly("io.zonky.test.postgres:embedded-postgres-binaries-linux-arm64v8")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.modulith:spring-modulith-starter-test")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+springBoot {
+    buildInfo()
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
+tasks.register<JavaExec>("devDatabase") {
+    group = "application"
+    description = "Starts a local PostgreSQL 18 for running the application (stop with Ctrl+C)."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "io.github.trufelek124.weddingplanner.DevDatabase"
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+}
