@@ -28,6 +28,12 @@
    "id": "f25db488-f761-46b9-82da-a6be2de1d54a",
    "sha256": "204d243af3c914731ff723baba24968d82ee79930d1f756e36cdabf0a9b4c7f4",
    "commit": "f00fe65"
+  },
+  "docs/deployment.md": {
+   "publicId": "WP-DOC-3",
+   "id": "a3fa59cf-6b77-4714-a7c3-696dc073d3cc",
+   "sha256": "39bef3e44f82c52df27c666634277b54cecbf794a8c4f3fc04d27e7c10c1f0f5",
+   "commit": "0f5152a"
   }
  }
 }
