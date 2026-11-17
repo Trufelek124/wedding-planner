@@ -3,7 +3,6 @@ package io.github.trufelek124.weddingplanner.planning.internal;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Kind;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Priority;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.PriorityMode;
-import io.github.trufelek124.weddingplanner.planning.internal.PriorityRule.Reason;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Status;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -24,7 +23,11 @@ import org.springframework.stereotype.Repository;
 @Repository
 class EntryRepository {
 
-    /** An entry as stored, with what lists need next to it: who does it and how many tasks hang on it. */
+    /**
+     * An entry as stored, with who does it and how many tasks hang on it.
+     *
+     * @param priority the level a person chose; null while the planner works the level out
+     */
     record EntryRow(
             UUID id,
             Kind kind,
@@ -37,21 +40,15 @@ class EntryRepository {
             Instant completedAt,
             PriorityMode priorityMode,
             Priority priority,
-            Reason priorityReason,
             UUID parentId,
             List<UUID> assigneeIds,
             int taskCount,
             int version,
             Instant createdAt,
-            Instant updatedAt) {
+            Instant updatedAt) {}
 
-        /** The same entry with its priority as worked out for today. */
-        EntryRow assessed(Priority priority, Reason reason) {
-            return new EntryRow(
-                    id, kind, title, notes, categoryId, startDate, dueDate, status, completedAt, priorityMode, priority,
-                    reason, parentId, assigneeIds, taskCount, version, createdAt, updatedAt);
-        }
-    }
+    /** No narrowing down: every entry of the wedding. */
+    static final Filter EVERYTHING = new Filter(null, null, null, null, null, null);
 
     /** What a list may be narrowed down by; null means "any". */
     record Filter(Kind kind, List<Status> statuses, UUID categoryId, UUID assigneeId, UUID parentId, Boolean scheduled) {}
@@ -183,7 +180,7 @@ class EntryRepository {
         fields.put("completed", at(entry.completedAt()));
         fields.put("mode", entry.priorityMode().name());
         // Only a level a person chose is stored; the automatic one is worked out when asked for.
-        fields.put("priority", entry.priorityMode() == PriorityMode.MANUAL ? entry.priority().name() : null);
+        fields.put("priority", entry.priority() == null ? null : entry.priority().name());
         fields.put("parent", entry.parentId());
         return fields;
     }
@@ -202,7 +199,6 @@ class EntryRepository {
                 instant(row.getObject("completed_at", OffsetDateTime.class)),
                 PriorityMode.valueOf(row.getString("priority_mode")),
                 row.getString("priority") == null ? null : Priority.valueOf(row.getString("priority")),
-                null,
                 row.getObject("parent_id", UUID.class),
                 new ArrayList<>(Arrays.asList(assignees)),
                 row.getInt("task_count"),

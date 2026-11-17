@@ -28,6 +28,8 @@ public enum ProblemCode {
     CHANGED_MEANWHILE(HttpStatus.CONFLICT, "changed-meanwhile", "Someone else changed this in the meantime"),
     /** A plan item that still has tasks: say what happens to them (keep or delete). */
     ENTRY_HAS_TASKS(HttpStatus.CONFLICT, "entry-has-tasks", "This plan item still has tasks"),
+    /** The link would make plan items wait for each other in a circle. */
+    DEPENDENCY_CYCLE(HttpStatus.CONFLICT, "dependency-cycle", "These plan items would wait for each other"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "method-not-allowed", "Method not allowed"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "internal-error", "Something went wrong on the server");
 

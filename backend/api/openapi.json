@@ -85,9 +85,25 @@
             "format" : "date-time",
             "type" : [ "string", "null" ]
           },
+          "conflictsWithIds" : {
+            "description" : "Those of dependsOnIds that end after this entry is meant to begin.",
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "createdAt" : {
             "format" : "date-time",
             "type" : "string"
+          },
+          "dependsOnIds" : {
+            "description" : "The plan items this one waits for: it can only start when they are finished.",
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
           },
           "dueDate" : {
             "description" : "The day a task is due, or the day a plan item ends; null while not scheduled.",
@@ -151,7 +167,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "assigneeIds", "categoryId", "completedAt", "createdAt", "dueDate", "id", "kind", "notes", "parentId", "priority", "priorityMode", "priorityReason", "startDate", "status", "taskCount", "title", "updatedAt", "version" ],
+        "required" : [ "assigneeIds", "categoryId", "completedAt", "conflictsWithIds", "createdAt", "dependsOnIds", "dueDate", "id", "kind", "notes", "parentId", "priority", "priorityMode", "priorityReason", "startDate", "status", "taskCount", "title", "updatedAt", "version" ],
         "type" : "object"
       },
       "EntryChange" : {
@@ -378,9 +394,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -1161,6 +1177,94 @@
           },
           "required" : true
         },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Entry"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "entry-controller" ]
+      }
+    },
+    "/api/entries/{id}/dependencies/{dependsOnId}" : {
+      "delete" : {
+        "operationId" : "removeDependency",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "dependsOnId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Entry"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "entry-controller" ]
+      },
+      "put" : {
+        "operationId" : "addDependency",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "dependsOnId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
         "responses" : {
           "200" : {
             "content" : {

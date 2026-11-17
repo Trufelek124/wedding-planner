@@ -81,6 +81,17 @@ class EntryController {
         return EntryResponse.of(entries.convert(user, id, request.kind()));
     }
 
+    /** Makes the plan item wait for another one. Saying it twice changes nothing. */
+    @PutMapping("/{id}/dependencies/{dependsOnId}")
+    EntryResponse addDependency(UserId user, @PathVariable UUID id, @PathVariable UUID dependsOnId) {
+        return EntryResponse.of(entries.addDependency(user, id, dependsOnId));
+    }
+
+    @DeleteMapping("/{id}/dependencies/{dependsOnId}")
+    EntryResponse removeDependency(UserId user, @PathVariable UUID id, @PathVariable UUID dependsOnId) {
+        return EntryResponse.of(entries.removeDependency(user, id, dependsOnId));
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(

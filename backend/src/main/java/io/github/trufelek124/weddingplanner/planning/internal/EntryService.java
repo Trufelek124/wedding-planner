@@ -32,103 +32,107 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Plan items and tasks: what may be saved, and what saving, converting and deleting do. */
+/** Plan items and tasks: what may be saved, and what saving, converting, linking and deleting do. */
 @Service
 class EntryService {
 
     private final EntryRepository entries;
     private final CategoryRepository categories;
+    private final DependencyRepository dependencies;
     private final Weddings weddings;
     private final Clock clock;
 
-    EntryService(EntryRepository entries, CategoryRepository categories, Weddings weddings, Clock clock) {
+    EntryService(
+            EntryRepository entries,
+            CategoryRepository categories,
+            DependencyRepository dependencies,
+            Weddings weddings,
+            Clock clock) {
         this.entries = entries;
         this.categories = categories;
+        this.dependencies = dependencies;
         this.weddings = weddings;
         this.clock = clock;
     }
 
+    // ------------------------------------------------------------ reading
+
     @Transactional
-    List<EntryRow> list(UserId user, Filter filter, Sort sort) {
+    List<EntryView> list(UserId user, Filter filter, Sort sort) {
         Membership membership = weddings.membershipOf(user);
+        Schedule schedule = schedule(membership);
         return entries.list(membership.weddingId(), filter).stream()
-                .map(row -> asSeenToday(row, membership))
+                .map(row -> view(row, membership, schedule))
                 .sorted(order(sort))
                 .toList();
     }
 
-    /** Each order ends in the id, so that equal entries never swap places between two requests. */
-    private static Comparator<EntryRow> order(Sort sort) {
-        Comparator<EntryRow> byDueDate = Comparator.comparing(EntryRow::dueDate, Comparator.nullsLast(Comparator.naturalOrder()));
-        Comparator<EntryRow> byPriority = Comparator.comparing(EntryRow::priority);
-        Comparator<EntryRow> byTitle = Comparator.comparing(row -> row.title().toLowerCase(Locale.ROOT));
-        Comparator<EntryRow> byId = Comparator.comparing(EntryRow::id);
-        return switch (sort) {
-            case DUE_DATE -> byDueDate.thenComparing(byPriority).thenComparing(byTitle).thenComparing(byId);
-            case PRIORITY -> byPriority.thenComparing(byDueDate).thenComparing(byTitle).thenComparing(byId);
-            case TITLE -> byTitle.thenComparing(byId);
-            case CREATED -> Comparator.comparing(EntryRow::createdAt).thenComparing(byId);
-        };
+    @Transactional
+    EntryView get(UserId user, UUID id) {
+        Membership membership = weddings.membershipOf(user);
+        return view(existing(membership, id), membership, schedule(membership));
     }
 
-    @Transactional
-    EntryRow get(UserId user, UUID id) {
-        return existing(weddings.membershipOf(user), id);
-    }
+    // ------------------------------------------------------------ writing
 
     @Transactional
-    EntryRow create(UserId user, NewEntry request) {
+    EntryView create(UserId user, NewEntry request) {
         Membership membership = weddings.membershipOf(user);
         Instant now = clock.instant();
-        EntryRow entry = checked(membership, UUID.randomUUID(), request.kind(), request, null, 0, now, now);
+        EntryRow entry = checked(membership, UUID.randomUUID(), request.kind(), request, null, now);
         entries.insert(membership.weddingId(), membership.memberId(), entry);
-        return existing(membership, entry.id());
+        return shown(membership, entry.id());
     }
 
     @Transactional
-    EntryRow change(UserId user, UUID id, EntryChange request) {
+    EntryView change(UserId user, UUID id, EntryChange request) {
         Membership membership = weddings.membershipOf(user);
         EntryRow before = existing(membership, id);
         Instant now = clock.instant();
-        EntryRow after = checked(membership, id, before.kind(), request, before, before.taskCount(), before.createdAt(), now);
-        save(membership.weddingId(), after, request.version(), now);
-        return existing(membership, id);
+        save(membership, checked(membership, id, before.kind(), request, before, now), request.version(), now);
+        return shown(membership, id);
     }
 
     /** Ticking off (or un-ticking) without sending the whole entry. */
     @Transactional
-    EntryRow setStatus(UserId user, UUID id, Status status) {
+    EntryView setStatus(UserId user, UUID id, Status status) {
         Membership membership = weddings.membershipOf(user);
         EntryRow before = existing(membership, id);
         Instant now = clock.instant();
-        save(membership.weddingId(), with(before, before.kind(), status, completedAt(status, before, now)), before.version(), now);
-        return existing(membership, id);
+        EntryRow after = new EntryRow(
+                before.id(), before.kind(), before.title(), before.notes(), before.categoryId(), before.startDate(),
+                before.dueDate(), status, completedAt(status, before, now), before.priorityMode(), before.priority(),
+                before.parentId(), before.assigneeIds(), before.taskCount(), before.version(), before.createdAt(), now);
+        save(membership, after, before.version(), now);
+        return shown(membership, id);
     }
 
     /**
      * Turns a task into a plan item or back. Title, notes, people, priority, category and the due
-     * date stay. A plan item has no parent; a task has no start date, and cannot have tasks of its own.
+     * date stay. A plan item has no parent. A task has no start date, cannot have tasks of its own
+     * and waits for nothing, so an entry that becomes a task loses its dependency links.
      */
     @Transactional
-    EntryRow convert(UserId user, UUID id, Kind to) {
+    EntryView convert(UserId user, UUID id, Kind to) {
         Membership membership = weddings.membershipOf(user);
-        UUID weddingId = membership.weddingId();
         EntryRow before = existing(membership, id);
-        if (before.kind() == to) {
-            return before;
+        if (before.kind() != to) {
+            if (to == Kind.TASK && before.taskCount() > 0) {
+                throw new ApiException(
+                        ProblemCode.ENTRY_HAS_TASKS, "This plan item has tasks. Move or delete them before making it a task.");
+            }
+            Instant now = clock.instant();
+            EntryRow after = new EntryRow(
+                    before.id(), to, before.title(), before.notes(), before.categoryId(),
+                    to == Kind.TASK ? null : before.startDate(), before.dueDate(), before.status(), before.completedAt(),
+                    before.priorityMode(), before.priority(), to == Kind.PLAN_ITEM ? null : before.parentId(),
+                    before.assigneeIds(), before.taskCount(), before.version(), before.createdAt(), now);
+            save(membership, after, before.version(), now);
+            if (to == Kind.TASK) {
+                dependencies.removeAllOf(id);
+            }
         }
-        if (to == Kind.TASK && before.taskCount() > 0) {
-            throw new ApiException(
-                    ProblemCode.ENTRY_HAS_TASKS, "This plan item has tasks. Move or delete them before making it a task.");
-        }
-        Instant now = clock.instant();
-        EntryRow after = new EntryRow(
-                before.id(), to, before.title(), before.notes(), before.categoryId(),
-                to == Kind.TASK ? null : before.startDate(), before.dueDate(), before.status(), before.completedAt(),
-                before.priorityMode(), before.priority(), before.priorityReason(), to == Kind.PLAN_ITEM ? null : before.parentId(),
-                before.assigneeIds(), before.taskCount(), before.version(), before.createdAt(), now);
-        save(weddingId, after, before.version(), now);
-        return existing(membership, id);
+        return shown(membership, id);
     }
 
     /**
@@ -154,40 +158,100 @@ class EntryService {
         entries.delete(weddingId, id);
     }
 
-    private void save(UUID weddingId, EntryRow entry, int basedOnVersion, Instant now) {
-        if (!entries.update(weddingId, entry, basedOnVersion, now)) {
+    // ------------------------------------------------------------ dependencies
+
+    /** "This plan item can only start when that one is finished." Saying it twice changes nothing. */
+    @Transactional
+    EntryView addDependency(UserId user, UUID id, UUID dependsOnId) {
+        Membership membership = weddings.membershipOf(user);
+        EntryRow entry = existing(membership, id);
+        EntryRow dependsOn = existing(membership, dependsOnId);
+        if (entry.kind() != Kind.PLAN_ITEM || dependsOn.kind() != Kind.PLAN_ITEM) {
+            throw new ApiException(ProblemCode.BAD_REQUEST, "Only plan items can wait for each other.");
+        }
+        if (schedule(membership).wouldCloseACircle(id, dependsOnId)) {
+            throw new ApiException(
+                    ProblemCode.DEPENDENCY_CYCLE,
+                    id.equals(dependsOnId)
+                            ? "A plan item cannot wait for itself."
+                            : "That plan item already waits for this one, directly or through others.");
+        }
+        dependencies.add(id, dependsOnId);
+        return shown(membership, id);
+    }
+
+    @Transactional
+    EntryView removeDependency(UserId user, UUID id, UUID dependsOnId) {
+        Membership membership = weddings.membershipOf(user);
+        existing(membership, id);
+        if (!dependencies.remove(id, dependsOnId)) {
+            throw new ApiException(ProblemCode.NOT_FOUND, "This plan item does not wait for that one.");
+        }
+        return shown(membership, id);
+    }
+
+    // ------------------------------------------------------------ how an entry is shown
+
+    private EntryView shown(Membership membership, UUID id) {
+        return view(existing(membership, id), membership, schedule(membership));
+    }
+
+    private Schedule schedule(Membership membership) {
+        UUID weddingId = membership.weddingId();
+        return new Schedule(entries.list(weddingId, EntryRepository.EVERYTHING), dependencies.links(weddingId));
+    }
+
+    /**
+     * An entry as it is shown: its people in the wedding's own order, its priority for today and
+     * its place in the plan. The automatic priority depends on the date, so it is worked out here,
+     * at the moment of asking, with "today" being the date where the wedding takes place.
+     */
+    private EntryView view(EntryRow row, Membership membership, Schedule schedule) {
+        row.assigneeIds().sort(Comparator.comparingInt(membership.memberIds()::indexOf));
+        List<UUID> dependsOn = schedule.dependsOn(row.id());
+        List<UUID> conflicts = schedule.conflicts(row.id());
+        if (row.priorityMode() == PriorityMode.MANUAL) {
+            return new EntryView(row, row.priority(), Reason.SET_BY_HAND, dependsOn, conflicts);
+        }
+        LocalDate today = LocalDate.now(clock.withZone(membership.timeZone()));
+        // Payments arrive with epic 6; until then no entry is one.
+        Facts facts = new Facts(
+                row.kind(), row.status(), row.startDate(), row.dueDate(), false, schedule.earliestDependentDue(row.id()));
+        Assessment assessment = PriorityRule.assess(facts, today);
+        return new EntryView(row, assessment.priority(), assessment.reason(), dependsOn, conflicts);
+    }
+
+    /** Each order ends in the id, so that equal entries never swap places between two requests. */
+    private static Comparator<EntryView> order(Sort sort) {
+        Comparator<EntryView> byDueDate =
+                Comparator.comparing(view -> view.entry().dueDate(), Comparator.nullsLast(Comparator.naturalOrder()));
+        Comparator<EntryView> byPriority = Comparator.comparing(EntryView::priority);
+        Comparator<EntryView> byTitle = Comparator.comparing(view -> view.entry().title().toLowerCase(Locale.ROOT));
+        Comparator<EntryView> byId = Comparator.comparing(view -> view.entry().id());
+        return switch (sort) {
+            case DUE_DATE -> byDueDate.thenComparing(byPriority).thenComparing(byTitle).thenComparing(byId);
+            case PRIORITY -> byPriority.thenComparing(byDueDate).thenComparing(byTitle).thenComparing(byId);
+            case TITLE -> byTitle.thenComparing(byId);
+            case CREATED -> Comparator.<EntryView, Instant>comparing(view -> view.entry().createdAt()).thenComparing(byId);
+        };
+    }
+
+    // ------------------------------------------------------------ rules
+
+    private void save(Membership membership, EntryRow entry, int basedOnVersion, Instant now) {
+        if (!entries.update(membership.weddingId(), entry, basedOnVersion, now)) {
             throw new ApiException(
                     ProblemCode.CHANGED_MEANWHILE, "Someone else changed this in the meantime. Load it again, then make your change.");
         }
     }
 
     private EntryRow existing(Membership membership, UUID id) {
-        EntryRow row = entries.find(membership.weddingId(), id)
+        return entries.find(membership.weddingId(), id)
                 .orElseThrow(() -> new ApiException(ProblemCode.NOT_FOUND, "There is no such entry."));
-        return asSeenToday(row, membership);
-    }
-
-    /**
-     * An entry as it is shown: its people in the wedding's own order, and its priority for today.
-     * The automatic priority depends on the date, so it is worked out here, at the moment of asking,
-     * with "today" being the date where the wedding takes place.
-     */
-    private EntryRow asSeenToday(EntryRow row, Membership membership) {
-        row.assigneeIds().sort(Comparator.comparingInt(membership.memberIds()::indexOf));
-        if (row.priorityMode() == PriorityMode.MANUAL) {
-            return row.assessed(row.priority(), Reason.SET_BY_HAND);
-        }
-        LocalDate today = LocalDate.now(clock.withZone(membership.timeZone()));
-        // Payments (epic 6) and dependencies (WP-TS-19) do not exist yet.
-        Assessment assessment = PriorityRule.assess(
-                new Facts(row.kind(), row.status(), row.startDate(), row.dueDate(), false, null), today);
-        return row.assessed(assessment.priority(), assessment.reason());
     }
 
     /** Applies the rules to what a person sent and returns the entry as it will be stored. */
-    private EntryRow checked(
-            Membership membership, UUID id, Kind kind, EntryFields request, EntryRow before, int taskCount, Instant createdAt,
-            Instant now) {
+    private EntryRow checked(Membership membership, UUID id, Kind kind, EntryFields request, EntryRow before, Instant now) {
         UUID weddingId = membership.weddingId();
         List<FieldProblem> problems = new ArrayList<>();
 
@@ -226,7 +290,8 @@ class EntryService {
         return new EntryRow(
                 id, kind, request.title().strip(), request.notes().strip(), request.categoryId(), request.startDate(),
                 request.dueDate(), request.status(), completedAt(request.status(), before, now), request.priorityMode(),
-                chosen, null, request.parentId(), assignees, taskCount, before == null ? 0 : before.version(), createdAt, now);
+                chosen, request.parentId(), assignees, before == null ? 0 : before.taskCount(),
+                before == null ? 0 : before.version(), before == null ? now : before.createdAt(), now);
     }
 
     /** "Done" remembers when it was done; a change that leaves it done keeps that moment. */
@@ -235,13 +300,5 @@ class EntryService {
             return null;
         }
         return before != null && before.completedAt() != null ? before.completedAt() : now;
-    }
-
-    private static EntryRow with(EntryRow entry, Kind kind, Status status, Instant completedAt) {
-        return new EntryRow(
-                entry.id(), kind, entry.title(), entry.notes(), entry.categoryId(), entry.startDate(), entry.dueDate(),
-                status, completedAt, entry.priorityMode(), entry.priority(), entry.priorityReason(), entry.parentId(),
-                entry.assigneeIds(),
-                entry.taskCount(), entry.version(), entry.createdAt(), entry.updatedAt());
     }
 }

@@ -103,15 +103,20 @@ final class PlanningDtos {
             @Schema(description = "The members who do it: none, one or both.") List<UUID> assigneeIds,
             @Schema(description = "Tasks only: the plan item it belongs to.", nullable = true) UUID parentId,
             @Schema(description = "For a plan item: how many tasks belong to it.") int taskCount,
+            @Schema(description = "The plan items this one waits for: it can only start when they are finished.")
+                    List<UUID> dependsOnIds,
+            @Schema(description = "Those of dependsOnIds that end after this entry is meant to begin.") List<UUID> conflictsWithIds,
             @Schema(description = "Send this back with a change; it tells whether someone else saved in between.") int version,
             Instant createdAt,
             Instant updatedAt) {
 
-        static EntryResponse of(EntryRow row) {
+        static EntryResponse of(EntryView view) {
+            EntryRow row = view.entry();
             return new EntryResponse(
                     row.id(), row.kind(), row.title(), row.notes(), row.categoryId(), row.startDate(), row.dueDate(),
-                    row.status(), row.completedAt(), row.priorityMode(), row.priority(), row.priorityReason(), row.assigneeIds(),
-                    row.parentId(), row.taskCount(), row.version(), row.createdAt(), row.updatedAt());
+                    row.status(), row.completedAt(), row.priorityMode(), view.priority(), view.priorityReason(),
+                    row.assigneeIds(), row.parentId(), row.taskCount(), view.dependsOnIds(), view.conflictsWithIds(),
+                    row.version(), row.createdAt(), row.updatedAt());
         }
     }
 

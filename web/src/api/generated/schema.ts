@@ -180,6 +180,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/entries/{id}/dependencies/{dependsOnId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["addDependency"];
+        post?: never;
+        delete: operations["removeDependency"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/entries/{id}/status": {
         parameters: {
             query?: never;
@@ -283,8 +299,12 @@ export interface components {
              * @description When it was marked done; null otherwise.
              */
             completedAt: string | null;
+            /** @description Those of dependsOnIds that end after this entry is meant to begin. */
+            conflictsWithIds: string[];
             /** Format: date-time */
             createdAt: string;
+            /** @description The plan items this one waits for: it can only start when they are finished. */
+            dependsOnIds: string[];
             /**
              * Format: date
              * @description The day a task is due, or the day a plan item ends; null while not scheduled.
@@ -443,7 +463,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -1023,6 +1043,70 @@ export interface operations {
                 "application/json": components["schemas"]["EntryConversion"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addDependency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                dependsOnId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeDependency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                dependsOnId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
