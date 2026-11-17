@@ -28,6 +28,31 @@
         "required" : [ "devLoginEnabled", "googleClientId" ],
         "type" : "object"
       },
+      "Category" : {
+        "description" : "A heading entries can be filed under, for example Venue.",
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name" ],
+        "type" : "object"
+      },
+      "CategoryName" : {
+        "properties" : {
+          "name" : {
+            "maxLength" : 60,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
       "DevSignInRequest" : {
         "properties" : {
           "email" : {
@@ -38,6 +63,169 @@
           }
         },
         "required" : [ "email" ],
+        "type" : "object"
+      },
+      "Entry" : {
+        "description" : "A plan item or a task.",
+        "properties" : {
+          "assigneeIds" : {
+            "description" : "The members who do it: none, one or both.",
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "categoryId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "completedAt" : {
+            "description" : "When it was marked done; null otherwise.",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "dueDate" : {
+            "description" : "The day a task is due, or the day a plan item ends; null while not scheduled.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "PLAN_ITEM", "TASK" ],
+            "type" : "string"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "parentId" : {
+            "description" : "Tasks only: the plan item it belongs to.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "priority" : {
+            "enum" : [ "CRITICAL", "HIGH", "NORMAL", "LOW" ],
+            "type" : "string"
+          },
+          "priorityMode" : {
+            "enum" : [ "AUTO", "MANUAL" ],
+            "type" : "string"
+          },
+          "startDate" : {
+            "description" : "Plan items only; null for a task.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "enum" : [ "NOT_STARTED", "IN_PROGRESS", "DONE", "DROPPED" ],
+            "type" : "string"
+          },
+          "taskCount" : {
+            "description" : "For a plan item: how many tasks belong to it.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "Send this back with a change; it tells whether someone else saved in between.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "assigneeIds", "categoryId", "completedAt", "createdAt", "dueDate", "id", "kind", "notes", "parentId", "priority", "priorityMode", "startDate", "status", "taskCount", "title", "updatedAt", "version" ],
+        "type" : "object"
+      },
+      "EntryChange" : {
+        "description" : "All fields of an entry as they should be from now on.",
+        "properties" : {
+          "assigneeIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "maxItems" : 2,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "categoryId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "dueDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "notes" : {
+            "maxLength" : 10000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "parentId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "priority" : {
+            "enum" : [ "CRITICAL", "HIGH", "NORMAL", "LOW" ],
+            "type" : [ "string", "null" ]
+          },
+          "priorityMode" : {
+            "enum" : [ "AUTO", "MANUAL" ],
+            "type" : "string"
+          },
+          "startDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "enum" : [ "NOT_STARTED", "IN_PROGRESS", "DONE", "DROPPED" ],
+            "type" : "string"
+          },
+          "title" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "The version of the entry this change is based on.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "assigneeIds", "categoryId", "dueDate", "notes", "parentId", "priority", "priorityMode", "startDate", "status", "title", "version" ],
+        "type" : "object"
+      },
+      "EntryConversion" : {
+        "properties" : {
+          "kind" : {
+            "description" : "What the entry should become.",
+            "enum" : [ "PLAN_ITEM", "TASK" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "kind" ],
+        "type" : "object"
+      },
+      "EntryStatusChange" : {
+        "properties" : {
+          "status" : {
+            "enum" : [ "NOT_STARTED", "IN_PROGRESS", "DONE", "DROPPED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "status" ],
         "type" : "object"
       },
       "GoogleSignInRequest" : {
@@ -80,6 +268,70 @@
         "required" : [ "displayName" ],
         "type" : "object"
       },
+      "NewEntry" : {
+        "description" : "A plan item or a task to add.",
+        "properties" : {
+          "assigneeIds" : {
+            "description" : "Who does it: none, one or both of the wedding's members.",
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "maxItems" : 2,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "categoryId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "dueDate" : {
+            "description" : "The day a task is due, or the day a plan item ends.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "kind" : {
+            "enum" : [ "PLAN_ITEM", "TASK" ],
+            "type" : "string"
+          },
+          "notes" : {
+            "description" : "Free text; may be empty.",
+            "maxLength" : 10000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "parentId" : {
+            "description" : "Tasks only: the plan item this task belongs to.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "priority" : {
+            "description" : "With priorityMode MANUAL: the chosen priority. With AUTO: null.",
+            "enum" : [ "CRITICAL", "HIGH", "NORMAL", "LOW" ],
+            "type" : [ "string", "null" ]
+          },
+          "priorityMode" : {
+            "enum" : [ "AUTO", "MANUAL" ],
+            "type" : "string"
+          },
+          "startDate" : {
+            "description" : "Plan items only: the day the step starts. Needs a due date.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "enum" : [ "NOT_STARTED", "IN_PROGRESS", "DONE", "DROPPED" ],
+            "type" : "string"
+          },
+          "title" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "assigneeIds", "categoryId", "dueDate", "kind", "notes", "parentId", "priority", "priorityMode", "startDate", "status", "title" ],
+        "type" : "object"
+      },
       "Problem" : {
         "description" : "An error, as RFC 9457 problem details.",
         "properties" : {
@@ -120,9 +372,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -487,6 +739,492 @@
           }
         },
         "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/categories" : {
+      "get" : {
+        "operationId" : "list_1",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Category"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "category-controller" ]
+      },
+      "post" : {
+        "operationId" : "add",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CategoryName"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Category"
+                }
+              }
+            },
+            "description" : "Created"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "category-controller" ]
+      }
+    },
+    "/api/categories/{id}" : {
+      "delete" : {
+        "operationId" : "delete_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "category-controller" ]
+      },
+      "put" : {
+        "operationId" : "rename_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CategoryName"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Category"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "category-controller" ]
+      }
+    },
+    "/api/entries" : {
+      "get" : {
+        "operationId" : "list",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "kind",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "PLAN_ITEM", "TASK" ],
+            "type" : "string"
+          }
+        }, {
+          "description" : "Only entries in one of these states.",
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "NOT_STARTED", "IN_PROGRESS", "DONE", "DROPPED" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "categoryId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Only entries this member does (alone or with the other).",
+          "in" : "query",
+          "name" : "assigneeId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Only the tasks of this plan item.",
+          "in" : "query",
+          "name" : "parentId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "true: only entries with a due date; false: only those without.",
+          "in" : "query",
+          "name" : "scheduled",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "default" : "DUE_DATE",
+            "enum" : [ "DUE_DATE", "PRIORITY", "TITLE", "CREATED" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Entry"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "entry-controller" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NewEntry"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Entry"
+                }
+              }
+            },
+            "description" : "Created"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "entry-controller" ]
+      }
+    },
+    "/api/entries/{id}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "For a plan item with tasks: what happens to them. Without it such a plan item is not deleted and the answer is the entry-has-tasks problem.",
+          "in" : "query",
+          "name" : "tasks",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "KEEP", "DELETE" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "entry-controller" ]
+      },
+      "get" : {
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Entry"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "entry-controller" ]
+      },
+      "put" : {
+        "operationId" : "change",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EntryChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Entry"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "entry-controller" ]
+      }
+    },
+    "/api/entries/{id}/convert" : {
+      "post" : {
+        "operationId" : "convert",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EntryConversion"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Entry"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "entry-controller" ]
+      }
+    },
+    "/api/entries/{id}/status" : {
+      "put" : {
+        "operationId" : "setStatus",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EntryStatusChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Entry"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "entry-controller" ]
       }
     },
     "/api/me" : {

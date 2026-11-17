@@ -83,7 +83,11 @@ class WeddingService implements Weddings {
     public Membership membershipOf(UserId user) {
         Seat seat = seatOf(user);
         return new Membership(
-                seat.wedding().id(), seat.mine().id(), ZoneId.of(seat.wedding().timeZone()), seat.wedding().weddingDate());
+                seat.wedding().id(),
+                seat.mine().id(),
+                ZoneId.of(seat.wedding().timeZone()),
+                seat.wedding().weddingDate(),
+                seat.members().stream().map(MemberRow::id).toList());
     }
 
     /** Finds the caller's place; a signed-in owner without one takes the free place. */

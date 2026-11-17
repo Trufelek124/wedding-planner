@@ -100,6 +100,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_1"];
+        put?: never;
+        post: operations["add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["rename_1"];
+        post?: never;
+        delete: operations["delete_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list"];
+        put?: never;
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/entries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_1"];
+        put: operations["change"];
+        post?: never;
+        delete: operations["delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/entries/{id}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["convert"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/entries/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["setStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me": {
         parameters: {
             query?: never;
@@ -163,9 +259,107 @@ export interface components {
             /** @description The Google OAuth client to sign in with; null when Google sign-in is not set up. */
             googleClientId: string | null;
         };
+        /** @description A heading entries can be filed under, for example Venue. */
+        Category: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        CategoryName: {
+            name: string;
+        };
         DevSignInRequest: {
             /** Format: email */
             email: string;
+        };
+        /** @description A plan item or a task. */
+        Entry: {
+            /** @description The members who do it: none, one or both. */
+            assigneeIds: string[];
+            /** Format: uuid */
+            categoryId: string | null;
+            /**
+             * Format: date-time
+             * @description When it was marked done; null otherwise.
+             */
+            completedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date
+             * @description The day a task is due, or the day a plan item ends; null while not scheduled.
+             */
+            dueDate: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "PLAN_ITEM" | "TASK";
+            notes: string;
+            /**
+             * Format: uuid
+             * @description Tasks only: the plan item it belongs to.
+             */
+            parentId: string | null;
+            /** @enum {string} */
+            priority: "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
+            /** @enum {string} */
+            priorityMode: "AUTO" | "MANUAL";
+            /**
+             * Format: date
+             * @description Plan items only; null for a task.
+             */
+            startDate: string | null;
+            /** @enum {string} */
+            status: "NOT_STARTED" | "IN_PROGRESS" | "DONE" | "DROPPED";
+            /**
+             * Format: int32
+             * @description For a plan item: how many tasks belong to it.
+             */
+            taskCount: number;
+            title: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /**
+             * Format: int32
+             * @description Send this back with a change; it tells whether someone else saved in between.
+             */
+            version: number;
+        };
+        /** @description All fields of an entry as they should be from now on. */
+        EntryChange: {
+            assigneeIds: string[];
+            /** Format: uuid */
+            categoryId: string | null;
+            /** Format: date */
+            dueDate: string | null;
+            notes: string;
+            /** Format: uuid */
+            parentId: string | null;
+            /** @enum {string|null} */
+            priority: "CRITICAL" | "HIGH" | "NORMAL" | "LOW" | null;
+            /** @enum {string} */
+            priorityMode: "AUTO" | "MANUAL";
+            /** Format: date */
+            startDate: string | null;
+            /** @enum {string} */
+            status: "NOT_STARTED" | "IN_PROGRESS" | "DONE" | "DROPPED";
+            title: string;
+            /**
+             * Format: int32
+             * @description The version of the entry this change is based on.
+             */
+            version: number;
+        };
+        EntryConversion: {
+            /**
+             * @description What the entry should become.
+             * @enum {string}
+             */
+            kind: "PLAN_ITEM" | "TASK";
+        };
+        EntryStatusChange: {
+            /** @enum {string} */
+            status: "NOT_STARTED" | "IN_PROGRESS" | "DONE" | "DROPPED";
         };
         GoogleSignInRequest: {
             /** @description The ID token Google handed to the client. */
@@ -180,6 +374,42 @@ export interface components {
         };
         MemberName: {
             displayName: string;
+        };
+        /** @description A plan item or a task to add. */
+        NewEntry: {
+            /** @description Who does it: none, one or both of the wedding's members. */
+            assigneeIds: string[];
+            /** Format: uuid */
+            categoryId: string | null;
+            /**
+             * Format: date
+             * @description The day a task is due, or the day a plan item ends.
+             */
+            dueDate: string | null;
+            /** @enum {string} */
+            kind: "PLAN_ITEM" | "TASK";
+            /** @description Free text; may be empty. */
+            notes: string;
+            /**
+             * Format: uuid
+             * @description Tasks only: the plan item this task belongs to.
+             */
+            parentId: string | null;
+            /**
+             * @description With priorityMode MANUAL: the chosen priority. With AUTO: null.
+             * @enum {string|null}
+             */
+            priority: "CRITICAL" | "HIGH" | "NORMAL" | "LOW" | null;
+            /** @enum {string} */
+            priorityMode: "AUTO" | "MANUAL";
+            /**
+             * Format: date
+             * @description Plan items only: the day the step starts. Needs a due date.
+             */
+            startDate: string | null;
+            /** @enum {string} */
+            status: "NOT_STARTED" | "IN_PROGRESS" | "DONE" | "DROPPED";
+            title: string;
         };
         /** @description An error, as RFC 9457 problem details. */
         Problem: {
@@ -205,7 +435,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -461,6 +691,374 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Category"][];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryName"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rename_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryName"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Category"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: {
+                kind?: "PLAN_ITEM" | "TASK";
+                /** @description Only entries in one of these states. */
+                status?: ("NOT_STARTED" | "IN_PROGRESS" | "DONE" | "DROPPED")[];
+                categoryId?: string;
+                /** @description Only entries this member does (alone or with the other). */
+                assigneeId?: string;
+                /** @description Only the tasks of this plan item. */
+                parentId?: string;
+                /** @description true: only entries with a due date; false: only those without. */
+                scheduled?: boolean;
+                sort?: "DUE_DATE" | "PRIORITY" | "TITLE" | "CREATED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"][];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewEntry"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    change: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryChange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete: {
+        parameters: {
+            query?: {
+                /** @description For a plan item with tasks: what happens to them. Without it such a plan item is not deleted and the answer is the entry-has-tasks problem. */
+                tasks?: "KEEP" | "DELETE";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    convert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryConversion"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryStatusChange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
             };
             /** @description Any error. */
             default: {

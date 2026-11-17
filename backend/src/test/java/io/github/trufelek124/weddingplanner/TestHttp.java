@@ -5,6 +5,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.Map;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -60,6 +61,10 @@ public final class TestHttp {
         return send(request, Map.of("Authorization", "Bearer " + accessToken));
     }
 
+    public HttpResponse<String> deleteAs(String accessToken, String path) throws IOException, InterruptedException {
+        return send(HttpRequest.newBuilder(URI.create(base + path)).DELETE(), Map.of("Authorization", "Bearer " + accessToken));
+    }
+
     /** A POST without a body, as a browser makes when its cookie says everything. */
     public HttpResponse<String> post(String path, Map<String, String> headers) throws IOException, InterruptedException {
         return send(HttpRequest.newBuilder(URI.create(base + path)).POST(HttpRequest.BodyPublishers.noBody()), headers);
@@ -81,6 +86,19 @@ public final class TestHttp {
     @SuppressWarnings("unchecked")
     public static Map<String, Object> json(HttpResponse<String> response) {
         return JSON.readValue(response.body(), Map.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static List<Map<String, Object>> jsonList(HttpResponse<String> response) {
+        return JSON.readValue(response.body(), List.class);
+    }
+
+    /** The fields a 400 answer complains about, in the order sent. */
+    @SuppressWarnings("unchecked")
+    public static List<String> fieldProblems(HttpResponse<String> response) {
+        Map<String, Object> problem = json(response);
+        List<Map<String, Object>> fields = (List<Map<String, Object>>) problem.getOrDefault("fieldProblems", List.of());
+        return fields.stream().map(field -> (String) field.get("field")).toList();
     }
 
     public static String jsonOf(Map<String, ?> value) {

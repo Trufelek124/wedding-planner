@@ -24,6 +24,10 @@ public enum ProblemCode {
     WEDDING_ALREADY_SET_UP(HttpStatus.CONFLICT, "wedding-already-set-up", "The wedding is already set up"),
     /** A third person signed in: a wedding has two members. */
     WEDDING_FULL(HttpStatus.FORBIDDEN, "wedding-full", "The wedding already has its two members"),
+    /** Someone else saved the same thing in the meantime: load it again before changing it. */
+    CHANGED_MEANWHILE(HttpStatus.CONFLICT, "changed-meanwhile", "Someone else changed this in the meantime"),
+    /** A plan item that still has tasks: say what happens to them (keep or delete). */
+    ENTRY_HAS_TASKS(HttpStatus.CONFLICT, "entry-has-tasks", "This plan item still has tasks"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "method-not-allowed", "Method not allowed"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "internal-error", "Something went wrong on the server");
 

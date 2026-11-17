@@ -182,6 +182,8 @@ class WeddingIntegrationTest extends PostgresIntegrationTest {
         assertThat(membership.memberId()).hasToString((String) members(wedding).get(0).get("id"));
         assertThat(membership.timeZone()).isEqualTo(ZoneId.of("Europe/Warsaw"));
         assertThat(membership.weddingDate()).isEqualTo(LocalDate.of(2027, 6, 19));
+        assertThat(membership.memberIds()).extracting(UUID::toString)
+                .containsExactly((String) members(wedding).get(0).get("id"), (String) members(wedding).get(1).get("id"));
     }
 
     @Nested
