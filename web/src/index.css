@@ -48,3 +48,8 @@ h1 {
 .status[data-status='down'] {
   color: var(--problem);
 }
+
+.version {
+  color: var(--muted);
+  font-size: 0.875rem;
+}

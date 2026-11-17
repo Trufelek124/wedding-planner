@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { fetchAppInfo } from './api/appInfo.ts'
 import { fetchBackendStatus, type BackendStatus } from './api/health.ts'
 
 type Status = BackendStatus | 'checking'
@@ -11,6 +12,7 @@ const MESSAGE: Record<Status, string> = {
 
 export default function App() {
   const [status, setStatus] = useState<Status>('checking')
+  const [version, setVersion] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -19,6 +21,15 @@ export default function App() {
         setStatus(result)
       }
     })
+    fetchAppInfo(controller.signal)
+      .then((info) => {
+        if (!controller.signal.aborted) {
+          setVersion(info.version)
+        }
+      })
+      .catch(() => {
+        // Without an answer there is no version to show; the status line says the rest.
+      })
     return () => {
       controller.abort()
     }
@@ -31,6 +42,7 @@ export default function App() {
       <p role="status" className="status" data-status={status}>
         {MESSAGE[status]}
       </p>
+      {version !== null && <p className="version">Server version {version}</p>}
     </main>
   )
 }

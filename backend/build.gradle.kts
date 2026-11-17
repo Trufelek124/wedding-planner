@@ -27,6 +27,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
+    // Describes the API (OpenAPI). The description is served only when API_DOCS_ENABLED is true.
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-api:3.2.0")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 
@@ -55,4 +57,14 @@ tasks.register<JavaExec>("devDatabase") {
     classpath = sourceSets["test"].runtimeClasspath
     mainClass = "io.github.trufelek124.weddingplanner.DevDatabase"
     javaLauncher = javaToolchains.launcherFor(java.toolchain)
+}
+
+tasks.register<Test>("updateApiContract") {
+    group = "verification"
+    description = "Rewrites api/openapi.json from the code. Regenerate the clients afterwards."
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    filter { includeTestsMatching("*ApiContractTest") }
+    systemProperty("api.contract.update", "true")
+    outputs.upToDateWhen { false }
 }

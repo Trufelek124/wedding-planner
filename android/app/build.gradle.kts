@@ -1,12 +1,36 @@
+import javax.inject.Inject
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.openapi.generator")
 }
 
 // The server the app talks to is fixed when the app is built:
 //   ./gradlew assembleDebug -PserverUrl=https://planner.example
 // The default is the address under which an emulator reaches the machine it runs on.
 val serverUrl = providers.gradleProperty("serverUrl").orElse("http://10.0.2.2:8080")
+
+// The API's data classes are generated from the backend's API description at every build
+// and are never committed or edited: change the backend, then ./gradlew updateApiContract there.
+val apiModels = layout.buildDirectory.dir("generated/api-models")
+
+openApiGenerate {
+    generatorName = "kotlin"
+    this.library.set("multiplatform")
+    // Start from an empty directory, so a model the API no longer has does not linger.
+    cleanupOutput = true
+    inputSpec = rootProject.file("../backend/api/openapi.json").path
+    outputDir = apiModels.map { it.asFile.path }
+    modelPackage = "io.github.trufelek124.weddingplanner.api.model"
+    globalProperties = mapOf("models" to "", "modelDocs" to "false", "modelTests" to "false")
+    configOptions = mapOf(
+        "sourceFolder" to "src/main/kotlin",
+        "enumPropertyNaming" to "UPPERCASE",
+        "dateLibrary" to "kotlinx-datetime",
+    )
+}
 
 android {
     namespace = "io.github.trufelek124.weddingplanner"
@@ -50,6 +74,8 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.core:core-ktx:1.19.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.8.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
@@ -57,4 +83,37 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("org.robolectric:robolectric:4.18")
+}
+
+// Hands the generated models to the Android build as a generated source directory, so that
+// compilation, lint and the IDE all see them and every task that needs them runs the generator first.
+abstract class ApiModelSources : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val generated: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val sources: DirectoryProperty
+
+    @get:Inject
+    abstract val files: FileSystemOperations
+
+    @TaskAction
+    fun copy() {
+        files.sync {
+            from(generated)
+            into(sources)
+        }
+    }
+}
+
+val apiModelSources = tasks.register<ApiModelSources>("apiModelSources") {
+    dependsOn(tasks.named("openApiGenerate"))
+    generated = apiModels.map { it.dir("src/main/kotlin") }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.kotlin?.addGeneratedSourceDirectory(apiModelSources, ApiModelSources::sources)
+    }
 }

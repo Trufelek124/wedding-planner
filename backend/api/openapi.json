@@ -1,0 +1,86 @@
+{
+  "components" : {
+    "schemas" : {
+      "AppInfo" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "version" ],
+        "type" : "object"
+      },
+      "Problem" : {
+        "description" : "An error, as RFC 9457 problem details.",
+        "properties" : {
+          "detail" : {
+            "description" : "What went wrong this time, if there is more to say.",
+            "type" : "string"
+          },
+          "instance" : {
+            "description" : "The path that was asked for.",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "The HTTP status of the response.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "title" : {
+            "description" : "The kind of error in words.",
+            "type" : "string"
+          },
+          "type" : {
+            "description" : "The kind of error. Clients decide what to do from this value.",
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "type" : "string",
+            "x-enum-varnames" : [ "BAD_REQUEST", "NOT_FOUND", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+          }
+        },
+        "required" : [ "status", "title", "type" ],
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "title" : "Wedding planner API",
+    "version" : "1"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/api/app-info" : {
+      "get" : {
+        "operationId" : "appInfo",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AppInfo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "app-info-controller" ]
+      }
+    }
+  },
+  "servers" : [ {
+    "url" : "/"
+  } ]
+}

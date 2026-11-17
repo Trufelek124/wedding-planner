@@ -12,6 +12,10 @@ spring:
       # endpoint answers "down" before a container health check times out.
       connection-timeout: 5000
       validation-timeout: 2000
+  mvc:
+    problemdetails:
+      # Errors are answered as RFC 9457 problem details (see the api module).
+      enabled: true
 
 app:
   # Directory with the built web app; empty means the backend serves the API only.
@@ -21,6 +25,12 @@ server:
   port: 8080
   # The app runs behind a proxy that terminates TLS.
   forward-headers-strategy: framework
+
+# The API description (/v3/api-docs) is for building the clients; production does not serve it.
+springdoc:
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:false}
+  paths-to-match: /api/**
 
 management:
   endpoints:

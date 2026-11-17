@@ -51,11 +51,12 @@ web() {
   if [ ! -d "$ROOT/web/node_modules" ] || [ "$ROOT/web/package-lock.json" -nt "$ROOT/web/node_modules/.package-lock.json" ]; then
     step web "install" npm ci --no-fund --no-audit
   fi
+  step web "api types" npm run check:api
   step web "lint" npm run lint
   rm -f "$ROOT/web/node_modules/.tmp/gate-junit.xml"
   step web "tests" npm test -- --reporter=default --reporter=junit --outputFile.junit=node_modules/.tmp/gate-junit.xml
   step web "build" npm run build
-  SUMMARY+=("web      $(tests_in "$ROOT/web/node_modules/.tmp/gate-junit.xml") tests, lint, build")
+  SUMMARY+=("web      $(tests_in "$ROOT/web/node_modules/.tmp/gate-junit.xml") tests, api types, lint, build")
 }
 
 android() {

@@ -40,6 +40,24 @@ A missing tool or a refused download host is an environment matter — ask the o
 `scripts/gate.sh backend web` runs only the parts named. A change is ready only when the whole gate passes; the
 closing comment quotes its summary lines and its exit code.
 
+## Changing the API
+
+`backend/api/openapi.json` is the contract. It is generated from the backend's code and committed; both clients
+generate their types from it. The gate fails while any of the three disagree.
+
+1. Change the backend. Then `cd backend && ./gradlew updateApiContract` rewrites `api/openapi.json`.
+2. `cd web && npm run generate:api` rewrites `web/src/api/generated/schema.ts`. Never edit that file.
+3. Android generates its models at every build (`android/app/build/generated`), so there is nothing to commit.
+4. Commit the backend change, `openapi.json` and the web's generated file together.
+
+Rules of the contract:
+- Every field of a response is always present; a value that may be missing is `null`, not left out.
+- Every error is a `Problem` (RFC 9457). Clients decide from its `type`, never from the wording. The kinds are the
+  constants of `ProblemCode`; a module raises one with `ApiException`. A code is never renamed or reused.
+- An old phone app meets a newer server: clients ignore unknown fields, and treat an unknown `type` as "some error".
+- Money is whole numbers of the smallest unit (grosze), never a decimal fraction.
+- The API description itself is served (`/v3/api-docs`) only when `API_DOCS_ENABLED=true`.
+
 ## The tracker: infokuznia, project `WP`
 
 Work is tracked as Project → Epic → Story → Task in the owner's infokuznia. The tracker is the source of truth for
