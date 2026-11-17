@@ -592,3 +592,400 @@ a.button {
   background: var(--danger-surface);
   border-color: var(--danger);
 }
+
+/* The plan's two views */
+
+.views {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin: 0 0 1.25rem;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.views a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 1rem;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: calc(var(--radius) - 4px);
+}
+
+.views a:hover {
+  background: var(--background);
+}
+
+.views a[aria-current='page'] {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+/* The chart. Sizes that place a bar are numbers in chart/layout.ts; everything here is appearance. */
+
+.content:has(.chart-page) {
+  max-width: 84rem;
+}
+
+.gantt-scroll {
+  --gantt-label: 17rem;
+
+  max-height: 70vh;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+@media (max-width: 40rem) {
+  .gantt-scroll {
+    --gantt-label: 8.5rem;
+  }
+}
+
+.gantt {
+  display: grid;
+  grid-template-columns: var(--gantt-label) max-content;
+  user-select: none;
+}
+
+.gantt-corner,
+.gantt-scale {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.gantt-corner {
+  left: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 0.75rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-right: 1px solid var(--border);
+}
+
+.gantt-labels {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.gantt-labels li {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.gantt-labels li[data-current] {
+  background: var(--background);
+}
+
+.gantt-title,
+.gantt-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gantt-title {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.gantt-title:hover {
+  text-decoration: underline;
+}
+
+.gantt-meta {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.gantt-warning {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.gantt-scale svg,
+.gantt-body {
+  display: block;
+}
+
+.gantt-upper {
+  display: flex;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.gantt-upper div {
+  flex: none;
+  border-left: 1px solid var(--border);
+}
+
+.gantt-upper span {
+  position: sticky;
+  left: var(--gantt-label);
+  padding: 0 6px;
+}
+
+.gantt-line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.gantt-scale text {
+  font-size: 12px;
+  fill: var(--text-muted);
+}
+
+/* The two marked days differ in their line as well as their colour, and are named in the scale. */
+.gantt-today {
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.gantt-wedding {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.gantt-scale .gantt-today-name,
+.gantt-scale .gantt-wedding-name {
+  font-weight: 700;
+  fill: var(--text);
+}
+
+.gantt-scale .gantt-wedding-name {
+  fill: var(--accent);
+}
+
+.gantt-bar {
+  outline: none;
+}
+
+.gantt-bar-body {
+  fill: var(--accent);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  cursor: grab;
+}
+
+/* How far a plan item has got shows in how its bar is filled, and in words next to its title. */
+.gantt-bar[data-status='NOT_STARTED'] .gantt-bar-body {
+  fill: color-mix(in srgb, var(--accent) 30%, var(--surface));
+}
+
+.gantt-bar[data-status='DONE'] .gantt-bar-body,
+.gantt-bar[data-status='DROPPED'] .gantt-bar-body {
+  fill: var(--border);
+  stroke: var(--border-strong);
+}
+
+.gantt-bar[data-status='DROPPED'] .gantt-bar-body {
+  stroke-dasharray: 4 3;
+}
+
+.gantt-bar[data-conflict] .gantt-bar-body {
+  stroke: var(--danger);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 3;
+}
+
+.gantt-bar:focus-visible .gantt-bar-body,
+.gantt-bar[data-linking] .gantt-bar-body {
+  stroke: var(--focus);
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+/* A finger drags only the chosen bar; anywhere else it scrolls the chart. */
+.gantt-bar[data-current] .gantt-bar-body,
+.gantt-bar[data-current] .gantt-grip,
+.gantt-link-grip {
+  touch-action: none;
+}
+
+.gantt-grip {
+  fill: transparent;
+  cursor: ew-resize;
+}
+
+.gantt-link-grip {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  cursor: crosshair;
+  opacity: 0;
+}
+
+.gantt-bar:hover .gantt-link-grip,
+.gantt-bar[data-current] .gantt-link-grip {
+  opacity: 1;
+}
+
+.gantt-conflict {
+  font-size: 14px;
+  font-weight: 800;
+  fill: var(--danger);
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+  pointer-events: none;
+}
+
+.gantt-task {
+  fill: var(--text);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.gantt-task[data-done] {
+  fill: var(--surface);
+  stroke: var(--text);
+}
+
+.gantt-link {
+  outline: none;
+  cursor: pointer;
+}
+
+.gantt-link-reach {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+}
+
+.gantt-link-line {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+.gantt-link-head {
+  fill: var(--border-strong);
+}
+
+.gantt-link[data-conflict] .gantt-link-line {
+  stroke: var(--danger);
+  stroke-dasharray: 5 3;
+}
+
+.gantt-link[data-conflict] .gantt-link-head {
+  fill: var(--danger);
+}
+
+.gantt-link[data-chosen] .gantt-link-line,
+.gantt-link:focus-visible .gantt-link-line {
+  stroke: var(--focus);
+  stroke-width: 3;
+}
+
+.gantt-link[data-chosen] .gantt-link-head,
+.gantt-link:focus-visible .gantt-link-head {
+  fill: var(--focus);
+}
+
+.gantt-band {
+  fill: none;
+  stroke: var(--focus);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+
+.gantt-status:empty {
+  display: none;
+}
+
+.gantt-status,
+.gantt-chosen {
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.gantt-chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.chart-page .group {
+  margin-top: 2rem;
+}
+
+.undated {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.undated a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.875rem;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.undated a:hover {
+  border-color: var(--border-strong);
+}
+
+/* What a plan item waits for, on its form */
+
+.waits-for {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.waits-for li,
+.waits-for-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.waits-for li {
+  align-items: center;
+}
+
+.waits-for-add .field {
+  flex: 1 1 14rem;
+}

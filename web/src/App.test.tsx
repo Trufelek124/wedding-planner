@@ -204,10 +204,11 @@ describe('signing in with Google', () => {
     render(<App />)
 
     // The library is a script from Google; the test stands in for its arrival.
+    // The button asks for it just after it appears, so the script is waited for and not looked up at once.
     await screen.findByTestId('google-button')
-    const script = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]')
-    expect(script).not.toBeNull()
-    script?.dispatchEvent(new Event('load'))
+    const library = () => document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]')
+    await waitFor(() => expect(library()).not.toBeNull())
+    library()?.dispatchEvent(new Event('load'))
 
     await waitFor(() => expect(renderButton).toHaveBeenCalled())
     const config = initialize.mock.calls[0]?.[0] as google.accounts.id.IdConfiguration

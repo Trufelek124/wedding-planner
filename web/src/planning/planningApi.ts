@@ -45,6 +45,40 @@ export async function deleteEntry(id: string, tasks?: 'KEEP' | 'DELETE'): Promis
   }
 }
 
+/**
+ * The whole of an entry as a change, with some of it replaced. The server takes an entry as one piece,
+ * so a change to its dates alone still says everything else again, and which version it is based on.
+ */
+export function changeOf(entry: Entry, replaced: Partial<Pick<EntryChange, 'startDate' | 'dueDate'>>): EntryChange {
+  return {
+    title: entry.title,
+    notes: entry.notes,
+    categoryId: entry.categoryId,
+    startDate: entry.startDate,
+    dueDate: entry.dueDate,
+    status: entry.status,
+    assigneeIds: entry.assigneeIds,
+    priorityMode: entry.priorityMode,
+    // A level the planner worked out is not sent back as if a person had chosen it.
+    priority: entry.priorityMode === 'MANUAL' ? entry.priority : null,
+    parentId: entry.parentId,
+    version: entry.version,
+    ...replaced,
+  }
+}
+
+/**
+ * Makes the plan item wait for another one.
+ * @throws ApiError `dependency-cycle` when the other one already waits for this one, directly or through others
+ */
+export async function addDependency(id: string, dependsOnId: string): Promise<Entry> {
+  return unwrap(await api.PUT('/api/entries/{id}/dependencies/{dependsOnId}', { params: { path: { id, dependsOnId } } }))
+}
+
+export async function removeDependency(id: string, dependsOnId: string): Promise<Entry> {
+  return unwrap(await api.DELETE('/api/entries/{id}/dependencies/{dependsOnId}', { params: { path: { id, dependsOnId } } }))
+}
+
 export async function listCategories(signal?: AbortSignal): Promise<Category[]> {
   return unwrap(await api.GET('/api/categories', { signal }))
 }

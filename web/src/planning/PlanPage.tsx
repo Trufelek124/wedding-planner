@@ -5,6 +5,7 @@ import { FilterBar } from './FilterBar.tsx'
 import { useFilters } from './filters.ts'
 import { STATUS_LABEL } from './labels.ts'
 import { listCategories, listEntries, type Category, type Entry, type Status } from './planningApi.ts'
+import { PlanViews } from './PlanViews.tsx'
 import { TaskRow } from './TaskRow.tsx'
 import { useLoaded } from './useLoaded.ts'
 import { useStatusChange, type PendingStatus } from './useStatusChange.ts'
@@ -57,6 +58,7 @@ export function PlanPage() {
           Add a plan item
         </Link>
       </div>
+      <PlanViews />
       <FilterBar filters={filters} categories={categories.state.data} onChange={set} />
       {status.failed && (
         <p role="alert" className="alert">
@@ -65,7 +67,7 @@ export function PlanPage() {
       )}
       {all.length === 0 ? (
         <p className="empty">
-          {filters.status === 'open' && filters.who === '' && filters.category === ''
+          {filters.status === 'open' && filters.who === '' && filters.category === '' && filters.priority === ''
             ? 'Nothing in the plan yet. Add the first step.'
             : 'Nothing matches these filters.'}
         </p>

@@ -4,6 +4,7 @@ import { forgetGoogleSignIn } from './auth/google.ts'
 import { restore, signOut, type Me } from './auth/session.ts'
 import { SignInPage } from './auth/SignInPage.tsx'
 import { useSession } from './auth/useSession.ts'
+import { ChartPage } from './planning/ChartPage.tsx'
 import { EntryFormPage } from './planning/EntryFormPage.tsx'
 import { PlanPage } from './planning/PlanPage.tsx'
 import { TasksPage } from './planning/TasksPage.tsx'
@@ -60,6 +61,7 @@ function SignedIn({ user }: { user: Me }) {
               <Route element={<Shell onSignOut={leave} />}>
                 <Route index element={<HomePage />} />
                 <Route path="plan" element={<PlanPage />} />
+                <Route path="plan/chart" element={<ChartPage />} />
                 <Route path="tasks" element={<TasksPage />} />
                 <Route path="entries/new" element={<EntryFormPage />} />
                 <Route path="entries/:id" element={<EntryFormPage />} />

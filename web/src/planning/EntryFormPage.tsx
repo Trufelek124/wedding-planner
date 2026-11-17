@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ApiError } from '../api/client.ts'
 import { Field } from '../ui/Field.tsx'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
@@ -20,6 +20,7 @@ import {
   type Status,
 } from './planningApi.ts'
 import { useLoaded } from './useLoaded.ts'
+import { WaitsFor } from './WaitsFor.tsx'
 
 const STATUSES: Status[] = ['NOT_STARTED', 'IN_PROGRESS', 'DONE', 'DROPPED']
 const PRIORITIES: Priority[] = ['CRITICAL', 'HIGH', 'NORMAL', 'LOW']
@@ -78,10 +79,16 @@ interface EntryFormProps {
 
 type Asking = null | 'delete'
 
+function cameFrom(state: unknown): string | null {
+  return typeof state === 'object' && state !== null && 'back' in state && typeof state.back === 'string' ? state.back : null
+}
+
 function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoaded, onReload }: EntryFormProps) {
   const wedding = useCurrentWedding()
   const navigate = useNavigate()
-  const back = kind === 'PLAN_ITEM' ? '/plan' : '/tasks'
+  const location = useLocation()
+  // Back to the page the form was opened from, when that page said which one it is.
+  const back = cameFrom(location.state) ?? (kind === 'PLAN_ITEM' ? '/plan' : '/tasks')
 
   const datesHint = useId()
   const [title, setTitle] = useState(existing?.title ?? '')
@@ -331,6 +338,8 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
           </Link>
         </div>
       </form>
+
+      {existing?.kind === 'PLAN_ITEM' && <WaitsFor entry={existing} planItems={planItems} />}
 
       {existing !== null && (
         <section className="danger-zone stack" aria-label="More">

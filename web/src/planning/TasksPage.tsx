@@ -51,7 +51,7 @@ export function TasksPage() {
       )}
       {all.length === 0 ? (
         <p className="empty">
-          {filters.status === 'open' && filters.who === '' && filters.category === ''
+          {filters.status === 'open' && filters.who === '' && filters.category === '' && filters.priority === ''
             ? 'No tasks to do. Add one when something comes up.'
             : 'Nothing matches these filters.'}
         </p>

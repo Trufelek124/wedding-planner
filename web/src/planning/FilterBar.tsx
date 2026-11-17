@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
 import type { Filters } from './filters.ts'
 import { PRIORITY_LABEL, STATUS_LABEL } from './labels.ts'
@@ -8,13 +8,17 @@ interface FilterBarProps {
   filters: Filters
   categories: Category[]
   onChange: (name: keyof Filters, value: string) => void
+  /** False where the order is not the reader's to choose, as on the chart. */
+  ordered?: boolean
+  /** One more control of the page's own, shown last. */
+  children?: ReactNode
 }
 
 const STATUSES: Status[] = ['NOT_STARTED', 'IN_PROGRESS', 'DONE', 'DROPPED']
 const PRIORITIES: Priority[] = ['CRITICAL', 'HIGH', 'NORMAL', 'LOW']
 
 /** Narrows a list down and orders it. Every choice applies at once. */
-export function FilterBar({ filters, categories, onChange }: FilterBarProps) {
+export function FilterBar({ filters, categories, onChange, ordered = true, children }: FilterBarProps) {
   const wedding = useCurrentWedding()
   const id = useId()
 
@@ -65,14 +69,17 @@ export function FilterBar({ filters, categories, onChange }: FilterBarProps) {
           ))}
         </select>
       </div>
-      <div className="filter">
-        <label htmlFor={`${id}-sort`}>Order</label>
-        <select id={`${id}-sort`} value={filters.sort} onChange={(event) => onChange('sort', event.target.value)}>
-          <option value="date">By date</option>
-          <option value="priority">By priority</option>
-          <option value="title">By title</option>
-        </select>
-      </div>
+      {ordered && (
+        <div className="filter">
+          <label htmlFor={`${id}-sort`}>Order</label>
+          <select id={`${id}-sort`} value={filters.sort} onChange={(event) => onChange('sort', event.target.value)}>
+            <option value="date">By date</option>
+            <option value="priority">By priority</option>
+            <option value="title">By title</option>
+          </select>
+        </div>
+      )}
+      {children}
     </form>
   )
 }
