@@ -262,6 +262,42 @@
         "required" : [ "idToken" ],
         "type" : "object"
       },
+      "Home" : {
+        "description" : "What the first page shows: how long until the wedding, and what to do next.",
+        "properties" : {
+          "daysLeft" : {
+            "description" : "Whole days from today to the wedding day: 0 on the day, negative after it; null while the day is not fixed.",
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "next" : {
+            "description" : "The five unfinished entries to turn to next, by priority and then by date. Overdue entries are not repeated here.",
+            "items" : {
+              "$ref" : "#/components/schemas/Entry"
+            },
+            "type" : "array"
+          },
+          "overdue" : {
+            "description" : "Every unfinished entry whose date has passed, the longest overdue first.",
+            "items" : {
+              "$ref" : "#/components/schemas/Entry"
+            },
+            "type" : "array"
+          },
+          "today" : {
+            "description" : "Today's date where the wedding takes place.",
+            "format" : "date",
+            "type" : "string"
+          },
+          "weddingDate" : {
+            "description" : "The wedding day; null while it is not fixed.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "daysLeft", "next", "overdue", "today", "weddingDate" ],
+        "type" : "object"
+      },
       "Me" : {
         "description" : "The signed-in person.",
         "properties" : {
@@ -1347,6 +1383,34 @@
           }
         },
         "tags" : [ "entry-controller" ]
+      }
+    },
+    "/api/home" : {
+      "get" : {
+        "operationId" : "home",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Home"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "home-controller" ]
       }
     },
     "/api/me" : {

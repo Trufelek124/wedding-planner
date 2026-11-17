@@ -69,6 +69,8 @@ closing comment quotes its summary lines and its exit code.
   arithmetic on its dates (`layout.ts`); nothing is measured on the page, which is why tests can drag by a known
   distance. New dates go through `useDateChanges`: shown at once, saved one after the other. Whatever a pointer
   can do on the chart also has a key there or a control on the entry's form.
+- "Today" is the date where the wedding takes place. The home page takes the days left from the server
+  (`GET /api/home`) and never counts them from the device's clock.
 - Every colour, size and radius comes from the tokens at the top of `src/index.css`; light and dark both work.
 - What a person reads is written for that person. This includes the server's validation messages
   (`message = "Enter your partner's name."`), which the forms show next to the field.

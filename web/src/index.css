@@ -58,6 +58,19 @@ body {
   background: var(--background);
 }
 
+/*
+ * A link in running text. Written with :where() so that it weighs nothing: links that are rows, tabs or
+ * buttons say how they look themselves, and must win without having to try.
+ */
+:where(a) {
+  color: var(--accent);
+  text-underline-offset: 0.15em;
+}
+
+:where(a:hover) {
+  color: var(--accent-hover);
+}
+
 h1,
 h2 {
   font-family: var(--font-display);
@@ -988,4 +1001,29 @@ a.button {
 
 .waits-for-add .field {
   flex: 1 1 14rem;
+}
+
+/* Home */
+
+.stack-wide {
+  display: grid;
+  gap: 2.5rem;
+}
+
+.ask-day {
+  justify-self: center;
+  width: 100%;
+  max-width: 20rem;
+  text-align: left;
+}
+
+.ask-day > p {
+  text-align: center;
+}
+
+.see-all {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.5rem;
 }

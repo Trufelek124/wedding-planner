@@ -1,6 +1,7 @@
 package io.github.trufelek124.weddingplanner.planning.internal;
 
 import io.github.trufelek124.weddingplanner.planning.internal.EntryRepository.EntryRow;
+import io.github.trufelek124.weddingplanner.planning.internal.EntryService.Attention;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Kind;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Priority;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.PriorityMode;
@@ -12,6 +13,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -117,6 +119,32 @@ final class PlanningDtos {
                     row.status(), row.completedAt(), row.priorityMode(), view.priority(), view.priorityReason(),
                     row.assigneeIds(), row.parentId(), row.taskCount(), view.dependsOnIds(), view.conflictsWithIds(),
                     row.version(), row.createdAt(), row.updatedAt());
+        }
+    }
+
+    @Schema(name = "Home", description = "What the first page shows: how long until the wedding, and what to do next.")
+    record HomeResponse(
+            @Schema(description = "Today's date where the wedding takes place.") LocalDate today,
+            @Schema(description = "The wedding day; null while it is not fixed.", nullable = true) LocalDate weddingDate,
+            @Schema(
+                            description = "Whole days from today to the wedding day: 0 on the day, negative after it; "
+                                    + "null while the day is not fixed.",
+                            nullable = true)
+                    Long daysLeft,
+            @Schema(description = "Every unfinished entry whose date has passed, the longest overdue first.")
+                    List<EntryResponse> overdue,
+            @Schema(description = "The five unfinished entries to turn to next, by priority and then by date. "
+                            + "Overdue entries are not repeated here.")
+                    List<EntryResponse> next) {
+
+        static HomeResponse of(Attention attention) {
+            LocalDate weddingDate = attention.weddingDate();
+            return new HomeResponse(
+                    attention.today(),
+                    weddingDate,
+                    weddingDate == null ? null : ChronoUnit.DAYS.between(attention.today(), weddingDate),
+                    attention.overdue().stream().map(EntryResponse::of).toList(),
+                    attention.next().stream().map(EntryResponse::of).toList());
         }
     }
 

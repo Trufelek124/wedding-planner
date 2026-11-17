@@ -195,6 +195,49 @@ class EntryService {
         return shown(membership, id);
     }
 
+    // ------------------------------------------------------------ what needs attention
+
+    /** How many entries the home screen names as the ones to turn to next. */
+    static final int NEXT_ENTRIES = 5;
+
+    private static final Filter STILL_TO_DO =
+            new Filter(null, List.of(Status.NOT_STARTED, Status.IN_PROGRESS), null, null, null, null);
+
+    /**
+     * What the home screen shows of the plan.
+     *
+     * @param today the current date where the wedding takes place
+     * @param weddingDate null until the couple has fixed the day
+     * @param overdue everything unfinished whose date has passed, the longest overdue first
+     * @param next the entries to turn to after those: by priority, then by date
+     */
+    record Attention(LocalDate today, LocalDate weddingDate, List<EntryView> overdue, List<EntryView> next) {}
+
+    @Transactional
+    Attention attention(UserId user) {
+        Membership membership = weddings.membershipOf(user);
+        LocalDate today = LocalDate.now(clock.withZone(membership.timeZone()));
+        Schedule schedule = schedule(membership);
+        List<EntryView> stillToDo = entries.list(membership.weddingId(), STILL_TO_DO).stream()
+                .map(row -> view(row, membership, schedule))
+                .toList();
+        // Overdue goes by the date alone: a level set by hand does not hide that a date has passed.
+        List<EntryView> overdue = stillToDo.stream()
+                .filter(view -> isOverdue(view, today))
+                .sorted(order(Sort.DUE_DATE))
+                .toList();
+        List<EntryView> next = stillToDo.stream()
+                .filter(view -> !isOverdue(view, today))
+                .sorted(order(Sort.PRIORITY))
+                .limit(NEXT_ENTRIES)
+                .toList();
+        return new Attention(today, membership.weddingDate(), overdue, next);
+    }
+
+    private static boolean isOverdue(EntryView view, LocalDate today) {
+        return view.entry().dueDate() != null && view.entry().dueDate().isBefore(today);
+    }
+
     // ------------------------------------------------------------ how an entry is shown
 
     private EntryView shown(Membership membership, UUID id) {

@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import type { Schemas } from './api/client.ts'
 
 type Entry = Schemas['Entry']
+type Home = Schemas['Home']
 
 type Handler = Response | Error | ((request: Request) => Response | Promise<Response>)
 
@@ -129,8 +130,14 @@ export function entry(overrides: Partial<Entry> = {}): Entry {
  * A server with a signed-in owner, a wedding and the given entries. GET /api/entries answers
  * them narrowed down by kind, as the real one does; the other filters are for the test to check.
  */
+/** What the home page is told: the days left, and what is overdue and next. */
+export function home(overrides: Partial<Home> = {}): Response {
+  return Response.json({ today: '2026-11-17', weddingDate: '2027-06-19', daysLeft: 214, overdue: [], next: [], ...overrides })
+}
+
 export function planningServer(entries: Entry[], extra: Record<string, Handler> = {}): FakeServer {
   return fakeServer({
+    'GET /api/home': home(),
     'POST /api/auth/refresh': session(),
     'GET /api/wedding': weddingOfAnnaAndPiotr(),
     'GET /api/categories': Response.json([VENUE, FLOWERS]),

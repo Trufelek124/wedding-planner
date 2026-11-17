@@ -212,6 +212,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["home"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me": {
         parameters: {
             query?: never;
@@ -392,6 +408,28 @@ export interface components {
         GoogleSignInRequest: {
             /** @description The ID token Google handed to the client. */
             idToken: string;
+        };
+        /** @description What the first page shows: how long until the wedding, and what to do next. */
+        Home: {
+            /**
+             * Format: int64
+             * @description Whole days from today to the wedding day: 0 on the day, negative after it; null while the day is not fixed.
+             */
+            daysLeft: number | null;
+            /** @description The five unfinished entries to turn to next, by priority and then by date. Overdue entries are not repeated here. */
+            next: components["schemas"]["Entry"][];
+            /** @description Every unfinished entry whose date has passed, the longest overdue first. */
+            overdue: components["schemas"]["Entry"][];
+            /**
+             * Format: date
+             * @description Today's date where the wedding takes place.
+             */
+            today: string;
+            /**
+             * Format: date
+             * @description The wedding day; null while it is not fixed.
+             */
+            weddingDate: string | null;
         };
         /** @description The signed-in person. */
         Me: {
@@ -1152,6 +1190,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    home: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Home"];
                 };
             };
             /** @description Any error. */

@@ -453,6 +453,8 @@ describe('getting around', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Loading…')
     expect(screen.getAllByRole('main')).toHaveLength(1)
 
+    // The page asks just after it appears; the answer can only be given once it has asked.
+    await waitFor(() => expect(server.calls).toContain('GET /api/categories'))
     answer(problem(500, 'internal-error'))
     expect(await screen.findByRole('alert')).toHaveTextContent('The plan could not be loaded. Try again.')
     expect(screen.getAllByRole('main')).toHaveLength(1)

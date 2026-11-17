@@ -70,7 +70,9 @@ describe('the planner, from a signed-out visitor to the home page', () => {
     await userEvent.type(await screen.findByLabelText('Your partner’s name'), 'Piotr')
     await userEvent.click(screen.getByRole('button', { name: 'Save and continue' }))
 
-    expect(await screen.findByText('The day is not fixed yet.')).toBeInTheDocument()
+    // Home then asks for the day instead of counting down to one.
+    expect(await screen.findByText(/^The day is not fixed yet\./)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save the day' })).toBeInTheDocument()
     await expect(server.requests('POST /api/wedding')[0]?.json()).resolves.toMatchObject({ date: null })
   })
 
