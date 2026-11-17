@@ -36,8 +36,9 @@ A missing tool or a refused download host is an environment matter — ask the o
 | `scripts/ops/` | the script's `--dry-run` against the tracker | — |
 | `docs/` | `scripts/ops/ik_sync_docs.py --dry-run` | — |
 
-`scripts/gate.sh` will run every check of all three parts — it arrives with WP-TS-10. Until then run the checks of
-the part you touched and say in the task's closing comment exactly what was run.
+**The gate: `scripts/gate.sh`** runs every check of all three parts, stops at the first failure and exits non-zero.
+`scripts/gate.sh backend web` runs only the parts named. A change is ready only when the whole gate passes; the
+closing comment quotes its summary lines and its exit code.
 
 ## The tracker: infokuznia, project `WP`
 
@@ -69,7 +70,7 @@ it blocks nothing.
 3. **Claim it when you start:** `scripts/ops/ik.py claim_task '{"taskId":"<uuid>"}' --quiet`
    (the answer is a very large snapshot). A task whose dependency is unfinished cannot be claimed.
 4. **Commit subjects carry the public id:** `WP-TS-12: <what changed>`.
-5. **At the end, in this order:** the checks pass → update `docs/state.md` (once it exists) → commit → if
+5. **At the end, in this order:** the gate passes → update `docs/state.md` (once it exists) → commit → if
    anything under `docs/` changed, run the document sync and commit its state → push to the branch your session
    was given → `add_comment` → `complete_task`.
    `complete_task` takes `{"taskId","result"}`; `result` is one or two sentences with the commits — later tasks
