@@ -67,6 +67,12 @@ class StartupIntegrationTest extends PostgresIntegrationTest {
         assertThat(get("/actuator/beans").statusCode()).isEqualTo(404);
     }
 
+    @Test
+    void servesNoWebAppWhenNoDirectoryIsConfigured() throws Exception {
+        assertThat(get("/").statusCode()).isEqualTo(404);
+        assertThat(get("/plan").statusCode()).isEqualTo(404);
+    }
+
     private HttpResponse<String> get(String path) throws Exception {
         HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).GET().build();
         return HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());

@@ -11,7 +11,7 @@ guests, vendors or mail. Configuration that names the owner's systems lives in e
 | Path | What |
 |---|---|
 | `backend/` | Java 25, Spring Boot 4.1, Gradle 9, PostgreSQL 18, Flyway. Package `io.github.trufelek124.weddingplanner`; each direct sub-package is a module whose own package is its interface and whose sub-packages are internal |
-| `web/` | Vite 8, React 19, TypeScript 5.9; served by the backend — arrives with WP-TS-7 |
+| `web/` | Vite 8, React 19, TypeScript 5.9 (not newer: the lint tooling does not support TypeScript 7 yet). The backend serves the built files from the directory named by `APP_WEB_DIR` and answers the web app's pages with `index.html` |
 | `android/` | Kotlin, Jetpack Compose — arrives with WP-TS-8 |
 | `docs/specs/` | Specs, `S<nn>-<slug>.md`. A change the owner can notice that no spec covers gets a spec first |
 | `docs/decisions.md` | Numbered decisions, one `## D-nnn — title` section each — arrives with WP-TS-2 |
@@ -30,6 +30,7 @@ A missing tool or a refused download host is an environment matter — ask the o
 | Part | Check | Run it locally |
 |---|---|---|
 | `backend/` | `cd backend && ./gradlew test` | `./gradlew devDatabase` (PostgreSQL 18 on port 5433, prints the variables), then `./gradlew bootRun` with `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD` set |
+| `web/` | `cd web && npm ci && npm run lint && npm test && npm run build` | `npm run dev` (port 5173; forwards `/api` and `/actuator` to the backend on 8080) |
 | `scripts/ops/` | the script's `--dry-run` against the tracker | — |
 | `docs/` | `scripts/ops/ik_sync_docs.py --dry-run` | — |
 

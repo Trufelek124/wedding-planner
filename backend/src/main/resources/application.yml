@@ -13,6 +13,10 @@ spring:
       connection-timeout: 5000
       validation-timeout: 2000
 
+app:
+  # Directory with the built web app; empty means the backend serves the API only.
+  web-dir: ${APP_WEB_DIR:}
+
 server:
   port: 8080
   # The app runs behind a proxy that terminates TLS.
