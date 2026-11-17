@@ -57,12 +57,17 @@ class EntryService {
 
     // ------------------------------------------------------------ reading
 
+    /**
+     * @param levels only entries at one of these levels; null or empty means any. The level is the one shown today,
+     *     worked out or set by hand, so it cannot be asked of the database.
+     */
     @Transactional
-    List<EntryView> list(UserId user, Filter filter, Sort sort) {
+    List<EntryView> list(UserId user, Filter filter, List<Priority> levels, Sort sort) {
         Membership membership = weddings.membershipOf(user);
         Schedule schedule = schedule(membership);
         return entries.list(membership.weddingId(), filter).stream()
                 .map(row -> view(row, membership, schedule))
+                .filter(view -> levels == null || levels.isEmpty() || levels.contains(view.priority()))
                 .sorted(order(sort))
                 .toList();
     }

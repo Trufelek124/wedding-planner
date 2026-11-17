@@ -319,6 +319,103 @@ describe('adding and changing an entry', () => {
   })
 })
 
+describe('priorities', () => {
+  it('says the level of every entry in words, with the reason', async () => {
+    const deposit = entry({ title: 'Pay the deposit', dueDate: '2026-11-19', priority: 'CRITICAL', priorityReason: 'DUE_WITHIN_3_DAYS' })
+    const band = entry({ title: 'Book the band', priority: 'HIGH', priorityMode: 'MANUAL', priorityReason: 'SET_BY_HAND' })
+    const cake = entry({ title: 'Taste cakes', status: 'DONE', priorityReason: 'FINISHED' })
+    planningServer([deposit, band, cake])
+    open('/tasks?status=all')
+
+    const row = async (title: string) => within((await screen.findByRole('link', { name: title })).closest('li') as HTMLElement)
+    expect((await row('Pay the deposit')).getByText('Critical').parentElement).toHaveTextContent('Critical — due within 3 days')
+    expect((await row('Book the band')).getByText('High').parentElement).toHaveTextContent('High — set by hand')
+    expect((await row('Taste cakes')).getByText('Low').parentElement).toHaveTextContent('Low — needs no more attention')
+  })
+
+  it('words the reason for a plan item by its end, and shows only the level for a reason it does not know', async () => {
+    const venue = entry({ kind: 'PLAN_ITEM', title: 'Book the venue', dueDate: '2026-11-27', priority: 'HIGH', priorityReason: 'DUE_WITHIN_14_DAYS' })
+    const late = entry({ kind: 'PLAN_ITEM', title: 'Order the rings', startDate: '2026-11-01', dueDate: '2027-03-01', priority: 'NORMAL',
+      priorityReason: 'SHOULD_HAVE_STARTED' })
+    const newer = entry({ kind: 'PLAN_ITEM', title: 'From a newer server', priority: 'NORMAL', priorityReason: 'SOMETHING_NEW' as never })
+    planningServer([venue, late, newer])
+    open('/plan')
+
+    const row = async (title: string) => within((await screen.findByRole('link', { name: title })).closest('li') as HTMLElement)
+    expect((await row('Book the venue')).getByText('High').parentElement).toHaveTextContent('High — ends within 14 days')
+    expect((await row('Order the rings')).getByText('Normal').parentElement).toHaveTextContent('Normal — should have started')
+    expect((await row('From a newer server')).getByText('Normal').parentElement).toHaveTextContent(/^Normal$/)
+  })
+
+  it('narrows a list to one level, asks the server for it and keeps it in the address', async () => {
+    const server = planningServer([entry({ title: 'Anything' })])
+    open('/tasks')
+
+    await userEvent.selectOptions(await screen.findByLabelText('Priority'), 'High')
+
+    await waitFor(() => expect(window.location.search).toBe('?priority=HIGH'))
+    await waitFor(() =>
+      expect(server.requests('GET /api/entries').map(query).filter((params) => params.kind?.[0] === 'TASK').at(-1)).toEqual({
+        kind: ['TASK'], status: ['NOT_STARTED', 'IN_PROGRESS'], priority: ['HIGH'], sort: ['DUE_DATE'],
+      }),
+    )
+
+    await userEvent.selectOptions(screen.getByLabelText('Priority'), 'Any')
+    await waitFor(() => expect(window.location.search).toBe(''))
+  })
+
+  it('says on the form what the planner decides right now, and why', async () => {
+    const deposit = entry({ title: 'Pay the deposit', dueDate: '2026-11-19', priority: 'CRITICAL', priorityReason: 'DUE_WITHIN_3_DAYS' })
+    planningServer([deposit], { [`GET /api/entries/${deposit.id}`]: Response.json(deposit) })
+    open(`/entries/${deposit.id}`)
+
+    const planner = await screen.findByRole('radio', { name: 'Let the planner decide, from the dates' })
+    expect(planner).toBeChecked()
+    expect(planner).toHaveAccessibleDescription('Right now: Critical — due within 3 days.')
+
+    // Choosing a level by hand starts from the one the planner had, and the planner's line goes away.
+    await userEvent.click(screen.getByRole('radio', { name: 'Set it myself' }))
+    expect(screen.getByLabelText('Priority level')).toHaveValue('CRITICAL')
+    expect(screen.queryByText(/^Right now/)).not.toBeInTheDocument()
+  })
+
+  it('keeps a level set by hand when something else about the entry is saved', async () => {
+    const band = entry({ title: 'Book the band', priority: 'HIGH', priorityMode: 'MANUAL', priorityReason: 'SET_BY_HAND', version: 3 })
+    const server = planningServer([band], {
+      [`GET /api/entries/${band.id}`]: Response.json(band),
+      [`PUT /api/entries/${band.id}`]: Response.json({ ...band, version: 4 }),
+    })
+    open(`/entries/${band.id}`)
+
+    expect(await screen.findByRole('radio', { name: 'Set it myself' })).toBeChecked()
+    expect(screen.getByLabelText('Priority level')).toHaveValue('HIGH')
+    expect(screen.queryByText(/^Right now/)).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText(/^Notes/), 'Ask for the song list.')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(server.requests(`PUT /api/entries/${band.id}`)).toHaveLength(1))
+    await expect(server.requests(`PUT /api/entries/${band.id}`)[0]?.json()).resolves.toMatchObject({
+      priorityMode: 'MANUAL', priority: 'HIGH', notes: 'Ask for the song list.', version: 3,
+    })
+  })
+
+  it('hands an entry back to the planner without sending a level', async () => {
+    const band = entry({ title: 'Book the band', priority: 'HIGH', priorityMode: 'MANUAL', priorityReason: 'SET_BY_HAND', version: 3 })
+    const server = planningServer([band], {
+      [`GET /api/entries/${band.id}`]: Response.json(band),
+      [`PUT /api/entries/${band.id}`]: Response.json({ ...band, priorityMode: 'AUTO', priority: 'LOW', priorityReason: 'NO_DATE', version: 4 }),
+    })
+    open(`/entries/${band.id}`)
+
+    await userEvent.click(await screen.findByRole('radio', { name: 'Let the planner decide, from the dates' }))
+    expect(screen.queryByLabelText('Priority level')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(server.requests(`PUT /api/entries/${band.id}`)).toHaveLength(1))
+    await expect(server.requests(`PUT /api/entries/${band.id}`)[0]?.json()).resolves.toMatchObject({ priorityMode: 'AUTO', priority: null })
+  })
+})
+
 describe('getting around', () => {
   it('has a way to every page and marks the one that is open', async () => {
     planningServer([])

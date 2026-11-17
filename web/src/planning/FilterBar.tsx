@@ -1,8 +1,8 @@
 import { useId } from 'react'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
 import type { Filters } from './filters.ts'
-import { STATUS_LABEL } from './labels.ts'
-import type { Category, Status } from './planningApi.ts'
+import { PRIORITY_LABEL, STATUS_LABEL } from './labels.ts'
+import type { Category, Priority, Status } from './planningApi.ts'
 
 interface FilterBarProps {
   filters: Filters
@@ -11,6 +11,7 @@ interface FilterBarProps {
 }
 
 const STATUSES: Status[] = ['NOT_STARTED', 'IN_PROGRESS', 'DONE', 'DROPPED']
+const PRIORITIES: Priority[] = ['CRITICAL', 'HIGH', 'NORMAL', 'LOW']
 
 /** Narrows a list down and orders it. Every choice applies at once. */
 export function FilterBar({ filters, categories, onChange }: FilterBarProps) {
@@ -49,6 +50,17 @@ export function FilterBar({ filters, categories, onChange }: FilterBarProps) {
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="filter">
+        <label htmlFor={`${id}-priority`}>Priority</label>
+        <select id={`${id}-priority`} value={filters.priority} onChange={(event) => onChange('priority', event.target.value)}>
+          <option value="">Any</option>
+          {PRIORITIES.map((level) => (
+            <option key={level} value={level}>
+              {PRIORITY_LABEL[level]}
             </option>
           ))}
         </select>

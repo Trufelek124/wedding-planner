@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router'
-import type { EntryFilter, Status } from './planningApi.ts'
+import type { EntryFilter, Priority, Status } from './planningApi.ts'
 
 /** What the filter bar offers for "status"; "open" is what still needs doing. */
 export type StatusChoice = 'open' | 'all' | Status
@@ -9,10 +9,13 @@ export interface Filters {
   status: StatusChoice
   who: string
   category: string
+  /** One level, or '' for any. */
+  priority: Priority | ''
   sort: SortChoice
 }
 
 const STATUS_CHOICES: readonly string[] = ['open', 'all', 'NOT_STARTED', 'IN_PROGRESS', 'DONE', 'DROPPED']
+const PRIORITY_CHOICES: readonly string[] = ['CRITICAL', 'HIGH', 'NORMAL', 'LOW']
 const SORT_CHOICES: readonly string[] = ['date', 'priority', 'title']
 const SORT: Record<SortChoice, NonNullable<EntryFilter['sort']>> = { date: 'DUE_DATE', priority: 'PRIORITY', title: 'TITLE' }
 
@@ -21,10 +24,12 @@ export function useFilters(): { filters: Filters; set: (name: keyof Filters, val
   const [params, setParams] = useSearchParams()
   const status = params.get('status') ?? 'open'
   const sort = params.get('sort') ?? 'date'
+  const priority = params.get('priority') ?? ''
   const filters: Filters = {
     status: (STATUS_CHOICES.includes(status) ? status : 'open') as StatusChoice,
     who: params.get('who') ?? '',
     category: params.get('category') ?? '',
+    priority: (PRIORITY_CHOICES.includes(priority) ? priority : '') as Priority | '',
     sort: (SORT_CHOICES.includes(sort) ? sort : 'date') as SortChoice,
   }
 
@@ -39,6 +44,9 @@ export function useFilters(): { filters: Filters; set: (name: keyof Filters, val
   }
   if (filters.category !== '') {
     query.categoryId = filters.category
+  }
+  if (filters.priority !== '') {
+    query.priority = [filters.priority]
   }
 
   function set(name: keyof Filters, value: string) {

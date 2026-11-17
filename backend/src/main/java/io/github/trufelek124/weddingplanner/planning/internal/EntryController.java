@@ -8,6 +8,7 @@ import io.github.trufelek124.weddingplanner.planning.internal.PlanningDtos.Entry
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningDtos.NewEntry;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningDtos.StatusChange;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Kind;
+import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Priority;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Sort;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Status;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.TasksOnDelete;
@@ -50,9 +51,12 @@ class EntryController {
             @Parameter(description = "true: only entries with a due date; false: only those without.")
                     @RequestParam(required = false)
                     Boolean scheduled,
+            @Parameter(description = "Only entries at one of these levels, as shown today: worked out or set by hand.")
+                    @RequestParam(required = false)
+                    List<Priority> priority,
             @RequestParam(defaultValue = "DUE_DATE") Sort sort) {
         Filter filter = new Filter(kind, status, categoryId, assigneeId, parentId, scheduled);
-        return entries.list(user, filter, sort).stream().map(EntryResponse::of).toList();
+        return entries.list(user, filter, priority, sort).stream().map(EntryResponse::of).toList();
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)

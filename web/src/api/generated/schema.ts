@@ -870,6 +870,8 @@ export interface operations {
                 parentId?: string;
                 /** @description true: only entries with a due date; false: only those without. */
                 scheduled?: boolean;
+                /** @description Only entries at one of these levels, as shown today: worked out or set by hand. */
+                priority?: ("CRITICAL" | "HIGH" | "NORMAL" | "LOW")[];
                 sort?: "DUE_DATE" | "PRIORITY" | "TITLE" | "CREATED";
             };
             header?: never;

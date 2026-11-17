@@ -380,7 +380,7 @@ a.button {
 
 .filters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
@@ -556,6 +556,11 @@ a.button {
   align-items: center;
   gap: 0.5rem;
   min-height: 2rem;
+}
+
+/* Under a choice, in line with its words rather than its box. */
+.choice-hint {
+  margin-left: 1.75rem;
 }
 
 .choice input[type='checkbox'],

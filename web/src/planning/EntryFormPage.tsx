@@ -4,7 +4,7 @@ import { ApiError } from '../api/client.ts'
 import { Field } from '../ui/Field.tsx'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
-import { KIND_LABEL, PRIORITY_LABEL, STATUS_LABEL } from './labels.ts'
+import { KIND_LABEL, PRIORITY_LABEL, priorityInWords, STATUS_LABEL } from './labels.ts'
 import {
   changeEntry,
   convertEntry,
@@ -92,6 +92,9 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
   const [status, setStatus] = useState<Status>(existing?.status ?? 'NOT_STARTED')
   const [assigneeIds, setAssigneeIds] = useState<string[]>(existing?.assigneeIds ?? [])
   const [byHand, setByHand] = useState(existing?.priorityMode === 'MANUAL')
+  const decidedHint = useId()
+  // What the planner makes of the entry as it was saved; it works the level out again at every save.
+  const decidedNow = existing?.priorityMode === 'AUTO' && !byHand ? priorityInWords(existing) : null
   const [priority, setPriority] = useState<Priority>(existing?.priority ?? 'NORMAL')
   const [parentId, setParentId] = useState(existing?.parentId ?? parentAsked ?? '')
 
@@ -280,9 +283,20 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
         <fieldset className="choice">
           <legend>Priority</legend>
           <label>
-            <input type="radio" name="priorityMode" checked={!byHand} onChange={() => setByHand(false)} />
+            <input
+              type="radio"
+              name="priorityMode"
+              checked={!byHand}
+              aria-describedby={decidedNow === null ? undefined : decidedHint}
+              onChange={() => setByHand(false)}
+            />
             Let the planner decide, from the dates
           </label>
+          {decidedNow !== null && (
+            <p className="hint choice-hint" id={decidedHint}>
+              Right now: {decidedNow}.
+            </p>
+          )}
           <label>
             <input type="radio" name="priorityMode" checked={byHand} onChange={() => setByHand(true)} />
             Set it myself

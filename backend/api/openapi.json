@@ -963,6 +963,18 @@
             "type" : "boolean"
           }
         }, {
+          "description" : "Only entries at one of these levels, as shown today: worked out or set by hand.",
+          "in" : "query",
+          "name" : "priority",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "CRITICAL", "HIGH", "NORMAL", "LOW" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
           "in" : "query",
           "name" : "sort",
           "required" : false,

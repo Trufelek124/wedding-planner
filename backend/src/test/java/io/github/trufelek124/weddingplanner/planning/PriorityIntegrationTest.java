@@ -144,6 +144,39 @@ class PriorityIntegrationTest extends PostgresIntegrationTest {
         assertThat(byPriority).containsExactly("overdue", "chosen high", "next month", "far away");
     }
 
+    @Test
+    void aListCanBeNarrowedToLevelsWhetherWorkedOutOrSetByHand() throws Exception {
+        created(task("far away", today.plusDays(200), "AUTO", null));
+        created(task("overdue", today.minusDays(2), "AUTO", null));
+        created(task("chosen high", today.plusDays(200), "MANUAL", "HIGH"));
+        created(task("next week", today.plusDays(9), "AUTO", null));
+        created(task("next month", today.plusDays(30), "AUTO", null));
+
+        assertThat(titles("priority=HIGH&sort=TITLE")).containsExactly("chosen high", "next week");
+        assertThat(titles("priority=CRITICAL&priority=LOW&sort=PRIORITY")).containsExactly("overdue", "far away");
+        assertThat(titles("sort=TITLE")).hasSize(5);
+
+        // The level asked for is the one of today: a week on, "next week" has become critical.
+        TestClock.advance(Duration.ofDays(7));
+        anna = TestSignIn.signIn(http, ANNA).accessToken();
+        assertThat(titles("priority=HIGH&sort=TITLE")).containsExactly("chosen high");
+        assertThat(titles("priority=CRITICAL&sort=TITLE")).containsExactly("next week", "overdue");
+    }
+
+    @Test
+    void aLevelThatDoesNotExistIsRefused() throws Exception {
+        HttpResponse<String> response = http.getAs(anna, "/api/entries?priority=URGENT");
+
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
+        assertThat((String) TestHttp.json(response).get("type")).endsWith(":bad-request");
+    }
+
+    private List<String> titles(String query) throws Exception {
+        HttpResponse<String> response = http.getAs(anna, "/api/entries?" + query);
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+        return TestHttp.jsonList(response).stream().map(entry -> (String) entry.get("title")).toList();
+    }
+
     private static Map<String, Object> task(String title, LocalDate dueDate, String mode, String priority) {
         Map<String, Object> entry = new HashMap<>();
         entry.put("kind", "TASK");
