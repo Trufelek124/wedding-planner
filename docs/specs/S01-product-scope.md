@@ -30,11 +30,13 @@ A private wedding planner for the two of you: a web app, a native Android app an
 | E-mail findings | Added automatically when the AI is confident; otherwise queued for review |
 | E-mail history | Last 3 months when an inbox is connected, then continuously |
 | In the first version | Plan + Gantt, tasks, priorities, inspirations with Android share, e-mail import, budget and payments, vendors, guest list |
-| Tracker | A project of its own in infokuznia, code `WP`, name `WeddingPlanner`; the LG flow may be changed where it helps |
+| Tracker | A project of its own in infokuznia, code `WP`; the LG flow may be changed where it helps |
 | Starter checklist | Yes: one wedding with Polish and Ukrainian formalities combined; anything on it can be deleted |
 | First deployment | Right after the plan and the Gantt chart work; the owner configures the domain first |
 | E-mail triage | Sees every message |
 | Phone notifications | Not in the first version |
+| Repository | Stays public: no host names, secrets or personal data in it. The tracker's address and the analyst's id are variables of the cloud environment |
+| Story acceptance | The analyst of the InfoKuźnia project's stories is the analyst on this project's stories |
 
 ## 3. Concepts
 
@@ -177,7 +179,7 @@ public HTTPS name, backed up nightly from the host. Two points are decided when 
 The owner creates the project; I create and maintain everything inside it. (The tracker's agent tools cannot create
 a project, and its REST interface is not reachable with the agent token.)
 
-- Project code `WP`, name `WeddingPlanner`.
+- Project code `WP`. Every story has an analyst, who gives it its final acceptance (§2).
 - **Epic** = a product area (§11). **Story** = a spec or a feature you can see, with acceptance criteria.
   **Task** = one unit of work on one branch.
 - **Task first.** A task exists before work on it starts. I claim it when I start, write `WP-TS-n: …` in the commit
@@ -210,8 +212,8 @@ E-mail import comes last because it writes into every other part.
 
 | When | What |
 |---|---|
-| Now | The infokuznia project (`WP`), and for my token's actor: the product-owner role (to create epics, stories and tasks) and the roles the tasks will ask for (architect, developer, tester, documentation, UX designer, analyst) |
-| Now | A decision on the repository's visibility: it is public, the LG repositories are private. No secrets or personal data will be committed either way |
+| Done 2026-11-17 | The infokuznia project `WP`; push access to the repository; the decision that the repository stays public |
+| Open | For the actor my token acts as: the analyst, documentation and tester roles. It holds developer, architect and product owner; tasks that ask for the other three are refused |
 | Epic 1 | A Google OAuth client for sign-in (web and Android). I can build and test without it through a development login |
 | Epic 3 | The domain configured, and the server-side entries |
 | Epic 7 | Gmail API switched on for that Google project; an Anthropic API key on the server |

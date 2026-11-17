@@ -1,0 +1,22 @@
+{
+ "documents": [
+  {
+   "path": "docs/specs/S01-product-scope.md",
+   "type": "REQUIREMENTS",
+   "link": "EP1-S1"
+  }
+ ],
+ "decisions": {
+  "path": "docs/decisions.md",
+  "type": "ADR"
+ },
+ "notMirrored": [],
+ "state": {
+  "docs/specs/S01-product-scope.md": {
+   "publicId": "WP-DOC-1",
+   "id": "3b912d99-f4d4-44ea-95e7-01b011c12d10",
+   "sha256": "5ca2e274c9d607ad02e2b770d0f5c94b3c005a3a268bedeb1eaa9fdf2e78f8ca",
+   "commit": "cff7ed9"
+  }
+ }
+}
