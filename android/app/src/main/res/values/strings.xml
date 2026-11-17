@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Wedding planner</string>
+    <string name="home_intro">This is the first, empty version. It only shows which server it will talk to.</string>
+    <string name="home_server">Server: %1$s</string>
+</resources>

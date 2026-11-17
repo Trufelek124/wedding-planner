@@ -12,7 +12,7 @@ guests, vendors or mail. Configuration that names the owner's systems lives in e
 |---|---|
 | `backend/` | Java 25, Spring Boot 4.1, Gradle 9, PostgreSQL 18, Flyway. Package `io.github.trufelek124.weddingplanner`; each direct sub-package is a module whose own package is its interface and whose sub-packages are internal |
 | `web/` | Vite 8, React 19, TypeScript 5.9 (not newer: the lint tooling does not support TypeScript 7 yet). The backend serves the built files from the directory named by `APP_WEB_DIR` and answers the web app's pages with `index.html` |
-| `android/` | Kotlin, Jetpack Compose — arrives with WP-TS-8 |
+| `android/` | Kotlin 2.4 and Jetpack Compose on the Android Gradle plugin 9.5 (its built-in Kotlin: no `kotlin-android` plugin). Application id `io.github.trufelek124.weddingplanner`, minSdk 28. Screens are tested on the JVM with Robolectric, which renders on Android 36 until it supports 37 |
 | `docs/specs/` | Specs, `S<nn>-<slug>.md`. A change the owner can notice that no spec covers gets a spec first |
 | `docs/decisions.md` | Numbered decisions, one `## D-nnn — title` section each — arrives with WP-TS-2 |
 | `docs/state.md` | One screen on where the project stands — arrives with WP-TS-2 |
@@ -23,7 +23,8 @@ The interface is in English. Tests never call the real AI service or the real Gm
 
 ## Tools and commands
 
-Needed: JDK 25 (the cloud environment's setup installs it; the Gradle wrapper finds it by itself), Node 22.
+Needed: JDK 25 (the Gradle wrapper finds it by itself), Node 22, and the Android SDK with `ANDROID_HOME` pointing
+at it (platform `android-37.0`, build tools `36.0.0`). The cloud environment's setup installs all of these.
 Docker is **not** needed: the backend's tests start their own PostgreSQL 18.
 A missing tool or a refused download host is an environment matter — ask the owner; never lower a version to get by.
 
@@ -31,6 +32,7 @@ A missing tool or a refused download host is an environment matter — ask the o
 |---|---|---|
 | `backend/` | `cd backend && ./gradlew test` | `./gradlew devDatabase` (PostgreSQL 18 on port 5433, prints the variables), then `./gradlew bootRun` with `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD` set |
 | `web/` | `cd web && npm ci && npm run lint && npm test && npm run build` | `npm run dev` (port 5173; forwards `/api` and `/actuator` to the backend on 8080) |
+| `android/` | `cd android && ./gradlew lintDebug testDebugUnitTest assembleDebug` | No emulator in a cloud session: install `app/build/outputs/apk/debug/app-debug.apk` on a phone. The server address is a build setting: `-PserverUrl=https://…` |
 | `scripts/ops/` | the script's `--dry-run` against the tracker | — |
 | `docs/` | `scripts/ops/ik_sync_docs.py --dry-run` | — |
 
