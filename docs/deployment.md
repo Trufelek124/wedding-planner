@@ -105,8 +105,15 @@ No time zone setting is needed: every date is read in the wedding's own time zon
 
 ## How this was checked
 
-On 2026-11-17 the image was built from the `Dockerfile` and run with `deploy/compose.yaml` and PostgreSQL 18:
-healthy about ten seconds after start; running as 10001 on a read-only file system with all capabilities dropped;
-unhealthy after the database was stopped and healthy again after it came back; data still there after everything
-was taken down and started again; the `Secure` cookie present with `X-Forwarded-Proto: https` and absent without.
-The build ran on an x86-64 machine. An image for `linux/arm64` has not been built or run yet (WP-TS-28).
+On 2026-11-17, in the session that wrote it:
+
+- The image was built from the `Dockerfile` and run with `deploy/compose.yaml` and PostgreSQL 18: healthy about
+  ten seconds after start; running as 10001 on a read-only file system with all capabilities dropped; unhealthy
+  after the database was stopped and healthy again after it came back; data still there after everything was
+  taken down and started again; the `Secure` cookie present with `X-Forwarded-Proto: https` and absent without.
+- `scripts/publish-image.sh` was run from a clean clone against a registry started for the purpose. It published
+  the commit under both tags, and the image pulled back from that registry ran healthy: once built for x86-64,
+  and once for `linux/arm64`, the server's kind, run under emulation. Each of its refusals was tried: another
+  branch, uncommitted changes, a commit the repository does not have, a name with a tag, Docker not running.
+
+Not done yet: a run on the owner's Mac that pushes to the real registry, and the server pulling from it.
