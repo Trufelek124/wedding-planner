@@ -1,0 +1,377 @@
+{
+ "projectCode": "WP",
+ "items": {
+  "EP1": {
+   "type": "epic",
+   "publicId": "WP-EP-1",
+   "id": "d10542fb-e68e-4dc2-bffd-ad21a0c2a67f",
+   "title": "Foundation: repository, gate, sign-in and tracker tooling"
+  },
+  "EP2": {
+   "type": "epic",
+   "publicId": "WP-EP-2",
+   "id": "0e881232-d199-4e12-a26a-00867afdfc5e",
+   "title": "Plan, tasks and priorities"
+  },
+  "EP3": {
+   "type": "epic",
+   "publicId": "WP-EP-3",
+   "id": "1ca5b8ec-8691-46a7-a963-3ac26285b090",
+   "title": "First deployment"
+  },
+  "EP4": {
+   "type": "epic",
+   "publicId": "WP-EP-4",
+   "id": "2ace44df-f5d8-44cf-a49f-67d706b5d4bf",
+   "title": "Android app"
+  },
+  "EP5": {
+   "type": "epic",
+   "publicId": "WP-EP-5",
+   "id": "e365bb9e-18e3-4133-a1fe-1121183e43f1",
+   "title": "Inspirations"
+  },
+  "EP6": {
+   "type": "epic",
+   "publicId": "WP-EP-6",
+   "id": "39fa5d71-43c8-4c9c-8505-4c85c195039a",
+   "title": "Budget, vendors and guests"
+  },
+  "EP7": {
+   "type": "epic",
+   "publicId": "WP-EP-7",
+   "id": "31ec7e0d-1a1d-4b9c-9f02-0025eb83159a",
+   "title": "E-mail import"
+  },
+  "EP1-S1": {
+   "type": "story",
+   "publicId": "WP-US-1",
+   "id": "6d58f6ca-2982-4165-92b9-d63f0b721258",
+   "title": "Scope and working agreement (S01)"
+  },
+  "EP1-S2": {
+   "type": "story",
+   "publicId": "WP-US-2",
+   "id": "b09970ae-1202-4508-bdb6-53e3c50a2701",
+   "title": "Infokuznia tooling and document mirror"
+  },
+  "EP1-S3": {
+   "type": "story",
+   "publicId": "WP-US-3",
+   "id": "4da5b9c3-e787-4b80-942c-e35dcf1db5b5",
+   "title": "Repository skeleton and one gate"
+  },
+  "EP1-S4": {
+   "type": "story",
+   "publicId": "WP-US-4",
+   "id": "d787dbef-90d0-402a-b31b-81300e1fa014",
+   "title": "Sign-in and wedding setup"
+  },
+  "EP2-S1": {
+   "type": "story",
+   "publicId": "WP-US-5",
+   "id": "ea2e32ff-6f9d-49c5-a22a-4ef75948f311",
+   "title": "Plan items and tasks"
+  },
+  "EP2-S2": {
+   "type": "story",
+   "publicId": "WP-US-6",
+   "id": "3deb9524-e5b4-4f33-b99c-3105849347f6",
+   "title": "Priorities: automatic rule and manual override"
+  },
+  "EP2-S3": {
+   "type": "story",
+   "publicId": "WP-US-7",
+   "id": "d7ddde00-87bf-4e59-aa41-8ca5291df7ce",
+   "title": "Dependencies and the Gantt chart"
+  },
+  "EP2-S4": {
+   "type": "story",
+   "publicId": "WP-US-8",
+   "id": "913910ae-681e-425a-b31e-2c38e045bc74",
+   "title": "Starter checklist for a Polish-Ukrainian wedding"
+  },
+  "EP2-S5": {
+   "type": "story",
+   "publicId": "WP-US-9",
+   "id": "bee16542-af7b-4ded-b034-715b72f84f8f",
+   "title": "Home screen"
+  },
+  "EP3-S1": {
+   "type": "story",
+   "publicId": "WP-US-10",
+   "id": "0eca113c-9ca5-4100-a9d8-d0402a31b129",
+   "title": "Container image with the backend and the web app"
+  },
+  "EP3-S2": {
+   "type": "story",
+   "publicId": "WP-US-11",
+   "id": "c0cd12ec-01f4-4b89-a1c1-0e18a44a5c18",
+   "title": "Running on the home server"
+  },
+  "EP4-S1": {
+   "type": "story",
+   "publicId": "WP-US-12",
+   "id": "35c3b58d-f08e-4357-80ba-2dca52f40ac7",
+   "title": "Android: sign-in, home and lists"
+  },
+  "EP4-S2": {
+   "type": "story",
+   "publicId": "WP-US-13",
+   "id": "e638a5e0-7501-4345-b5b2-59dcc74ac1e7",
+   "title": "Android: quick actions"
+  },
+  "EP4-S3": {
+   "type": "story",
+   "publicId": "WP-US-14",
+   "id": "2015ba47-fdf6-4115-b719-6e14088431ba",
+   "title": "Android: release build for the second phone"
+  },
+  "EP5-S1": {
+   "type": "story",
+   "publicId": "WP-US-15",
+   "id": "1af05586-c74b-46cc-af78-4e16ff439798",
+   "title": "Inspirations: storage, previews and the web board"
+  },
+  "EP5-S2": {
+   "type": "story",
+   "publicId": "WP-US-16",
+   "id": "88d79858-545b-4bba-9797-e53630fe7292",
+   "title": "Android share target"
+  },
+  "EP6-S1": {
+   "type": "story",
+   "publicId": "WP-US-17",
+   "id": "3123d414-9d3b-4c07-a154-d086b602619e",
+   "title": "Payments and budget"
+  },
+  "EP6-S2": {
+   "type": "story",
+   "publicId": "WP-US-18",
+   "id": "4072229c-131a-4ea9-85f2-b29ae0b204a2",
+   "title": "Vendors"
+  },
+  "EP6-S3": {
+   "type": "story",
+   "publicId": "WP-US-19",
+   "id": "94b4709e-d4be-43c6-b921-c07abf8630fd",
+   "title": "Guest list"
+  },
+  "EP7-S1": {
+   "type": "story",
+   "publicId": "WP-US-20",
+   "id": "81bb15f2-6820-45f6-98d8-9052795ff145",
+   "title": "Gmail connection and sync"
+  },
+  "EP7-S2": {
+   "type": "story",
+   "publicId": "WP-US-21",
+   "id": "4ca68827-760f-4123-b563-cca2244db861",
+   "title": "Triage and extraction"
+  },
+  "EP7-S3": {
+   "type": "story",
+   "publicId": "WP-US-22",
+   "id": "9650be91-43ce-42e8-a248-ee55c7e8cc6b",
+   "title": "Suggestions inbox and automatic adding"
+  },
+  "EP1-S1-T1": {
+   "type": "task",
+   "publicId": "WP-TS-1",
+   "id": "a57e48a5-9c71-4883-a1cc-407cee798acc",
+   "title": "S01: product scope and working agreement"
+  },
+  "EP1-S1-T2": {
+   "type": "task",
+   "publicId": "WP-TS-2",
+   "id": "991b9d93-1562-412c-a049-e1d3c5b898a5",
+   "title": "Decisions log and state of play"
+  },
+  "EP1-S2-T1": {
+   "type": "task",
+   "publicId": "WP-TS-3",
+   "id": "25cdc204-ba62-445a-b2d9-f2441b770dd7",
+   "title": "Tracker client and backlog import (scripts/ops/ik.py, ik_seed.py)"
+  },
+  "EP1-S2-T2": {
+   "type": "task",
+   "publicId": "WP-TS-4",
+   "id": "2fa87256-2748-40fc-9f70-9c6950ddab0b",
+   "title": "Document mirror (scripts/ops/ik_sync_docs.py)"
+  },
+  "EP1-S2-T3": {
+   "type": "task",
+   "publicId": "WP-TS-5",
+   "id": "3fa08a51-8387-4636-b14b-ce9d189274ad",
+   "title": "CLAUDE.md: working rules for agents in this repository"
+  },
+  "EP1-S3-T1": {
+   "type": "task",
+   "publicId": "WP-TS-6",
+   "id": "d0297cfe-13e2-44f1-a32b-12133aed3dad",
+   "title": "Backend skeleton: Spring Boot, PostgreSQL, Flyway, health, module boundaries"
+  },
+  "EP1-S3-T2": {
+   "type": "task",
+   "publicId": "WP-TS-7",
+   "id": "b8554204-3bd3-4d47-9a1d-6b7bd2e2a2d9",
+   "title": "Web skeleton: Vite, React, TypeScript, lint and tests, served by the backend"
+  },
+  "EP1-S3-T3": {
+   "type": "task",
+   "publicId": "WP-TS-8",
+   "id": "33b83d8c-219a-4f05-8c02-927ce2f8ce18",
+   "title": "Android skeleton: Kotlin, Compose, debug build and unit tests"
+  },
+  "EP1-S3-T4": {
+   "type": "task",
+   "publicId": "WP-TS-9",
+   "id": "86a6351f-21bf-42ff-8137-ae31c65b9190",
+   "title": "API contract: generated openapi.json, drift test, generated client types"
+  },
+  "EP1-S3-T5": {
+   "type": "task",
+   "publicId": "WP-TS-10",
+   "id": "36e53520-6cac-4ee9-ac84-3caa18d1119c",
+   "title": "One gate: scripts/gate.sh"
+  },
+  "EP1-S4-T1": {
+   "type": "task",
+   "publicId": "WP-TS-11",
+   "id": "2a876613-1956-4e29-bf93-45c76ce2325b",
+   "title": "Backend: Google sign-in, own tokens, allow-list, development login"
+  },
+  "EP1-S4-T2": {
+   "type": "task",
+   "publicId": "WP-TS-12",
+   "id": "a2146e0d-aaf9-48a4-aece-e552844c3010",
+   "title": "Backend: the wedding and its two members"
+  },
+  "EP1-S4-T3": {
+   "type": "task",
+   "publicId": "WP-TS-13",
+   "id": "28d06c6b-816c-4a09-947d-0190637c8623",
+   "title": "Web: sign-in and wedding setup"
+  },
+  "EP1-S4-T4": {
+   "type": "task",
+   "publicId": "WP-TS-14",
+   "id": "4b809c80-e6fc-47f8-a355-394e60305aae",
+   "title": "Owner: create the Google OAuth web client and pass on its client id"
+  },
+  "EP2-S1-T1": {
+   "type": "task",
+   "publicId": "WP-TS-15",
+   "id": "15dcda74-ff64-48cd-a446-30c5050db01b",
+   "title": "Backend: entries (plan items and tasks) with their API"
+  },
+  "EP2-S1-T2": {
+   "type": "task",
+   "publicId": "WP-TS-16",
+   "id": "d9db05ca-d6d0-4e17-9f49-85c3d0ad0ae8",
+   "title": "Web: Plan list and Task list"
+  },
+  "EP2-S2-T1": {
+   "type": "task",
+   "publicId": "WP-TS-17",
+   "id": "3c2ed8f4-c5a9-478c-a740-fe7cf9d216d7",
+   "title": "Backend: priority rule, reasons and daily recalculation"
+  },
+  "EP2-S2-T2": {
+   "type": "task",
+   "publicId": "WP-TS-18",
+   "id": "675beb76-3605-4e5e-8f06-db81dbe91e68",
+   "title": "Web: priority display, reason and manual control"
+  },
+  "EP2-S3-T1": {
+   "type": "task",
+   "publicId": "WP-TS-19",
+   "id": "ccf938db-ed55-468d-bee6-b1027d9c217d",
+   "title": "Backend: dependencies between plan items, cycle check, schedule conflicts"
+  },
+  "EP2-S3-T2": {
+   "type": "task",
+   "publicId": "WP-TS-20",
+   "id": "0c1975b7-d48c-4110-9ee9-00a242487d0f",
+   "title": "Decision: build the Gantt chart or use a library"
+  },
+  "EP2-S3-T3": {
+   "type": "task",
+   "publicId": "WP-TS-21",
+   "id": "a371aa9c-04a1-4542-8048-35ed1ca69404",
+   "title": "Web: the Gantt chart"
+  },
+  "EP2-S4-T1": {
+   "type": "task",
+   "publicId": "WP-TS-22",
+   "id": "5293cc85-c252-49e6-b0a4-4d9a303b5a3d",
+   "title": "Research: formalities and usual steps for a Polish-Ukrainian wedding, with sources"
+  },
+  "EP2-S4-T2": {
+   "type": "task",
+   "publicId": "WP-TS-23",
+   "id": "7898e389-ccd2-4a0f-865f-4faf039077fc",
+   "title": "Backend: checklist content, applying it at setup, deleting by entry or group"
+  },
+  "EP2-S4-T3": {
+   "type": "task",
+   "publicId": "WP-TS-24",
+   "id": "418ab64a-96ba-4d7e-8e45-08222541b31f",
+   "title": "Web: checklist step in the setup, group delete with undo"
+  },
+  "EP2-S5-T1": {
+   "type": "task",
+   "publicId": "WP-TS-25",
+   "id": "d7e3608a-2692-4f51-bc7d-281566d5f828",
+   "title": "Home screen: countdown, next entries, overdue"
+  },
+  "EP3-S1-T1": {
+   "type": "task",
+   "publicId": "WP-TS-26",
+   "id": "d640604e-1389-473e-b197-35a09aef1068",
+   "title": "Dockerfile and container configuration"
+  },
+  "EP3-S1-T2": {
+   "type": "task",
+   "publicId": "WP-TS-27",
+   "id": "305f7918-ea35-4ba7-960d-325e775e66e9",
+   "title": "Decision: how the image is published"
+  },
+  "EP3-S1-T3": {
+   "type": "task",
+   "publicId": "WP-TS-28",
+   "id": "6f9d355d-27ad-43ae-b31d-acfc57a5f5e5",
+   "title": "Image publishing automated"
+  },
+  "EP3-S2-T1": {
+   "type": "task",
+   "publicId": "WP-TS-29",
+   "id": "c9d094d2-3507-4627-b2a9-0771a9d4289c",
+   "title": "Owner: configure the planner's domain"
+  },
+  "EP3-S2-T2": {
+   "type": "task",
+   "publicId": "WP-TS-30",
+   "id": "64d39056-f977-4c00-b3ba-b8d299664e6a",
+   "title": "Owner or server session: the planner's entry and environment file on the home server"
+  },
+  "EP3-S2-T3": {
+   "type": "task",
+   "publicId": "WP-TS-31",
+   "id": "a9fd7b13-4c3a-4619-8921-134be464cc6e",
+   "title": "Owner: add the planner's address to the Google OAuth client"
+  },
+  "EP3-S2-T4": {
+   "type": "task",
+   "publicId": "WP-TS-32",
+   "id": "ed164b7f-b4fc-45f5-b142-f3025119e2e3",
+   "title": "Runbook: update, rollback, logs, backup, restore"
+  },
+  "EP3-S2-T5": {
+   "type": "task",
+   "publicId": "WP-TS-33",
+   "id": "c13c27ba-f78f-49e3-a439-1801129d9ca0",
+   "title": "First deployment verified from outside"
+  }
+ }
+}

@@ -13,8 +13,13 @@ import can be rerun: an entry whose key is already in that file is skipped.
 
 --dry-run checks every entry against the tracker's own tool schemas and the
 references between entries, and creates nothing.
+
+IK_ANALYST_ID  the actor who gives stories their final acceptance. The tracker
+               refuses a story without an analyst unless the token's own actor
+               is one; a story's own "analystId" wins over this.
 """
 import json
+import os
 import pathlib
 import re
 import sys
@@ -86,6 +91,9 @@ def arguments_for(kind, entry, project_code, ids):
     elif kind == "stories":
         args["projectCode"] = project_code
         args["epicId"] = ids[entry["epic"]]["id"]
+        analyst = os.environ.get("IK_ANALYST_ID", "").strip()
+        if analyst and "analystId" not in args:
+            args["analystId"] = analyst
     else:
         args["storyId"] = ids[entry["story"]]["id"]
         if entry.get("dependsOn"):
