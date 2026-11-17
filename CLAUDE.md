@@ -52,6 +52,20 @@ closing comment quotes its summary lines and its exit code.
   `NoPersonalDataInLogsIntegrationTest` checks this with debug logging on.
 - In tests, `TestSignIn.signIn(http, PostgresIntegrationTest.ANNA)` signs an owner in through the real endpoint.
 
+## The web app
+
+- `App.tsx` decides the screen from two states: the session (`src/auth/session.ts`) and the wedding
+  (`src/wedding/useWedding.ts`). A signed-out visitor sees the sign-in whatever the address.
+- The access token lives in memory only, never in storage. The refresh token is a cookie scripts cannot read.
+  `api` (in `src/api/client.ts`) sends the token and renews it once on a 401; `publicApi` is for the sign-in
+  endpoints themselves.
+- Every colour, size and radius comes from the tokens at the top of `src/index.css`; light and dark both work.
+- What a person reads is written for that person. This includes the server's validation messages
+  (`message = "Enter your partner's name."`), which the forms show next to the field.
+- Tests replace the server with `fakeServer` from `src/test-server.ts` and drive the screens as a person would.
+- Google's button is drawn by Google's own library (`src/auth/GoogleButton.tsx`); the page's content security
+  policy in `SecurityConfiguration` allows exactly that library. It has not yet been tried against Google.
+
 ## Changing the API
 
 `backend/api/openapi.json` is the contract. It is generated from the backend's code and committed; both clients

@@ -109,6 +109,26 @@ class WebAppIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void thePageMayLoadOnlyItselfAndGooglesSignInButton() throws Exception {
+        HttpResponse<String> response = get("/");
+
+        String policy = response.headers().firstValue("Content-Security-Policy").orElse("");
+        assertThat(policy)
+                .contains("default-src 'self'")
+                .contains("script-src 'self' https://accounts.google.com/gsi/client;")
+                .contains("object-src 'none'")
+                .contains("frame-ancestors 'none'");
+        assertThat(policy.substring(policy.indexOf("script-src"), policy.indexOf("frame-src")))
+                .as("scripts are never allowed inline or from anywhere else")
+                .doesNotContain("unsafe")
+                .doesNotContain("*");
+        assertThat(response.headers().firstValue("X-Content-Type-Options")).hasValue("nosniff");
+        assertThat(response.headers().firstValue("X-Frame-Options")).hasValue("DENY");
+        assertThat(response.headers().firstValue("Cross-Origin-Opener-Policy")).hasValue("same-origin-allow-popups");
+        assertThat(response.headers().firstValue("Referrer-Policy")).hasValue("strict-origin-when-cross-origin");
+    }
+
+    @Test
     void healthStillAnswers() throws Exception {
         assertThat(get("/actuator/health").statusCode()).isEqualTo(200);
     }

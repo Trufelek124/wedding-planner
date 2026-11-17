@@ -10,16 +10,30 @@ import java.util.UUID;
 /** What the wedding endpoints take and give. Records that hold a name hide it in toString(). */
 final class WeddingDtos {
 
+    // These messages are shown to people next to the field, so they say what to do.
+    private static final String CHOOSE_CURRENCY = "Choose a currency.";
+    private static final String CHOOSE_TIME_ZONE = "Choose a time zone.";
+    private static final String TOO_LONG = "Use at most 80 characters.";
+
     private WeddingDtos() {}
 
     @Schema(name = "WeddingSetup", description = "The first owner's answers at the setup.")
     record SetUpRequest(
             @Schema(description = "The wedding day; null while it is not fixed.", nullable = true) LocalDate date,
-            @Schema(description = "ISO 4217 code of the currency all amounts are in, for example PLN.") @NotBlank String currency,
-            @Schema(description = "IANA time zone the wedding's dates are read in, for example Europe/Warsaw.") @NotBlank
+            @Schema(description = "ISO 4217 code of the currency all amounts are in, for example PLN.")
+                    @NotBlank(message = CHOOSE_CURRENCY)
+                    String currency,
+            @Schema(description = "IANA time zone the wedding's dates are read in, for example Europe/Warsaw.")
+                    @NotBlank(message = CHOOSE_TIME_ZONE)
                     String timeZone,
-            @Schema(description = "What the planner calls the person setting it up.") @NotBlank @Size(max = 80) String yourName,
-            @Schema(description = "What the planner calls the other person.") @NotBlank @Size(max = 80) String partnerName) {
+            @Schema(description = "What the planner calls the person setting it up.")
+                    @NotBlank(message = "Enter your name.")
+                    @Size(max = 80, message = TOO_LONG)
+                    String yourName,
+            @Schema(description = "What the planner calls the other person.")
+                    @NotBlank(message = "Enter your partner's name.")
+                    @Size(max = 80, message = TOO_LONG)
+                    String partnerName) {
 
         @Override
         public String toString() {
@@ -30,11 +44,12 @@ final class WeddingDtos {
     @Schema(name = "WeddingDetails")
     record DetailsRequest(
             @Schema(description = "The wedding day; null while it is not fixed.", nullable = true) LocalDate date,
-            @NotBlank String currency,
-            @NotBlank String timeZone) {}
+            @NotBlank(message = CHOOSE_CURRENCY) String currency,
+            @NotBlank(message = CHOOSE_TIME_ZONE) String timeZone) {}
 
     @Schema(name = "MemberName")
-    record RenameRequest(@NotBlank @Size(max = 80) String displayName) {
+    record RenameRequest(
+            @NotBlank(message = "Enter a name.") @Size(max = 80, message = TOO_LONG) String displayName) {
 
         @Override
         public String toString() {

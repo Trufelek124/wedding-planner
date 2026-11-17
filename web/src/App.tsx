@@ -1,48 +1,67 @@
-import { useEffect, useState } from 'react'
-import { fetchAppInfo } from './api/appInfo.ts'
-import { fetchBackendStatus, type BackendStatus } from './api/health.ts'
+import { useEffect } from 'react'
+import { forgetGoogleSignIn } from './auth/google.ts'
+import { restore, signOut, type Me } from './auth/session.ts'
+import { SignInPage } from './auth/SignInPage.tsx'
+import { useSession } from './auth/useSession.ts'
+import { CardScreen, Retry, Waiting } from './ui/Screen.tsx'
+import { HomePage } from './wedding/HomePage.tsx'
+import { SetupPage } from './wedding/SetupPage.tsx'
+import { useWedding } from './wedding/useWedding.ts'
 
-type Status = BackendStatus | 'checking'
-
-const MESSAGE: Record<Status, string> = {
-  checking: 'Checking the server…',
-  up: 'The server is running.',
-  down: 'The server cannot be reached.',
+function leave() {
+  forgetGoogleSignIn()
+  void signOut()
 }
 
+/** Nobody sees anything of the planner without being signed in: every state below starts from the session. */
 export default function App() {
-  const [status, setStatus] = useState<Status>('checking')
-  const [version, setVersion] = useState<string | null>(null)
+  const session = useSession()
 
   useEffect(() => {
-    const controller = new AbortController()
-    void fetchBackendStatus(controller.signal).then((result) => {
-      if (!controller.signal.aborted) {
-        setStatus(result)
-      }
-    })
-    fetchAppInfo(controller.signal)
-      .then((info) => {
-        if (!controller.signal.aborted) {
-          setVersion(info.version)
-        }
-      })
-      .catch(() => {
-        // Without an answer there is no version to show; the status line says the rest.
-      })
-    return () => {
-      controller.abort()
-    }
+    void restore()
   }, [])
 
-  return (
-    <main className="page">
-      <h1>Wedding planner</h1>
-      <p>This is the first, empty version. It only checks that the server answers.</p>
-      <p role="status" className="status" data-status={status}>
-        {MESSAGE[status]}
-      </p>
-      {version !== null && <p className="version">Server version {version}</p>}
-    </main>
-  )
+  switch (session.status) {
+    case 'restoring':
+      return <Waiting what="Loading…" />
+    case 'unreachable':
+      return (
+        <Retry
+          message="The server cannot be reached. Check your connection and try again."
+          onRetry={() => void restore()}
+        />
+      )
+    case 'signedOut':
+      return <SignInPage />
+    case 'signedIn':
+      return <SignedIn user={session.user} />
+  }
+}
+
+function SignedIn({ user }: { user: Me }) {
+  const { state, reload, show } = useWedding()
+
+  switch (state.status) {
+    case 'loading':
+      return <Waiting what="Loading…" />
+    case 'notSetUp':
+      return <SetupPage suggestedName={user.displayName} onDone={show} onAlreadySetUp={reload} />
+    case 'ready':
+      return <HomePage wedding={state.wedding} onSignOut={leave} />
+    case 'full':
+      return (
+        <CardScreen title="Wedding planner">
+          <div className="stack">
+            <p role="alert" className="alert">
+              This planner already belongs to two people, and you are not one of them.
+            </p>
+            <button type="button" className="button button-block" onClick={leave}>
+              Sign out
+            </button>
+          </div>
+        </CardScreen>
+      )
+    case 'failed':
+      return <Retry message="The wedding could not be loaded. Try again." onRetry={reload} />
+  }
 }

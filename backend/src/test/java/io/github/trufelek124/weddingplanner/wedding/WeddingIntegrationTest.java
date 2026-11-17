@@ -122,6 +122,10 @@ class WeddingIntegrationTest extends PostgresIntegrationTest {
                 .containsExactly("partnerName", "yourName");
         assertThat(fieldProblems(http().postJsonAs(anna, "/api/wedding", "{}")))
                 .containsExactly("currency", "partnerName", "timeZone", "yourName");
+        assertThat(http().postJsonAs(anna, "/api/wedding", "{}").body())
+                .as("the messages are for people: they say what to do")
+                .contains("Enter your name.", "Enter your partner's name.", "Choose a currency.", "Choose a time zone.")
+                .doesNotContain("must not be");
 
         HttpResponse<String> notADate = http().postJsonAs(anna, "/api/wedding", setup("19 June 2027", "PLN", "Europe/Warsaw", "Anna", "Piotr"));
         assertThat(notADate.statusCode()).isEqualTo(400);

@@ -34,7 +34,11 @@ final class AuthDtos {
     }
 
     @Schema(name = "DevSignInRequest")
-    record DevSignInRequest(@NotBlank @Email @Size(max = 320) String email) {
+    record DevSignInRequest(
+            @NotBlank(message = "Enter an e-mail address.")
+                    @Email(message = "Enter an e-mail address.")
+                    @Size(max = 320, message = "Enter an e-mail address.")
+                    String email) {
 
         @Override
         public String toString() {

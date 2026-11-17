@@ -10,6 +10,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.CrossOriginOpenerPolicyHeaderWriter.CrossOriginOpenerPolicy;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -24,6 +26,24 @@ class SecurityConfiguration implements WebMvcConfigurer {
     /** API paths that answer without a sign-in. Adding one is a security decision: keep the list short. */
     static final String[] PUBLIC_API = {"/api/auth/**", "/api/app-info"};
 
+    /**
+     * What a page of the web app may load and where it may send data: itself, plus exactly what
+     * Google's sign-in button needs (its script, its frame, its style sheet and its own calls).
+     * Styles written into the page are allowed because that button sets some; scripts never are.
+     */
+    static final String CONTENT_SECURITY_POLICY = String.join("; ",
+            "default-src 'self'",
+            "script-src 'self' https://accounts.google.com/gsi/client",
+            "frame-src https://accounts.google.com/gsi/",
+            "connect-src 'self' https://accounts.google.com/gsi/",
+            "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
+            "img-src 'self' data: blob:",
+            "font-src 'self'",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'");
+
     @Bean
     SecurityFilterChain security(HttpSecurity http, SecurityProblems problems) throws Exception {
         http
@@ -31,6 +51,10 @@ class SecurityConfiguration implements WebMvcConfigurer {
                 // its access token in a header, which another site cannot make a browser send.
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers
+                        .contentSecurityPolicy(policy -> policy.policyDirectives(CONTENT_SECURITY_POLICY))
+                        .crossOriginOpenerPolicy(opener -> opener.policy(CrossOriginOpenerPolicy.SAME_ORIGIN_ALLOW_POPUPS))
+                        .referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)))
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(PUBLIC_API).permitAll()
                         .requestMatchers("/api/**").authenticated()
