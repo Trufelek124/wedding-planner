@@ -4,6 +4,11 @@
    "path": "docs/specs/S01-product-scope.md",
    "type": "REQUIREMENTS",
    "link": "EP1-S1"
+  },
+  {
+   "path": "docs/deployment.md",
+   "type": "DEPLOYMENT",
+   "link": "EP3-S1"
   }
  ],
  "decisions": {

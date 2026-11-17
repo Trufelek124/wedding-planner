@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# Filled-in settings of an installation. Only the example without values is kept.
+deploy/.env

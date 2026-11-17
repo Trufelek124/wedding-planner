@@ -1,0 +1,8 @@
+# Only the two parts the image is built from go to the builder.
+*
+!backend
+!web
+backend/build
+backend/.gradle
+web/node_modules
+web/dist

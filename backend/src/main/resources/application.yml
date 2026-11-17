@@ -1,5 +1,5 @@
 # Every value that differs between installations comes from an environment variable.
-# The variables are listed in docs/deployment.md (arrives with WP-TS-26).
+# The variables are listed in docs/deployment.md.
 spring:
   application:
     name: wedding-planner

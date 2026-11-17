@@ -1,0 +1,61 @@
+# The planner next to a PostgreSQL 18 of its own: for trying the image on one machine,
+# and as the pattern for the real server. Values come from deploy/.env (see env.example).
+#
+#   cp deploy/env.example deploy/.env     and fill it in
+#   docker compose -f deploy/compose.yaml up --build
+#
+# Then http://localhost:8080. On the real server nothing is published like this:
+# the proxy that ends TLS reaches the app over a private network.
+
+name: wedding-planner
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: weddingplanner
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      # From version 18 on the image keeps its data in a directory named after the version, under this one.
+      - database:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username=$$POSTGRES_USER --dbname=$$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  app:
+    image: ${IMAGE:-wedding-planner}:${IMAGE_TAG:-local}
+    build:
+      context: ..
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/weddingplanner
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      APP_JWT_SECRET: ${APP_JWT_SECRET}
+      GOOGLE_OAUTH_WEB_CLIENT_ID: ${GOOGLE_OAUTH_WEB_CLIENT_ID:-}
+      ALLOWED_EMAILS: ${ALLOWED_EMAILS}
+      DEV_LOGIN_ENABLED: ${DEV_LOGIN_ENABLED:-false}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - media:/data/media
+    # As locked down as the image allows: no root, nothing writable but /tmp and the media volume.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    restart: unless-stopped
+
+volumes:
+  database:
+  media:
