@@ -19,6 +19,7 @@ guests, vendors or mail. Configuration that names the owner's systems lives in e
 | `docs/state.md` | One screen on where the project stands — arrives with WP-TS-2 |
 | `docs/backlog/` | Backlog batches that were imported into the tracker |
 | `scripts/ops/` | Tracker tooling: `ik.py`, `ik_seed.py`, `ik_sync_docs.py` |
+| `scripts/publish-image.sh` | Publishes the image. The owner runs it on the Mac, from `main` (D-002); a session never publishes |
 
 The interface is in English. Tests never call the real AI service or the real Gmail.
 

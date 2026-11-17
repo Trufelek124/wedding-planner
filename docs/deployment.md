@@ -17,6 +17,30 @@ the image that runs. The first two run on the machine that builds, whatever mach
 for the server's processor (`--platform linux/arm64`) stays fast. The publishing step (WP-TS-28) passes the commit
 as `--build-arg REVISION=<sha>`; it ends up in the label `org.opencontainers.image.revision`.
 
+## Publishing the image
+
+The owner publishes, from the Mac, by running one script (decision D-002). Nothing else does.
+
+```bash
+scripts/publish-image.sh
+```
+
+It refuses unless the checkout is on `main`, has no changes of its own and is exactly what the repository's `main`
+is. Then it runs the checks for the backend and the web app (`--full-gate` adds the Android part), builds the image
+for `linux/arm64` and pushes it twice: tagged with the full commit, and as `latest`. The commit is also in the
+image's label `org.opencontainers.image.revision`. `--no-push` does everything but the push.
+
+- **Name.** `ghcr.io/<owner>/<repository>`, worked out from the address of the remote `origin`. Give `IMAGE=…`
+  to publish somewhere else.
+- **Once, before the first run:** `docker login ghcr.io`, with a token that may write packages (for GitHub's
+  registry a classic personal access token with `write:packages`). Docker keeps it in the keychain; the script
+  never sees it.
+- **The first push creates the package as private.** Either the server logs in too, with a token that may only
+  read packages, or the package is made public on GitHub: it contains nothing that is not in this repository.
+- **Going back.** Every published commit keeps its own tag. The server runs an older one by naming that commit
+  as the tag instead of `latest`.
+- The Mac needs Docker with its daemon running, and what the gate needs: JDK 25 and Node 22.
+
 ## Trying it on one machine
 
 `deploy/compose.yaml` starts the image next to a PostgreSQL 18 of its own, locked down the way the real server
