@@ -48,3 +48,28 @@ export function Retry({ message, onRetry }: { message: string; onRetry: () => vo
     </CardScreen>
   )
 }
+
+/** The same moment inside a page that already has its frame around it. */
+export function PageWaiting({ what }: { what: string }) {
+  return (
+    <p role="status" className="muted page-note">
+      {what}
+    </p>
+  )
+}
+
+/** A page inside the frame could not be loaded. */
+export function PageRetry({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="stack page-note">
+      <p role="alert" className="alert">
+        {message}
+      </p>
+      <div>
+        <button type="button" className="button" onClick={onRetry}>
+          Try again
+        </button>
+      </div>
+    </div>
+  )
+}

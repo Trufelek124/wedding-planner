@@ -59,6 +59,12 @@ closing comment quotes its summary lines and its exit code.
 - The access token lives in memory only, never in storage. The refresh token is a cookie scripts cannot read.
   `api` (in `src/api/client.ts`) sends the token and renews it once on a 401; `publicApi` is for the sign-in
   endpoints themselves.
+- A signed-in owner's pages are routes in `App.tsx`, drawn inside `Shell` (`src/shell/Shell.tsx`): the top bar, the
+  one `main`, and a new page starting at its top with the keyboard inside it. While such a page loads or fails it
+  shows `PageWaiting` or `PageRetry`; `Waiting` and `Retry` are whole screens with a `main` of their own.
+- A page reads the server with `useLoaded` (`src/planning/useLoaded.ts`). A list keeps its filters in the address
+  (`src/planning/filters.ts`). A change to an entry sends the `version` it was based on; `CHANGED_MEANWHILE`
+  offers the latest version and never overwrites.
 - Every colour, size and radius comes from the tokens at the top of `src/index.css`; light and dark both work.
 - What a person reads is written for that person. This includes the server's validation messages
   (`message = "Enter your partner's name."`), which the forms show next to the field.

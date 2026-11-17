@@ -221,7 +221,7 @@ p {
   border-width: 2px;
 }
 
-.field .hint {
+.hint {
   font-size: 0.875rem;
   color: var(--text-muted);
 }
@@ -298,6 +298,17 @@ p {
   padding: 3rem 1.25rem;
 }
 
+/* The page area takes the focus when a new page opens; it is not a control, so it shows no ring. */
+.content:focus {
+  outline: none;
+}
+
+.page-note {
+  padding: 2rem 0;
+  text-align: center;
+  justify-items: center;
+}
+
 .hero {
   display: grid;
   gap: 0.5rem;
@@ -319,4 +330,260 @@ p {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* Navigation inside the signed-in shell */
+
+.nav {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 0.875rem;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--radius);
+}
+
+.nav a:hover {
+  background: var(--background);
+}
+
+.nav a[aria-current='page'] {
+  color: var(--accent);
+  box-shadow: inset 0 -3px 0 var(--accent);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+/* Pages with lists */
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+a.button {
+  text-decoration: none;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter {
+  display: grid;
+  gap: 0.25rem;
+  /* A long option must not push the control out of its column. */
+  min-width: 0;
+}
+
+.filter label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.filter select {
+  width: 100%;
+  min-width: 0;
+}
+
+.filter select,
+.status-select {
+  min-height: var(--control-height);
+  padding: 0 0.5rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.group {
+  margin-bottom: 2rem;
+}
+
+.group > h2 {
+  margin-bottom: 0.75rem;
+}
+
+.entries {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.entry-body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.entry-title {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.entry-title:hover {
+  text-decoration: underline;
+}
+
+.entry[data-done='true'] > .entry-body > .entry-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.priority {
+  font-weight: 600;
+}
+
+.priority[data-priority='CRITICAL'] {
+  color: var(--danger);
+}
+
+.priority[data-priority='HIGH'] {
+  color: var(--text);
+}
+
+.tick {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0.125rem 0 0;
+  accent-color: var(--accent);
+}
+
+.entry-tasks summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  padding: 0.25rem 0;
+}
+
+.entry-tasks .entry {
+  background: var(--background);
+}
+
+.quiet-link {
+  justify-self: start;
+  font-size: 0.875rem;
+  color: var(--accent);
+}
+
+.empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+
+/* The form page */
+
+.form-page {
+  max-width: 34rem;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.field textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  resize: vertical;
+}
+
+.choice {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice legend {
+  padding: 0;
+  margin-bottom: 0.375rem;
+  font-weight: 600;
+}
+
+.choice label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
+}
+
+.choice input[type='checkbox'],
+.choice input[type='radio'] {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.danger-zone {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.button-danger {
+  color: var(--danger);
+  background: transparent;
+  border-color: var(--danger);
+}
+
+.button-danger:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--danger-surface);
+  border-color: var(--danger);
 }

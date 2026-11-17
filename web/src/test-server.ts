@@ -1,4 +1,7 @@
 import { vi } from 'vitest'
+import type { Schemas } from './api/client.ts'
+
+type Entry = Schemas['Entry']
 
 type Handler = Response | Error | ((request: Request) => Response | Promise<Response>)
 
@@ -73,5 +76,68 @@ export function wedding(overrides: Record<string, unknown> = {}): Response {
       { id: 'm2', displayName: 'Piotr', you: false, signedIn: false },
     ],
     ...overrides,
+  })
+}
+
+export const ANNA_MEMBER = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+export const PIOTR_MEMBER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+
+/** A wedding whose members have real-looking ids, for pages that refer to people. */
+export function weddingOfAnnaAndPiotr(): Response {
+  return wedding({
+    members: [
+      { id: ANNA_MEMBER, displayName: 'Anna', you: true, signedIn: true },
+      { id: PIOTR_MEMBER, displayName: 'Piotr', you: false, signedIn: true },
+    ],
+  })
+}
+
+export const VENUE = { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccc01', name: 'Venue' }
+export const FLOWERS = { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccc02', name: 'Flowers and decor' }
+
+let entryNumber = 0
+
+/** An entry as the server sends it; name only what the test is about. */
+export function entry(overrides: Partial<Entry> = {}): Entry {
+  entryNumber += 1
+  return {
+    id: `eeeeeeee-eeee-4eee-8eee-${String(entryNumber).padStart(12, '0')}`,
+    kind: 'TASK',
+    title: `Entry ${entryNumber}`,
+    notes: '',
+    categoryId: null,
+    startDate: null,
+    dueDate: null,
+    status: 'NOT_STARTED',
+    completedAt: null,
+    priorityMode: 'AUTO',
+    priority: 'LOW',
+    priorityReason: 'NO_DATE',
+    assigneeIds: [],
+    parentId: null,
+    taskCount: 0,
+    dependsOnIds: [],
+    conflictsWithIds: [],
+    version: 0,
+    createdAt: '2026-11-17T10:00:00Z',
+    updatedAt: '2026-11-17T10:00:00Z',
+    ...overrides,
+  }
+}
+
+/**
+ * A server with a signed-in owner, a wedding and the given entries. GET /api/entries answers
+ * them narrowed down by kind, as the real one does; the other filters are for the test to check.
+ */
+export function planningServer(entries: Entry[], extra: Record<string, Handler> = {}): FakeServer {
+  return fakeServer({
+    'POST /api/auth/refresh': session(),
+    'GET /api/wedding': weddingOfAnnaAndPiotr(),
+    'GET /api/categories': Response.json([VENUE, FLOWERS]),
+    'GET /api/entries': (request) => {
+      const kind = new URL(request.url).searchParams.get('kind')
+      return Response.json(entries.filter((candidate) => kind === null || candidate.kind === kind))
+    },
+    ...extra,
   })
 }
