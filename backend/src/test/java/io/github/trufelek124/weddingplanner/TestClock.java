@@ -1,0 +1,49 @@
+package io.github.trufelek124.weddingplanner;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+
+/** The application's clock in tests: real time plus whatever a test has moved it forward by. */
+public final class TestClock extends Clock {
+
+    private static volatile Duration offset = Duration.ZERO;
+
+    public static void advance(Duration by) {
+        offset = offset.plus(by);
+    }
+
+    public static void reset() {
+        offset = Duration.ZERO;
+    }
+
+    @Override
+    public Instant instant() {
+        return Instant.now().plus(offset);
+    }
+
+    @Override
+    public ZoneId getZone() {
+        return ZoneOffset.UTC;
+    }
+
+    @Override
+    public Clock withZone(ZoneId zone) {
+        return this;
+    }
+
+    @TestConfiguration
+    public static class Configuration {
+
+        @Bean
+        @Primary
+        Clock testClock() {
+            return new TestClock();
+        }
+    }
+}

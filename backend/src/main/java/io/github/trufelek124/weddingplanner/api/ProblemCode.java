@@ -11,6 +11,12 @@ import org.springframework.http.HttpStatusCode;
  */
 public enum ProblemCode {
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "bad-request", "The request is not valid"),
+    /** Nobody is signed in, or the sign-in is no longer valid: sign in (again). */
+    UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "unauthenticated", "Sign-in required"),
+    /** Signed in, but not allowed to do this. */
+    FORBIDDEN(HttpStatus.FORBIDDEN, "forbidden", "Not allowed"),
+    /** The account is genuine but is not one of the planner's owners. */
+    ACCOUNT_NOT_ALLOWED(HttpStatus.FORBIDDEN, "account-not-allowed", "This account may not use this planner"),
     NOT_FOUND(HttpStatus.NOT_FOUND, "not-found", "Not found"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "method-not-allowed", "Method not allowed"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "internal-error", "Something went wrong on the server");
@@ -47,6 +53,8 @@ public enum ProblemCode {
             return INTERNAL_ERROR;
         }
         return switch (status.value()) {
+            case 401 -> UNAUTHENTICATED;
+            case 403 -> FORBIDDEN;
             case 404 -> NOT_FOUND;
             case 405 -> METHOD_NOT_ALLOWED;
             default -> BAD_REQUEST;

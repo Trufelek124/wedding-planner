@@ -26,6 +26,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    // Spring Security with JWT support: checks our own access tokens and Google's ID tokens.
+    implementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     // Describes the API (OpenAPI). The description is served only when API_DOCS_ENABLED is true.
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-api:3.2.0")

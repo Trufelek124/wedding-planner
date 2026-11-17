@@ -78,14 +78,21 @@ class WebAppIntegrationTest extends PostgresIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-        "/assets/missing.js", "/missing.png", "/favicon.ico", "/api", "/api/no-such-endpoint", "/api/plan/12",
-        "/actuator/no-such-endpoint"
-    })
-    void neverAnswersAMissingFileOrAnApiPathWithThePage(String path) throws Exception {
+    @ValueSource(strings = {"/assets/missing.js", "/missing.png", "/favicon.ico", "/actuator/no-such-endpoint"})
+    void neverAnswersAMissingFileWithThePage(String path) throws Exception {
         HttpResponse<String> response = get(path);
 
         assertThat(response.statusCode()).isEqualTo(404);
+        assertThat(response.body()).doesNotContain("the web app's page");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api", "/api/", "/api/no-such-endpoint", "/api/plan/12"})
+    void neverAnswersAnApiPathWithThePage(String path) throws Exception {
+        // Without a sign-in an API path answers 401 whether it exists or not; never the page.
+        HttpResponse<String> response = get(path);
+
+        assertThat(response.statusCode()).isEqualTo(401);
         assertThat(response.body()).doesNotContain("the web app's page");
     }
 

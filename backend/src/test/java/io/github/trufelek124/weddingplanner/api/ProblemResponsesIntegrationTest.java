@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.trufelek124.weddingplanner.PostgresIntegrationTest;
 import io.github.trufelek124.weddingplanner.TestHttp;
+import io.github.trufelek124.weddingplanner.TestSignIn;
 import java.net.http.HttpResponse;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-import tools.jackson.databind.json.JsonMapper;
 
 @Import(ProblemResponsesIntegrationTest.FailingEndpoints.class)
 class ProblemResponsesIntegrationTest extends PostgresIntegrationTest {
@@ -46,7 +46,7 @@ class ProblemResponsesIntegrationTest extends PostgresIntegrationTest {
 
     @Test
     void anErrorAModuleRaisesKeepsItsCodeAndItsDetail() throws Exception {
-        HttpResponse<String> response = http().get("/api/test/known");
+        HttpResponse<String> response = http().getAs(accessToken(), "/api/test/known");
 
         assertThat(response.statusCode()).isEqualTo(404);
         assertThat(response.headers().firstValue("Content-Type")).hasValue("application/problem+json");
@@ -60,7 +60,7 @@ class ProblemResponsesIntegrationTest extends PostgresIntegrationTest {
 
     @Test
     void anUnexpectedErrorTellsTheClientNothingAboutItsCause() throws Exception {
-        HttpResponse<String> response = http().get("/api/test/unexpected");
+        HttpResponse<String> response = http().getAs(accessToken(), "/api/test/unexpected");
 
         assertThat(response.statusCode()).isEqualTo(500);
         assertThat(response.body()).doesNotContain("hunter2").doesNotContain("IllegalStateException");
@@ -72,7 +72,7 @@ class ProblemResponsesIntegrationTest extends PostgresIntegrationTest {
 
     @Test
     void anUnknownApiPathIsNotFound() throws Exception {
-        HttpResponse<String> response = http().get("/api/no-such-endpoint");
+        HttpResponse<String> response = http().getAs(accessToken(), "/api/no-such-endpoint");
 
         assertThat(response.statusCode()).isEqualTo(404);
         assertThat(problem(response)).containsEntry("type", "urn:wedding-planner:problem:not-found");
@@ -88,19 +88,23 @@ class ProblemResponsesIntegrationTest extends PostgresIntegrationTest {
 
     @Test
     void aBodyThatIsNotJsonIsABadRequest() throws Exception {
-        HttpResponse<String> response = http().postJson("/api/test/wishes", "{ not json");
+        HttpResponse<String> response =
+                http().postJson("/api/test/wishes", "{ not json", Map.of("Authorization", "Bearer " + accessToken()));
 
         assertThat(response.statusCode()).isEqualTo(400);
         assertThat(problem(response)).containsEntry("type", "urn:wedding-planner:problem:bad-request");
         assertThat(response.body()).doesNotContain("Exception");
     }
 
+    private String accessToken() throws Exception {
+        return TestSignIn.signIn(http(), ANNA).accessToken();
+    }
+
     private TestHttp http() {
         return new TestHttp(port);
     }
 
-    @SuppressWarnings("unchecked")
     private static Map<String, Object> problem(HttpResponse<String> response) {
-        return JsonMapper.builder().build().readValue(response.body(), Map.class);
+        return TestHttp.json(response);
     }
 }

@@ -20,6 +20,18 @@ spring:
 app:
   # Directory with the built web app; empty means the backend serves the API only.
   web-dir: ${APP_WEB_DIR:}
+  identity:
+    # Signs the access tokens. At least 32 characters; changing it signs everyone out.
+    jwt-secret: ${APP_JWT_SECRET}
+    # The Google OAuth client the web and Android apps sign in with. Empty: nobody can sign in with Google.
+    google-client-id: ${GOOGLE_OAUTH_WEB_CLIENT_ID:}
+    # Comma-separated addresses that may sign in. Empty: nobody may.
+    allowed-emails: ${ALLOWED_EMAILS:}
+    # Signing in as an allowed address without Google. For development and tests only.
+    dev-login-enabled: ${DEV_LOGIN_ENABLED:false}
+    google-jwks-uri: https://www.googleapis.com/oauth2/v3/certs
+    access-token-ttl: 15m
+    refresh-token-ttl: 60d
 
 server:
   port: 8080

@@ -30,7 +30,7 @@ A missing tool or a refused download host is an environment matter — ask the o
 
 | Part | Check | Run it locally |
 |---|---|---|
-| `backend/` | `cd backend && ./gradlew test` | `./gradlew devDatabase` (PostgreSQL 18 on port 5433, prints the variables), then `./gradlew bootRun` with `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD` set |
+| `backend/` | `cd backend && ./gradlew test` | `./gradlew devDatabase` (PostgreSQL 18 on port 5433, prints the database variables), then `./gradlew bootRun` with those and `APP_JWT_SECRET` (32+ characters), `ALLOWED_EMAILS` (made-up addresses) and `DEV_LOGIN_ENABLED=true` set |
 | `web/` | `cd web && npm ci && npm run lint && npm test && npm run build` | `npm run dev` (port 5173; forwards `/api` and `/actuator` to the backend on 8080) |
 | `android/` | `cd android && ./gradlew lintDebug testDebugUnitTest assembleDebug` | No emulator in a cloud session: install `app/build/outputs/apk/debug/app-debug.apk` on a phone. The server address is a build setting: `-PserverUrl=https://…` |
 | `scripts/ops/` | the script's `--dry-run` against the tracker | — |
@@ -39,6 +39,18 @@ A missing tool or a refused download host is an environment matter — ask the o
 **The gate: `scripts/gate.sh`** runs every check of all three parts, stops at the first failure and exits non-zero.
 `scripts/gate.sh backend web` runs only the parts named. A change is ready only when the whole gate passes; the
 closing comment quotes its summary lines and its exit code.
+
+## Signing in and who may call what
+
+- Everything under `/api` needs an access token, except the paths in `SecurityConfiguration.PUBLIC_API`.
+  Adding a public path is a security decision: `AccessControlIntegrationTest` holds the same list on purpose.
+- A controller method in any module gets the caller by declaring a `UserId` parameter.
+- Only addresses in `ALLOWED_EMAILS` can sign in, with Google or with the development login. The development
+  login exists only while `DEV_LOGIN_ENABLED=true`; never set that where the server is reachable by others.
+- Nothing personal in logs: users are named by id. A record that holds an address, a name or a token overrides
+  `toString()` to hide it, because request and response bodies reach debug logs through that method.
+  `NoPersonalDataInLogsIntegrationTest` checks this with debug logging on.
+- In tests, `TestSignIn.signIn(http, PostgresIntegrationTest.ANNA)` signs an owner in through the real endpoint.
 
 ## Changing the API
 

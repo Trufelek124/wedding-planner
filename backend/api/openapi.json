@@ -13,6 +13,62 @@
         "required" : [ "name", "version" ],
         "type" : "object"
       },
+      "AuthConfig" : {
+        "description" : "What a client needs to know before anyone has signed in.",
+        "properties" : {
+          "devLoginEnabled" : {
+            "description" : "Whether the development login is available.",
+            "type" : "boolean"
+          },
+          "googleClientId" : {
+            "description" : "The Google OAuth client to sign in with; null when Google sign-in is not set up.",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "devLoginEnabled", "googleClientId" ],
+        "type" : "object"
+      },
+      "DevSignInRequest" : {
+        "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 320,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email" ],
+        "type" : "object"
+      },
+      "GoogleSignInRequest" : {
+        "properties" : {
+          "idToken" : {
+            "description" : "The ID token Google handed to the client.",
+            "maxLength" : 8192,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "idToken" ],
+        "type" : "object"
+      },
+      "Me" : {
+        "description" : "The signed-in person.",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName", "email", "id" ],
+        "type" : "object"
+      },
       "Problem" : {
         "description" : "An error, as RFC 9457 problem details.",
         "properties" : {
@@ -35,12 +91,47 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "NOT_FOUND", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
+        "type" : "object"
+      },
+      "RefreshRequest" : {
+        "properties" : {
+          "refreshToken" : {
+            "description" : "The refresh token; a browser leaves it out, because its cookie carries it.",
+            "maxLength" : 512,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "refreshToken" ],
+        "type" : "object"
+      },
+      "Session" : {
+        "description" : "What a client holds while someone is signed in.",
+        "properties" : {
+          "accessToken" : {
+            "description" : "Sent with every request as 'Authorization: Bearer ...'.",
+            "type" : "string"
+          },
+          "accessTokenExpiresAt" : {
+            "description" : "When the access token stops working; refresh before then.",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "refreshToken" : {
+            "description" : "Exchanged for a new session when the access token expires; used once. Null for a browser: there it travels in a cookie that scripts cannot read.",
+            "type" : [ "string", "null" ]
+          },
+          "user" : {
+            "$ref" : "#/components/schemas/Me"
+          }
+        },
+        "required" : [ "accessToken", "accessTokenExpiresAt", "refreshToken", "user" ],
         "type" : "object"
       }
     }
@@ -77,6 +168,221 @@
           }
         },
         "tags" : [ "app-info-controller" ]
+      }
+    },
+    "/api/auth/config" : {
+      "get" : {
+        "operationId" : "config",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthConfig"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/dev" : {
+      "post" : {
+        "operationId" : "dev",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DevSignInRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Session"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "dev-login-controller" ]
+      }
+    },
+    "/api/auth/google" : {
+      "post" : {
+        "operationId" : "google",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GoogleSignInRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Session"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/refresh" : {
+      "post" : {
+        "operationId" : "refresh",
+        "parameters" : [ {
+          "in" : "cookie",
+          "name" : "wp_refresh",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Session"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/sign-out" : {
+      "post" : {
+        "operationId" : "signOut",
+        "parameters" : [ {
+          "in" : "cookie",
+          "name" : "wp_refresh",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/me" : {
+      "get" : {
+        "operationId" : "me",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Me"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "me-controller" ]
       }
     }
   },

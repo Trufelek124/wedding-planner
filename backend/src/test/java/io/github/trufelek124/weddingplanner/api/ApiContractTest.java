@@ -17,7 +17,8 @@ import tools.jackson.databind.json.JsonMapper;
  * when the code and the committed file disagree, so an endpoint cannot change unnoticed.
  * To accept a change: ./gradlew updateApiContract, then regenerate the clients.
  */
-@TestPropertySource(properties = "springdoc.api-docs.enabled=true")
+// The development login is switched on here so that its endpoint is part of the description.
+@TestPropertySource(properties = {"springdoc.api-docs.enabled=true", "DEV_LOGIN_ENABLED=true"})
 class ApiContractTest extends PostgresIntegrationTest {
 
     private static final Path CONTRACT = Path.of("api", "openapi.json");
