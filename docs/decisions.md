@@ -88,3 +88,55 @@ We write the chart ourselves, as one SVG inside a React component, with no chart
   and says why.
 - Every bar can be focused and has a name. Arrow keys move it, with a modifier they resize it, and a dependency can
   be added and removed without a pointer. The entry form gets a "Depends on" control as the second way.
+
+## D-002 — The image is published by a script the owner runs on the Mac
+
+**Date:** 2026-11-17 · **Task:** WP-TS-27 · **Decided by:** the owner · **Applies to:** WP-TS-28, the server's update
+
+### Context
+
+The planner runs on the owner's home server as a container (`docs/deployment.md`). A finished commit has to
+become an image that server can pull. The server's processor is ARM, the repository is public, and
+the server already runs another application that is published by a script from the owner's Mac.
+
+### What was compared
+
+| | A script on the owner's Mac | GitHub Actions in this repository | Building on the server, no registry |
+|---|---|---|---|
+| Cost | none | none while the repository is public | none |
+| Who can publish | the owner, at the Mac | whoever can put a commit on `main` | whoever can update the server's checkout |
+| When it happens | when the owner runs it | at every push to `main`, unattended | when the server updates |
+| Registry credentials | the owner's own token, in the Mac's keychain | none stored: the workflow's short-lived token | none |
+| Building for ARM | native on the Mac | on GitHub's ARM runner | native, but the server compiles Java and npm at every update |
+| Going back to an older version | pull the older tag | pull the older tag | rebuild the older commit |
+| What a public repository adds | nothing: no workflow can publish | a publishing workflow whose triggers, permissions and pinned actions have to be kept tight | nothing |
+
+### Decision
+
+A script in this repository, run by the owner on the Mac, publishes the image. It runs the checks, builds for
+`linux/arm64` and pushes to the registry under a stable name, tagged with the full commit and with `latest`.
+`main` is the branch that is published.
+
+### What speaks for it
+
+- Nothing goes live unless the owner runs the script. Where a server pulls `latest` by itself, an unattended
+  workflow makes every merge to `main` a deployment.
+- It is the way the other application on the same server is published, so there is one routine to remember.
+- The registry token stays on the Mac. The repository holds no secret and no workflow that could publish.
+
+### What it costs, and what would change the decision
+
+- Publishing needs the owner and the Mac, with Docker, Java 25 and Node 22 on it. A fix cannot go live while the
+  owner is away from it.
+- The checks run on the Mac only as far as its tools reach; the script runs the parts the image is built from
+  (backend and web) and can run the whole gate where the Android SDK is installed.
+- If publishing by hand becomes a burden, GitHub Actions is the alternative, recorded as a new decision that
+  replaces this one.
+
+### What follows for WP-TS-28
+
+- The script refuses to publish anything but a clean checkout of `main` that is already pushed, so that the
+  commit in the image's label can always be found in the repository.
+- It never asks for, stores or prints a token: the owner logs Docker in to the registry once.
+- The image's name is not written into the repository's files; it is worked out from the repository's address
+  or given when the script is called.
