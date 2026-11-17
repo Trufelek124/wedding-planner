@@ -1,0 +1,1544 @@
+{
+ "projectCode": "WP",
+ "epics": [
+  {
+   "key": "EP1",
+   "name": "Foundation: repository, gate, sign-in and tracker tooling",
+   "businessGoal": "One repository in which the backend, the web app and the Android app build and test with a single command, the two owners can sign in, and every piece of work and every document is tracked in infokuznia.",
+   "description": "The scope and working agreement (S01); the infokuznia client, backlog import and document mirror; the skeleton of the three parts with one gate; the generated API contract; Google sign-in with the two-address allow-list; the wedding setup. Source: docs/specs/S01-product-scope.md sections 8, 10 and 11.",
+   "rank": 10
+  },
+  {
+   "key": "EP2",
+   "name": "Plan, tasks and priorities",
+   "businessGoal": "The couple keeps everything that has to happen for the wedding in one place, sees it on a timeline and knows what to do next.",
+   "description": "Plan items and tasks as one record type, the lists on the web, automatic and manual priority, dependencies, the Gantt chart, the Poland/Ukraine starter checklist and the home screen. Source: docs/specs/S01-product-scope.md sections 3, 4 and 5.",
+   "rank": 20
+  },
+  {
+   "key": "EP3",
+   "name": "First deployment",
+   "businessGoal": "The planner is reachable on the web under its own address and survives a restart and a lost disk, so the couple can use it while the rest is built.",
+   "description": "One container image holding the backend and the web app, published and run on the home server next to LearningGerman; the domain; the Google sign-in origins; a nightly backup and one tested restore. Follows the LearningGerman container path (LG-DOC-3, LG-DOC-56). Source: docs/specs/S01-product-scope.md section 9.",
+   "rank": 30
+  },
+  {
+   "key": "EP4",
+   "name": "Android app",
+   "businessGoal": "Everything in the planner can be read on the phone, and the everyday actions take one tap.",
+   "description": "A native Kotlin and Compose app: sign-in, home, the plan and task lists, quick actions, offline reading, and a signed release build for the second phone. Source: docs/specs/S01-product-scope.md sections 4, 8 and 9.",
+   "rank": 40
+  },
+  {
+   "key": "EP5",
+   "name": "Inspirations",
+   "businessGoal": "An idea seen on Instagram or TikTok lands in the planner within two taps and can be found again by board.",
+   "description": "Storage of links and pictures, previews where the source allows them, the web board, and the Android share target with an offline queue. Source: docs/specs/S01-product-scope.md sections 3 and 7.",
+   "rank": 50
+  },
+  {
+   "key": "EP6",
+   "name": "Budget, vendors and guests",
+   "businessGoal": "The couple sees what the wedding costs and what is still to pay, who the vendors are and where each stands, and who is coming.",
+   "description": "Payments as tasks that carry money, the budget summary, the vendor register with its linked entries, and the guest list with statuses and counts. Source: docs/specs/S01-product-scope.md sections 3 and 4.",
+   "rank": 60
+  },
+  {
+   "key": "EP7",
+   "name": "E-mail import",
+   "businessGoal": "Wedding matters that arrive by e-mail become tasks without anyone copying them over.",
+   "description": "A read-only Gmail connection for both owners, a three-month backfill and continuous sync, AI triage of every message and extraction from wedding messages, the Suggestions inbox, and automatic adding above a confidence threshold. Source: docs/specs/S01-product-scope.md section 6.",
+   "rank": 70
+  }
+ ],
+ "stories": [
+  {
+   "key": "EP1-S1",
+   "epic": "EP1",
+   "title": "Scope and working agreement (S01)",
+   "description": "The owner's brief, two rounds of questions and the LearningGerman documents turned into one spec: scope, concepts, the priority rule, e-mail import, technology, deployment, the infokuznia flow and the build order.",
+   "goal": "The owner and the agent work from one written, accepted scope.",
+   "rationale": "Three clients and an AI pipeline are easy to build wrongly. Agreeing the scope first is cheaper than rework, and the spec is the source of every later story's acceptance criteria.",
+   "expectedBehavior": "docs/specs/S01-product-scope.md is in the repository with the status accepted and the owner's answers. The decisions taken are numbered in docs/decisions.md. docs/state.md says where the project stands.",
+   "priority": "HIGH",
+   "rank": 10,
+   "requiredRoles": [
+    "PRODUCT_OWNER",
+    "ANALYST"
+   ],
+   "requiredSkills": [
+    "specification"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "S01 carries the owner's answers to all five open questions and the status accepted.",
+     "source": "docs/specs/S01-product-scope.md section 14"
+    },
+    {
+     "text": "Every decision in S01 section 2 has a numbered entry in docs/decisions.md.",
+     "source": "docs/specs/S01-product-scope.md sections 2 and 10"
+    },
+    {
+     "text": "docs/state.md exists and fits on one screen.",
+     "source": "docs/specs/S01-product-scope.md section 10"
+    }
+   ]
+  },
+  {
+   "key": "EP1-S2",
+   "epic": "EP1",
+   "title": "Infokuznia tooling and document mirror",
+   "description": "A small client for the tracker's agent tools, an import for backlog batches, a script that mirrors docs/ into infokuznia documents, and the working rules for agents in CLAUDE.md.",
+   "goal": "An agent in any session can read and write the tracker and keep its documents equal to the repository's docs.",
+   "rationale": "Cloud sessions have no built-in infokuznia tools. Without a client and a sync script neither the task-first rule nor the document mirror can be kept.",
+   "expectedBehavior": "scripts/ops/ik.py calls any tracker tool. scripts/ops/ik_seed.py imports a backlog batch once and records the ids in docs/infokuznia-ids.json. scripts/ops/ik_sync_docs.py creates or updates one infokuznia document per mapped file under docs/ and changes nothing on a second run. CLAUDE.md states the working rules.",
+   "priority": "HIGH",
+   "rank": 20,
+   "requiredRoles": [
+    "DEVELOPER",
+    "DOCUMENTATION"
+   ],
+   "requiredSkills": [
+    "python",
+    "mcp"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "Importing the same backlog batch twice creates nothing the second time.",
+     "source": "docs/specs/S01-product-scope.md section 10"
+    },
+    {
+     "text": "Running the document sync twice in a row reports 0 created and 0 updated on the second run.",
+     "source": "docs/specs/S01-product-scope.md section 10"
+    },
+    {
+     "text": "Every mirrored document names its source file and commit in its first lines.",
+     "source": "LG-DOC-4 section 3"
+    },
+    {
+     "text": "CLAUDE.md states the task-first rule, the commit subject format WP-TS-n, what a closing comment contains, and the gate command.",
+     "source": "docs/specs/S01-product-scope.md section 10"
+    },
+    {
+     "text": "No token or other secret is printed, logged or committed by any of the scripts.",
+     "source": "LG hand-off section 1"
+    }
+   ]
+  },
+  {
+   "key": "EP1-S3",
+   "epic": "EP1",
+   "title": "Repository skeleton and one gate",
+   "description": "The empty but working shape of all three parts, on the versions LearningGerman runs, with one command that proves everything builds and passes.",
+   "goal": "All three parts build and test from a clean checkout with one command.",
+   "rationale": "A gate that exists from the first commit keeps later work honest. Using LearningGerman's versions means both apps are built, run and maintained the same way.",
+   "expectedBehavior": "backend/ is a Spring Boot 4.1 application on Java 25 and Gradle 9 with PostgreSQL 18, Flyway and a health endpoint. web/ is a Vite, React and TypeScript app that the backend serves. android/ is a Kotlin and Compose app that builds a debug APK. scripts/gate.sh runs every check. The backend's openapi.json is generated, committed and drift-tested, and both clients generate their types from it.",
+   "priority": "HIGH",
+   "rank": 30,
+   "requiredRoles": [
+    "ARCHITECT",
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "typescript",
+    "react",
+    "kotlin",
+    "android"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "scripts/gate.sh exits 0 on a clean checkout and non-zero when a backend test, the web lint, a web test, the web build, an Android unit test or the Android debug build fails.",
+     "source": "docs/specs/S01-product-scope.md section 8"
+    },
+    {
+     "text": "The backend starts against an empty PostgreSQL 18, applies its migrations and answers GET /actuator/health with 200.",
+     "source": "LG-DOC-3 points 5 and 7"
+    },
+    {
+     "text": "The backend serves the built web app at / and falls back to index.html for client-side routes.",
+     "source": "LG-DOC-3 point 2"
+    },
+    {
+     "text": "A test fails when the committed openapi.json differs from what the code generates.",
+     "source": "LG-DOC-18 section 1, Contracts"
+    },
+    {
+     "text": "A test fails when one backend module reaches into another module's internals.",
+     "source": "docs/specs/S01-product-scope.md section 8"
+    }
+   ]
+  },
+  {
+   "key": "EP1-S4",
+   "epic": "EP1",
+   "title": "Sign-in and wedding setup",
+   "description": "Google sign-in checked by the backend, the backend's own tokens, the allow-list of two addresses, and the first screen after sign-in: the wedding's date, currency, time zone and the two names.",
+   "goal": "The two owners, and nobody else, can sign in and share one wedding.",
+   "rationale": "Every other feature has to know who is asking and which wedding the data belongs to. The planner holds private data and will read private mail.",
+   "expectedBehavior": "The web app signs in with Google. The backend verifies the Google ID token, checks the address against the allow-list and issues its own access and refresh tokens. The first sign-in leads to the wedding setup; the second owner joins the same wedding. A development login exists only when configuration switches it on.",
+   "priority": "HIGH",
+   "rank": 40,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "spring-security",
+    "typescript",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "A Google account whose address is on the allow-list receives tokens; any other account is refused with 403 and a message that names no addresses.",
+     "source": "LG-DOC-99 (D-043)"
+    },
+    {
+     "text": "Every API endpoint except health and sign-in answers 401 without a valid token.",
+     "source": "docs/specs/S01-product-scope.md section 8"
+    },
+    {
+     "text": "The development login is unavailable unless DEV_LOGIN_ENABLED is true, and it is false by default.",
+     "source": "LG-DOC-3 point 6"
+    },
+    {
+     "text": "After the setup both owners see the same wedding date, currency and time zone.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "No address, token or secret appears in a log line.",
+     "source": "docs/specs/S01-product-scope.md section 12"
+    }
+   ]
+  },
+  {
+   "key": "EP2-S1",
+   "epic": "EP2",
+   "title": "Plan items and tasks",
+   "description": "The core record of the planner: steps of the preparation that take time (plan items) and single actions (tasks), kept as one record type with a kind, and the two lists on the web.",
+   "goal": "Everything to do for the wedding is recorded in one place.",
+   "rationale": "This is the planner's core; priorities, the Gantt chart, payments, vendors and the e-mail import all attach to these records.",
+   "expectedBehavior": "A record has the fields of S01 section 3. The web has a Plan list and a Task list with add, edit, delete, filter by status, person and category, and sorting by date and priority. A task can sit under a plan item. A task can be turned into a plan item and back.",
+   "priority": "HIGH",
+   "rank": 10,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "A plan item can be saved without dates and then appears under 'not scheduled'.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "A task can be saved with or without a due date and ticked off in one action.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "Turning a task into a plan item and back keeps title, notes, person, priority and vendor.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "A change made by one owner is visible to the other after a reload.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "Deleting a plan item asks what happens to its tasks: keep them without a parent, or delete them.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    }
+   ]
+  },
+  {
+   "key": "EP2-S2",
+   "epic": "EP2",
+   "title": "Priorities: automatic rule and manual override",
+   "description": "Four levels. Each entry is in Auto mode, where a fixed rule sets the level from dates and dependencies, or in Manual mode, where the level the owner chose stays.",
+   "goal": "The couple sees what matters now without ranking everything by hand, and can overrule the rule.",
+   "rationale": "The owner asked for priorities that can be set by hand or automatically. A fixed rule is predictable and can say why; an AI ranking is left out of the first version.",
+   "expectedBehavior": "The rule of S01 section 5 gives each Auto entry its level and a reason in words. Levels are recalculated when a date or a dependency changes and once a day. A level set by hand stays until the entry is switched back to Auto.",
+   "priority": "NORMAL",
+   "rank": 20,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "An entry in Auto mode gets its level from the rule in S01 section 5, and the interface shows the reason in words.",
+     "source": "docs/specs/S01-product-scope.md section 5"
+    },
+    {
+     "text": "A level set by hand stays until the entry is switched back to Auto.",
+     "source": "docs/specs/S01-product-scope.md section 5"
+    },
+    {
+     "text": "Levels are recalculated when a date or a dependency changes and once a day.",
+     "source": "docs/specs/S01-product-scope.md section 5"
+    },
+    {
+     "text": "Tests cover every row of the rule's table and every boundary day, in the wedding's time zone.",
+     "source": "docs/specs/S01-product-scope.md section 5"
+    }
+   ]
+  },
+  {
+   "key": "EP2-S3",
+   "epic": "EP2",
+   "title": "Dependencies and the Gantt chart",
+   "description": "Plan items can depend on one another, and the plan is shown and rescheduled on a timeline.",
+   "goal": "The couple sees the whole preparation on a timeline and reschedules it by dragging.",
+   "rationale": "The owner asked for a Gantt chart next to the list. Dependencies make order visible and feed the priority rule.",
+   "expectedBehavior": "Plan items with dates are bars between today and the wedding day. Bars are dragged and resized; dependencies are drawn as lines. Tasks with a due date are markers on their plan item's bar. Items without dates stay in a list beside the chart and can be dragged onto it.",
+   "priority": "HIGH",
+   "rank": 30,
+   "requiredRoles": [
+    "DEVELOPER",
+    "UX_DESIGNER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "Plan items with dates are bars; dragging or resizing a bar changes its dates and saves them.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "A dependency drawn between two bars is saved and shown as a line; a cycle is refused.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "A plan item that starts before something it depends on ends is marked.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "Tasks with a due date show as markers on their plan item's bar; today and the wedding day are marked.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "The chart can be read by week and by month and stays responsive with 200 plan items.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "Every change that can be made by dragging can also be made by keyboard or through the entry's form.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    }
+   ]
+  },
+  {
+   "key": "EP2-S4",
+   "epic": "EP2",
+   "title": "Starter checklist for a Polish-Ukrainian wedding",
+   "description": "A ready list of the usual steps, offered when the wedding is set up: general preparations plus the formalities of both countries for one wedding, dated backwards from the wedding day.",
+   "goal": "The couple starts from a filled plan instead of an empty one and removes what does not apply.",
+   "rationale": "The owner asked for it on 2026-11-17: 'for Poland/Ukraine (one wedding, but combined formalities - we should be able to delete the ones that we don't like)'.",
+   "expectedBehavior": "At setup the checklist is offered. Accepted entries become plan items and tasks, grouped (civil formalities, documents and translations, religious ceremony, traditions, guests travelling from abroad, general preparations). A single entry or a whole group can be deleted. Legal entries are prompts to check with the registry office or consulate, each with its source.",
+   "priority": "NORMAL",
+   "rank": 40,
+   "requiredRoles": [
+    "ANALYST",
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "research",
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "At the wedding setup the checklist is offered and can be declined.",
+     "source": "docs/specs/S01-product-scope.md section 3, Starter checklist"
+    },
+    {
+     "text": "Accepted entries are dated backwards from the wedding day and each can be edited.",
+     "source": "docs/specs/S01-product-scope.md section 3, Starter checklist"
+    },
+    {
+     "text": "A single entry or a whole group can be deleted, with undo.",
+     "source": "docs/specs/S01-product-scope.md section 14, answer 2"
+    },
+    {
+     "text": "Each legal or administrative entry names the office to ask and links its source; the checklist states that it is not legal advice.",
+     "source": "docs/specs/S01-product-scope.md section 3, Starter checklist"
+    },
+    {
+     "text": "The content covers both countries' formalities for one wedding and the general preparations; the sources and the date they were read are recorded in the repository.",
+     "source": "docs/specs/S01-product-scope.md section 14, answer 2"
+    }
+   ]
+  },
+  {
+   "key": "EP2-S5",
+   "epic": "EP2",
+   "title": "Home screen",
+   "description": "The first page after sign-in: how long until the wedding and what to do next.",
+   "goal": "One look tells the couple how much time is left and what needs attention.",
+   "rationale": "The lists hold everything; Home holds what matters today. Budget and e-mail suggestions join it with their epics.",
+   "expectedBehavior": "Home shows the days left, the next entries ordered by priority and date, and everything overdue. Entries open for editing and can be ticked off in place.",
+   "priority": "NORMAL",
+   "rank": 50,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "Home shows the days left to the wedding, the next five entries by priority and date, and everything overdue.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "Each entry on Home opens for editing and can be ticked off there.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "With no wedding date set, Home asks for it instead of showing a countdown.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    }
+   ]
+  },
+  {
+   "key": "EP3-S1",
+   "epic": "EP3",
+   "title": "Container image with the backend and the web app",
+   "description": "One image that holds the backend and the built web app and meets the home server's container contract.",
+   "goal": "The planner can be run anywhere a container runs, configured only from outside.",
+   "rationale": "The home server runs containers it pulls; LearningGerman set the contract, and following it means no new server-side work beyond one more entry.",
+   "expectedBehavior": "One Dockerfile builds the web app and the backend and yields a small image: non-root user, port 8080, configuration from environment variables, health tied to the database, migrations at start-up, one declared data directory for stored pictures. The image is published under a stable name with the commit as its tag.",
+   "priority": "HIGH",
+   "rank": 10,
+   "requiredRoles": [
+    "DEVELOPER",
+    "ARCHITECT"
+   ],
+   "requiredSkills": [
+    "docker",
+    "java",
+    "spring-boot"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "One Dockerfile builds the web app and the backend and yields an image that runs as a non-root user, listens on 8080 and writes only to /tmp and its declared data directory.",
+     "source": "LG-DOC-3 points 1, 3 and 4"
+    },
+    {
+     "text": "All configuration comes from environment variables; the docs list each variable with its meaning.",
+     "source": "LG-DOC-3 point 6"
+    },
+    {
+     "text": "The container reports healthy only when the database is reachable, and applies its migrations at start-up.",
+     "source": "LG-DOC-3 points 5 and 7"
+    },
+    {
+     "text": "The image builds for linux/arm64.",
+     "source": "LG-DOC-3, CI/CD"
+    },
+    {
+     "text": "How the image is published is decided, recorded as a decision and automated.",
+     "source": "docs/specs/S01-product-scope.md section 9"
+    }
+   ]
+  },
+  {
+   "key": "EP3-S2",
+   "epic": "EP3",
+   "title": "Running on the home server",
+   "description": "The planner's entry on the home server next to LearningGerman, its address, its backups, and the proof that it works from outside.",
+   "goal": "The couple opens the planner in a browser from anywhere and their data is safe.",
+   "rationale": "The owner wants to use the planner while the rest is built (S01 section 14, answer 3) and configures the domain first.",
+   "expectedBehavior": "The server pulls the published image and runs it with its own PostgreSQL. The planner answers under its own HTTPS address. The database and the stored pictures are backed up nightly. A runbook covers update, rollback, logs, backup and restore.",
+   "priority": "HIGH",
+   "rank": 20,
+   "requiredRoles": [
+    "DEVELOPER",
+    "PRODUCT_OWNER"
+   ],
+   "requiredSkills": [
+    "docker",
+    "operations"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "The planner answers under its own HTTPS address, and sign-in with Google works there for both owners.",
+     "source": "docs/specs/S01-product-scope.md section 9"
+    },
+    {
+     "text": "After a restart of the server the planner comes back by itself with its data.",
+     "source": "LG-DOC-3, What the server side provides"
+    },
+    {
+     "text": "The database and the stored pictures are backed up nightly, and one backup has been restored into a scratch database on purpose.",
+     "source": "LG-DOC-55, Backups"
+    },
+    {
+     "text": "A runbook in docs/ covers update, rollback, logs, backup and restore.",
+     "source": "LG-DOC-55"
+    }
+   ]
+  },
+  {
+   "key": "EP4-S1",
+   "epic": "EP4",
+   "title": "Android: sign-in, home and lists",
+   "description": "The planner on the phone, read-first: Google sign-in, Home, the plan and task lists and a read-only timeline.",
+   "goal": "Both owners see the whole plan on their phones.",
+   "rationale": "The owner asked for an Android version that displays all the information; the phone is where the plan is looked at most often.",
+   "expectedBehavior": "The app signs in with Google against the same backend, shows Home, the plan list, the task list and a read-only timeline, and keeps the data it loaded last readable without a connection.",
+   "priority": "HIGH",
+   "rank": 10,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "Both owners can sign in with Google on the phone and see the same data as on the web.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "Home, the plan list, the task list and a read-only timeline are available.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "Data loaded last stays readable without a connection and shows when it was loaded.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "Signing out removes the account's data from the phone.",
+     "source": "LG-DOC-339 (D-245)"
+    }
+   ]
+  },
+  {
+   "key": "EP4-S2",
+   "epic": "EP4",
+   "title": "Android: quick actions",
+   "description": "The everyday changes on the phone: tick off, add and edit a task.",
+   "goal": "A task is ticked off or added in the moment it comes up.",
+   "rationale": "Reading alone would send the couple back to the browser for the most frequent actions.",
+   "expectedBehavior": "A task can be ticked off, added and edited. An action made without a connection waits and is sent when the connection returns.",
+   "priority": "NORMAL",
+   "rank": 20,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "A task can be ticked off, added and edited on the phone.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "An action made without a connection is sent when the connection returns, and the app shows that it is waiting.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "Two edits of the same entry from two devices do not silently lose one of them.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    }
+   ]
+  },
+  {
+   "key": "EP4-S3",
+   "epic": "EP4",
+   "title": "Android: release build for the second phone",
+   "description": "A signed release build that can be installed on the partner's phone.",
+   "goal": "Both owners have the app, not only the phone that is connected to the development machine.",
+   "rationale": "LearningGerman gives other people the release build and keeps debug builds for the development phone (D-248).",
+   "expectedBehavior": "The gate builds the release variant. The owner holds the signing key; its fingerprint is registered for Google sign-in. The build installs on a second phone and signs in.",
+   "priority": "NORMAL",
+   "rank": 30,
+   "requiredRoles": [
+    "DEVELOPER",
+    "PRODUCT_OWNER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "A signed release build installs on a second phone and signs in with Google.",
+     "source": "LG-DOC-342 (D-248)"
+    },
+    {
+     "text": "The signing key and its passwords are not in the repository.",
+     "source": "LG-DOC-342 (D-248)"
+    },
+    {
+     "text": "The gate builds the release variant.",
+     "source": "LG-DOC-342 (D-248)"
+    }
+   ]
+  },
+  {
+   "key": "EP5-S1",
+   "epic": "EP5",
+   "title": "Inspirations: storage, previews and the web board",
+   "description": "A place for ideas: links and pictures on boards, with notes and tags.",
+   "goal": "The couple collects ideas in one place and finds them again by board.",
+   "rationale": "The owner asked for a place for inspirations; it is also what the Android share feeds.",
+   "expectedBehavior": "A link or pictures are saved with a board, a note and tags. The backend fetches a title and a preview picture where the source allows it. The web shows boards as a grid with filters. Pictures are stored on the server and are part of the backup.",
+   "priority": "HIGH",
+   "rank": 10,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "A link or one or more pictures can be saved with a board, a note and tags.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "Boards can be added, renamed and removed; the board view filters by board and tag.",
+     "source": "docs/specs/S01-product-scope.md section 7"
+    },
+    {
+     "text": "When no preview can be fetched the card shows the source and the note, and a picture can be attached later.",
+     "source": "docs/specs/S01-product-scope.md section 7"
+    },
+    {
+     "text": "Stored pictures are served only to signed-in owners.",
+     "source": "docs/specs/S01-product-scope.md section 8"
+    },
+    {
+     "text": "Fetching a preview cannot be used to reach addresses inside the server's own network.",
+     "source": "docs/specs/S01-product-scope.md section 7"
+    },
+    {
+     "text": "An inspiration can be linked to a plan item or a vendor.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    }
+   ]
+  },
+  {
+   "key": "EP5-S2",
+   "epic": "EP5",
+   "title": "Android share target",
+   "description": "The planner in Android's share sheet, for links and pictures.",
+   "goal": "An idea seen in Instagram or TikTok is saved without leaving that app for long.",
+   "rationale": "This is the owner's main way of collecting inspirations: 'when I'm on Instagram or TikTok, I could click share and share to the app'.",
+   "expectedBehavior": "Share, choose the planner, pick a board, add a note, save. Links and pictures both work. A share made without a connection is kept and sent later.",
+   "priority": "HIGH",
+   "rank": 20,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "The planner appears in Android's share sheet for links and for pictures.",
+     "source": "docs/specs/S01-product-scope.md section 7"
+    },
+    {
+     "text": "Sharing from Instagram and from TikTok saves an inspiration in at most two taps after choosing the planner.",
+     "source": "docs/specs/S01-product-scope.md section 7"
+    },
+    {
+     "text": "A share made without a connection is kept and sent later, and is visible as waiting.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "A share made while signed out asks for sign-in and is not lost.",
+     "source": "docs/specs/S01-product-scope.md section 7"
+    }
+   ]
+  },
+  {
+   "key": "EP6-S1",
+   "epic": "EP6",
+   "title": "Payments and budget",
+   "description": "Money in the planner: a task can carry an amount, and the budget adds everything up.",
+   "goal": "The couple knows what the wedding costs, what is paid and what is due next.",
+   "rationale": "The owner's own example of a task is 'pay for something'. Keeping the payment on the task means it is entered once and seen in both places.",
+   "expectedBehavior": "A task carries an amount, a budget category and a kind (deposit, instalment, final); marking it paid records the date. The budget has a total and a planned amount per category and shows planned, committed and paid.",
+   "priority": "HIGH",
+   "rank": 10,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "A task can carry an amount, a budget category and a kind; marking it paid records the date.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "The budget shows planned, committed and paid, in total and per category.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "A payment is the same entry in the task list and in the budget.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "Amounts are stored exactly, without floating point, in the wedding's currency.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "Home shows the budget at a glance and the next payments due.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    }
+   ]
+  },
+  {
+   "key": "EP6-S2",
+   "epic": "EP6",
+   "title": "Vendors",
+   "description": "The register of vendors with their contacts, status and everything that hangs on them.",
+   "goal": "Everything about a vendor - who to call, what was agreed, what is paid, what is open - is on one page.",
+   "rationale": "Plan items, payments and e-mails all concern vendors; without the register the same contact details end up in notes all over the plan.",
+   "expectedBehavior": "A vendor has the fields of S01 section 3 and a status. Its page lists its plan items, tasks and payments and the sum paid against the agreed price.",
+   "priority": "NORMAL",
+   "rank": 20,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "A vendor has the fields of S01 section 3 and a status of considering, booked or dropped.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "A vendor's page lists its plan items, tasks and payments, and the sum paid against the agreed price.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "A vendor that entries point to cannot be deleted without saying what happens to those links.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    }
+   ]
+  },
+  {
+   "key": "EP6-S3",
+   "epic": "EP6",
+   "title": "Guest list",
+   "description": "Who is invited, who is coming and what they need.",
+   "goal": "The couple knows the head count and each guest's status at any time.",
+   "rationale": "The owner chose the guest list for the first version; the count drives venue, catering and budget.",
+   "expectedBehavior": "A guest has the fields of S01 section 3; guests can be grouped into households. The list filters by status and side and shows counts.",
+   "priority": "NORMAL",
+   "rank": 30,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "A guest has the fields of S01 section 3, and guests can be grouped into households.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "Counts per status and per side are shown, with plus-ones and children counted.",
+     "source": "docs/specs/S01-product-scope.md section 3"
+    },
+    {
+     "text": "A guest's status can be changed in one action from the list, on the web and on the phone.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "Guests' personal data never appears in logs, in the tracker or in the repository.",
+     "source": "docs/specs/S01-product-scope.md section 12"
+    }
+   ]
+  },
+  {
+   "key": "EP7-S1",
+   "epic": "EP7",
+   "title": "Gmail connection and sync",
+   "description": "Each owner connects their Gmail, read-only; the backend reads the last three months and then keeps up.",
+   "goal": "The backend can read both inboxes without either owner doing anything after the first consent.",
+   "rationale": "The owner asked for the backend to link to both e-mail accounts and read all mail. Everything else in the import depends on a connection that is reliable and asks for no more access than reading.",
+   "expectedBehavior": "An owner connects Gmail once after sign-in and can disconnect at any time. On connect the last three months are read; afterwards new messages are picked up every few minutes. The mail source is a replaceable part so Outlook or IMAP can follow.",
+   "priority": "HIGH",
+   "rank": 10,
+   "requiredRoles": [
+    "DEVELOPER",
+    "ARCHITECT"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "oauth",
+    "gmail-api"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "Each owner can connect and disconnect their Gmail; the access asked for is read-only.",
+     "source": "docs/specs/S01-product-scope.md section 6, step 1"
+    },
+    {
+     "text": "On connect the last three months are read; afterwards a new message is picked up within 15 minutes.",
+     "source": "docs/specs/S01-product-scope.md section 6, step 2"
+    },
+    {
+     "text": "No message is read twice, also after a restart.",
+     "source": "docs/specs/S01-product-scope.md section 6, What is kept"
+    },
+    {
+     "text": "The stored Google tokens are encrypted at rest and never logged; disconnecting stops the sync and deletes them.",
+     "source": "docs/specs/S01-product-scope.md section 6"
+    },
+    {
+     "text": "The route past Google's review of the restricted permission is verified for two private accounts and recorded as a decision; the fallback is IMAP with an app password.",
+     "source": "docs/specs/S01-product-scope.md section 6, To verify"
+    },
+    {
+     "text": "A second mail provider can be added without changing the triage, extraction or routing code.",
+     "source": "docs/specs/S01-product-scope.md section 6, Not in v1"
+    }
+   ]
+  },
+  {
+   "key": "EP7-S2",
+   "epic": "EP7",
+   "title": "Triage and extraction",
+   "description": "Two AI steps: decide for every message whether it concerns the wedding, then read the wedding messages in full and propose entries.",
+   "goal": "Every wedding matter in the mail is found and turned into a well-formed proposal, at a known cost.",
+   "rationale": "The owner wants the program to read all e-mails and judge what belongs to the wedding planning. Two steps keep the cost and the exposure of mail content low: only the start of a message is sent for most mail.",
+   "expectedBehavior": "Triage sees sender, subject and the beginning of each message. Extraction reads the full text of wedding messages with their thread and returns entries with kind, title, due date, amount, vendor, confidence and the passage relied on. Only the data listed in S01 section 6 is stored.",
+   "priority": "HIGH",
+   "rank": 20,
+   "requiredRoles": [
+    "DEVELOPER",
+    "ARCHITECT"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "llm",
+    "prompt-engineering"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "Every message gets a verdict from the triage step; only messages judged wedding-related go to extraction.",
+     "source": "docs/specs/S01-product-scope.md section 6, steps 3 and 4"
+    },
+    {
+     "text": "Extraction returns entries with kind, title, due date, amount, vendor, confidence and the passage relied on.",
+     "source": "docs/specs/S01-product-scope.md section 6, step 4"
+    },
+    {
+     "text": "Only the data listed under 'What is kept' is stored; full message texts are not.",
+     "source": "docs/specs/S01-product-scope.md section 6, What is kept"
+    },
+    {
+     "text": "Text inside a message that tries to instruct the model causes nothing but proposed entries: no other action, no change to existing data.",
+     "source": "docs/specs/S01-product-scope.md section 6"
+    },
+    {
+     "text": "No test calls the real AI service or the real Gmail.",
+     "source": "docs/specs/S01-product-scope.md section 8"
+    },
+    {
+     "text": "The quality of triage and extraction is measured on a fixed set of sample messages in Polish, Ukrainian and English, and the cost of the first backfill is reported to the owner.",
+     "source": "docs/specs/S01-product-scope.md section 6"
+    }
+   ]
+  },
+  {
+   "key": "EP7-S3",
+   "epic": "EP7",
+   "title": "Suggestions inbox and automatic adding",
+   "description": "What happens to a proposal: added at once when the confidence is high, otherwise waiting for the owner.",
+   "goal": "Confident findings appear in the plan by themselves; doubtful ones wait for a decision instead of cluttering it.",
+   "rationale": "The owner chose 'auto-add when confident'. Undo and the visible source keep automatic adding trustworthy.",
+   "expectedBehavior": "At or above the threshold an entry is added, marked as coming from e-mail, with one-action undo. Below it the entry waits in the Suggestions inbox for accept, edit or reject. Later messages in a thread update the entry they belong to. A sender that matches a vendor links the entry to it.",
+   "priority": "HIGH",
+   "rank": 30,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react",
+    "kotlin",
+    "android"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "An entry at or above the threshold is added, marked as coming from e-mail, and can be undone in one action.",
+     "source": "docs/specs/S01-product-scope.md section 6, step 6"
+    },
+    {
+     "text": "An entry below the threshold waits in the Suggestions inbox for accept, edit or reject.",
+     "source": "docs/specs/S01-product-scope.md section 6, step 6"
+    },
+    {
+     "text": "A later message in the same thread updates the existing entry instead of adding one.",
+     "source": "docs/specs/S01-product-scope.md section 6, step 5"
+    },
+    {
+     "text": "A sender that matches a vendor's address links the entry to that vendor.",
+     "source": "docs/specs/S01-product-scope.md section 6, step 5"
+    },
+    {
+     "text": "The threshold starts at 0.85 and can be changed in Settings.",
+     "source": "docs/specs/S01-product-scope.md section 6, step 6"
+    },
+    {
+     "text": "Each entry from e-mail shows sender, subject and date and opens the message in Gmail.",
+     "source": "docs/specs/S01-product-scope.md section 3, Suggestion"
+    },
+    {
+     "text": "Suggestions can be accepted and rejected on the web and on the phone.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    }
+   ]
+  }
+ ],
+ "tasks": [
+  {
+   "key": "EP1-S1-T1",
+   "story": "EP1-S1",
+   "title": "S01: product scope and working agreement",
+   "description": "Write docs/specs/S01-product-scope.md from the owner's brief and answers of 2026-11-17. Match technology and hosting to the LearningGerman documents in infokuznia (LG-DOC-18, LG-DOC-3, LG-DOC-56, LG-DOC-4). Record the owner's answers to the open questions. Done when the owner has accepted the spec.",
+   "type": "PRODUCT",
+   "mandatory": true,
+   "requiredRoles": [
+    "ANALYST"
+   ],
+   "requiredSkills": [
+    "specification"
+   ]
+  },
+  {
+   "key": "EP1-S1-T2",
+   "story": "EP1-S1",
+   "title": "Decisions log and state of play",
+   "description": "Create docs/decisions.md with one numbered entry (D-001 and up) per decision in S01 sections 2, 8 and 10: context, decision, date. Create docs/state.md with one screen on where the project stands. Done when both exist and S01 points to them.",
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DOCUMENTATION"
+   ],
+   "requiredSkills": [
+    "technical-writing"
+   ],
+   "dependsOn": [
+    "EP1-S1-T1"
+   ]
+  },
+  {
+   "key": "EP1-S2-T1",
+   "story": "EP1-S2",
+   "title": "Tracker client and backlog import (scripts/ops/ik.py, ik_seed.py)",
+   "description": "ik.py: call one tracker tool over MCP (endpoint from IK_MCP_URL; token from ~/.infokuznia/token when the file exists, otherwise added by the session's network proxy); exit 0 / 2 (tool refusal or bad argument) / 3 (transport). ik_seed.py: import docs/backlog/<batch>.json (epics, stories, tasks with our own keys), check every entry against the tracker's tool schemas first, write created ids to docs/infokuznia-ids.json after each call, skip keys already imported. Done when the first batch is imported and a second run creates nothing.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "python",
+    "mcp"
+   ]
+  },
+  {
+   "key": "EP1-S2-T2",
+   "story": "EP1-S2",
+   "title": "Document mirror (scripts/ops/ik_sync_docs.py)",
+   "description": "Mirror docs/ into infokuznia documents through create_document and update_document. A map file (docs/infokuznia-docs.json) holds path, document type, title and the document id. Specs become REQUIREMENTS linked to their story, decisions one ADR each, architecture and deployment notes their own types. Each document starts with a line naming its source path and commit. Unchanged content is not written again. Options: --dry-run and --only <path>. Done when S01 is mirrored and a second run reports 0 created, 0 updated.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "python",
+    "mcp"
+   ],
+   "dependsOn": [
+    "EP1-S2-T1"
+   ]
+  },
+  {
+   "key": "EP1-S2-T3",
+   "story": "EP1-S2",
+   "title": "CLAUDE.md: working rules for agents in this repository",
+   "description": "Write CLAUDE.md: what the project is and where its spec lives; the layout of the repository; the gate command; the infokuznia rules (task first, claim at start, WP-TS-n in commit subjects, the closing comment's contents, complete after the work is pushed and the gate passes, block or return when stuck); what never goes into a commit or a comment (secrets, addresses, guests' or vendors' personal data). Done when a fresh session can start a task from CLAUDE.md alone.",
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DOCUMENTATION"
+   ],
+   "requiredSkills": [
+    "technical-writing"
+   ],
+   "dependsOn": [
+    "EP1-S2-T1",
+    "EP1-S2-T2"
+   ]
+  },
+  {
+   "key": "EP1-S3-T1",
+   "story": "EP1-S3",
+   "title": "Backend skeleton: Spring Boot, PostgreSQL, Flyway, health, module boundaries",
+   "description": "Create backend/: Java 25, Spring Boot 4.1, Gradle 9 with the wrapper; PostgreSQL 18 through Flyway (first, empty baseline migration); GET /actuator/health that is up only when the database answers; configuration through environment variables only; one sample module and a test that fails when a module reaches into another's internals; integration tests on a real PostgreSQL 18 started by the test run. Done when ./gradlew test passes on a clean checkout.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql"
+   ]
+  },
+  {
+   "key": "EP1-S3-T2",
+   "story": "EP1-S3",
+   "title": "Web skeleton: Vite, React, TypeScript, lint and tests, served by the backend",
+   "description": "Create web/: Vite, React 19, TypeScript in strict mode, a linter, a unit-test runner, one page that shows the backend's health. The backend serves the built files from a directory named by APP_WEB_DIR with a fallback to index.html for client-side routes. Done when npm run lint, npm test and npm run build pass and the backend shows the page at /.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ],
+   "dependsOn": [
+    "EP1-S3-T1"
+   ]
+  },
+  {
+   "key": "EP1-S3-T3",
+   "story": "EP1-S3",
+   "title": "Android skeleton: Kotlin, Compose, debug build and unit tests",
+   "description": "Create android/: one application module in Kotlin with Jetpack Compose, the Gradle wrapper, one screen, one unit test, the server address as a build setting. Done when ./gradlew testDebugUnitTest assembleDebug passes on a clean checkout.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  },
+  {
+   "key": "EP1-S3-T4",
+   "story": "EP1-S3",
+   "title": "API contract: generated openapi.json, drift test, generated client types",
+   "description": "The backend writes its OpenAPI description to backend/api/openapi.json; a test fails when the committed file differs from the generated one. web/ generates TypeScript types from that file, android/ generates Kotlin models from it; generated code is not edited by hand. Errors follow one shape (a stable type code, HTTP status, message). Done when changing an endpoint without regenerating fails the gate.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "openapi",
+    "typescript",
+    "kotlin"
+   ],
+   "dependsOn": [
+    "EP1-S3-T1",
+    "EP1-S3-T2",
+    "EP1-S3-T3"
+   ]
+  },
+  {
+   "key": "EP1-S3-T5",
+   "story": "EP1-S3",
+   "title": "One gate: scripts/gate.sh",
+   "description": "scripts/gate.sh runs, in order and stopping at the first failure: backend tests, web lint, web tests, web build, Android unit tests and debug build. It prints one summary line per part with its test count and exits non-zero on any failure. Options to run one part only. Done when it passes on a clean checkout and fails when a test in any part is broken on purpose.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "bash",
+    "gradle",
+    "npm"
+   ],
+   "dependsOn": [
+    "EP1-S3-T1",
+    "EP1-S3-T2",
+    "EP1-S3-T3"
+   ]
+  },
+  {
+   "key": "EP1-S4-T1",
+   "story": "EP1-S4",
+   "title": "Backend: Google sign-in, own tokens, allow-list, development login",
+   "description": "Module identity: POST a Google ID token, verify it against Google's keys and GOOGLE_OAUTH_WEB_CLIENT_ID, refuse addresses that are not in ALLOWED_EMAILS, issue a short-lived access token and a rotating refresh token signed with APP_JWT_SECRET; refresh and sign-out endpoints; every other endpoint requires the access token. A development login behind DEV_LOGIN_ENABLED (false by default). Nothing personal in logs. Done when the story's first, second, third and fifth criteria are covered by tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "spring-security"
+   ],
+   "dependsOn": [
+    "EP1-S3-T1"
+   ]
+  },
+  {
+   "key": "EP1-S4-T2",
+   "story": "EP1-S4",
+   "title": "Backend: the wedding and its two members",
+   "description": "Module wedding: one wedding per installation with date (optional until set), currency, time zone and display names of the two members; the first signed-in owner creates it, the second joins it; read and update endpoints. All later data hangs off this wedding. Done when both owners read the same wedding through the API in tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql"
+   ],
+   "dependsOn": [
+    "EP1-S4-T1"
+   ]
+  },
+  {
+   "key": "EP1-S4-T3",
+   "story": "EP1-S4",
+   "title": "Web: sign-in and wedding setup",
+   "description": "Sign-in page with the Google button (and the development login when the backend offers it), token storage and silent refresh, sign-out, a guard that sends signed-out visitors to sign-in, the refusal message for an address that is not on the allow-list, and the setup form (date, currency, time zone, names) shown until the wedding exists. Done when the flow passes in tests against the development login and the story's fourth criterion holds.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ],
+   "dependsOn": [
+    "EP1-S4-T1",
+    "EP1-S4-T2",
+    "EP1-S3-T2",
+    "EP1-S3-T4"
+   ]
+  },
+  {
+   "key": "EP1-S4-T4",
+   "story": "EP1-S4",
+   "title": "Owner: create the Google OAuth web client and pass on its client id",
+   "description": "In the Google Cloud console create a project for the planner (or reuse one), configure the consent screen, and create an OAuth client of type web application. For local testing add http://localhost:5173 and http://localhost:8080 to the authorised JavaScript origins. Give the client id to the agent; it is not a secret and goes into configuration, not into the repository. The Android client id follows with the Android epic.",
+   "type": "OTHER",
+   "mandatory": true,
+   "requiredRoles": [
+    "PRODUCT_OWNER"
+   ],
+   "requiredSkills": [
+    "google-cloud"
+   ]
+  },
+  {
+   "key": "EP2-S1-T1",
+   "story": "EP2-S1",
+   "title": "Backend: entries (plan items and tasks) with their API",
+   "description": "Module planning: one table for entries with a kind (PLAN_ITEM or TASK), title, notes, category, start and end date or due date (all optional), status, person (one member or both), priority and its mode, parent plan item; categories as an editable list; create, read, update, delete, list with filters and sorting; convert between kinds; the choice on deleting a plan item with tasks. Done when the story's criteria that concern data are covered by tests and openapi.json is regenerated.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql"
+   ]
+  },
+  {
+   "key": "EP2-S1-T2",
+   "story": "EP2-S1",
+   "title": "Web: Plan list and Task list",
+   "description": "Two list pages over the entries API: add and edit in a form, delete with confirmation, tick off, filter by status, person and category, sort by date and priority, the 'not scheduled' group, tasks shown under their plan item, convert between kinds. Usable by keyboard. Done when the story's criteria pass in tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ],
+   "dependsOn": [
+    "EP2-S1-T1"
+   ]
+  },
+  {
+   "key": "EP2-S2-T1",
+   "story": "EP2-S2",
+   "title": "Backend: priority rule, reasons and daily recalculation",
+   "description": "A pure function from an entry, today's date in the wedding's time zone and its dependents to a level and a reason code, following the table in S01 section 5 (including the one-level raise for a plan item that should have started). Applied on every change to an Auto entry or to something that depends on it, and by a daily job. Manual entries are never changed. Done when the table and each boundary day are covered by tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql"
+   ],
+   "dependsOn": [
+    "EP2-S1-T1"
+   ]
+  },
+  {
+   "key": "EP2-S2-T2",
+   "story": "EP2-S2",
+   "title": "Web: priority display, reason and manual control",
+   "description": "Show the level on every entry, not by colour alone; show the reason for an Auto level in words; a control to set a level by hand and to return to Auto; sorting and filtering by level. Done when the story's first two criteria pass in tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ],
+   "dependsOn": [
+    "EP2-S2-T1",
+    "EP2-S1-T2"
+   ]
+  },
+  {
+   "key": "EP2-S3-T1",
+   "story": "EP2-S3",
+   "title": "Backend: dependencies between plan items, cycle check, schedule conflicts",
+   "description": "Depends-on links between plan items; adding a link that closes a cycle is refused with its own error type; each plan item reports whether it starts before something it depends on ends; the priority rule's 'another entry depends on it' input comes from here. Done when the story's second and third criteria are covered by tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql"
+   ],
+   "dependsOn": [
+    "EP2-S1-T1"
+   ]
+  },
+  {
+   "key": "EP2-S3-T2",
+   "story": "EP2-S3",
+   "title": "Decision: build the Gantt chart or use a library",
+   "description": "Compare writing the chart in SVG with the maintained open-source Gantt libraries for React against the story's criteria: drag and resize, dependency lines, task markers, week and month scale, keyboard use, 200 rows, licence, bundle size, and how the look can follow the rest of the app. Record the choice as a decision in docs/decisions.md with the alternatives and why they lost.",
+   "type": "ARCHITECTURE",
+   "mandatory": true,
+   "requiredRoles": [
+    "ARCHITECT"
+   ],
+   "requiredSkills": [
+    "react",
+    "data-visualisation"
+   ]
+  },
+  {
+   "key": "EP2-S3-T3",
+   "story": "EP2-S3",
+   "title": "Web: the Gantt chart",
+   "description": "The chart as decided in EP2-S3-T2: bars for dated plan items, drag and resize with saving, dependency lines drawn and removed, conflict marks, task markers, today and wedding-day lines, week and month scale, the list of items without dates beside it, keyboard equivalents for every drag. Done when the story's criteria pass, the 200-item case included.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ],
+   "dependsOn": [
+    "EP2-S3-T1",
+    "EP2-S3-T2",
+    "EP2-S1-T2"
+   ]
+  },
+  {
+   "key": "EP2-S4-T1",
+   "story": "EP2-S4",
+   "title": "Research: formalities and usual steps for a Polish-Ukrainian wedding, with sources",
+   "description": "From official sources (registry offices, consulates, government portals of both countries) and, for traditions and general preparations, reputable guides: collect the steps for one wedding of a Polish and a Ukrainian partner - civil formalities and documents on both sides, translations and legalisation, recognition of the marriage in the other country, religious ceremonies of the denominations concerned, both countries' customs, guests travelling across the border, and the general preparations with their usual lead times. Write docs/research/starter-checklist.md: each entry with group, lead time before the wedding, the office to ask, the source link and the date read. Put to the owner the questions the content depends on (where the wedding takes place, civil or religious or both).",
+   "type": "ANALYSIS",
+   "mandatory": true,
+   "requiredRoles": [
+    "ANALYST"
+   ],
+   "requiredSkills": [
+    "research"
+   ]
+  },
+  {
+   "key": "EP2-S4-T2",
+   "story": "EP2-S4",
+   "title": "Backend: checklist content, applying it at setup, deleting by entry or group",
+   "description": "The checklist as a versioned data file built from the research; an endpoint that applies it to the wedding (plan items and tasks dated backwards from the wedding day, each tagged with its group and its source link); deleting one group in one call; undo within the session. Applying twice does not duplicate. Done when the story's first three criteria are covered by tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql"
+   ],
+   "dependsOn": [
+    "EP2-S4-T1",
+    "EP2-S1-T1"
+   ]
+  },
+  {
+   "key": "EP2-S4-T3",
+   "story": "EP2-S4",
+   "title": "Web: checklist step in the setup, group delete with undo",
+   "description": "After the wedding setup offer the checklist with its groups and entry counts, each group selectable; show group and source on the entries; delete an entry or a group with undo; the note that legal entries are prompts to check and not legal advice. Done when the story's criteria pass in tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ],
+   "dependsOn": [
+    "EP2-S4-T2",
+    "EP2-S1-T2"
+   ]
+  },
+  {
+   "key": "EP2-S5-T1",
+   "story": "EP2-S5",
+   "title": "Home screen: countdown, next entries, overdue",
+   "description": "A summary endpoint (days left in the wedding's time zone, next entries, overdue entries) and the Home page over it. Done when the story's criteria pass in tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql",
+    "typescript",
+    "react"
+   ],
+   "dependsOn": [
+    "EP2-S2-T1",
+    "EP2-S1-T2"
+   ]
+  },
+  {
+   "key": "EP3-S1-T1",
+   "story": "EP3-S1",
+   "title": "Dockerfile and container configuration",
+   "description": "A multi-stage Dockerfile at the repository root following LG-DOC-3: build web/, build the backend jar, final stage a Java 25 runtime with the jar and the web files; uid and gid 10001; read-only root filesystem with /tmp writable; APP_MEDIA_DIR as a volume; forwarded-header handling for a TLS-terminating proxy; the list of environment variables in docs/deployment.md with an example file without values. Done when the image runs locally with a PostgreSQL 18 container and reports healthy.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "docker",
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP3-S1-T2",
+   "story": "EP3-S1",
+   "title": "Decision: how the image is published",
+   "description": "Choose between GitHub Actions in this repository and a script run from the owner's Mac (the LearningGerman way, because Actions are off there). Consider cost, who can trigger it, where the registry credentials live, and the repository's visibility. Record the decision; it needs the owner's word.",
+   "type": "ARCHITECTURE",
+   "mandatory": true,
+   "requiredRoles": [
+    "ARCHITECT"
+   ],
+   "requiredSkills": [
+    "docker",
+    "github-actions"
+   ]
+  },
+  {
+   "key": "EP3-S1-T3",
+   "story": "EP3-S1",
+   "title": "Image publishing automated",
+   "description": "Implement the decision of EP3-S1-T2: the gate first, then build for linux/arm64 and push under a stable name with the full commit sha and latest as tags, with the commit recorded in the image's labels. Done when a commit on the main branch ends as a pullable image.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "docker",
+    "github-actions",
+    "bash"
+   ],
+   "dependsOn": [
+    "EP3-S1-T1",
+    "EP3-S1-T2"
+   ]
+  },
+  {
+   "key": "EP3-S2-T1",
+   "story": "EP3-S2",
+   "title": "Owner: configure the planner's domain",
+   "description": "Choose the planner's address and route it to the home server the way LearningGerman's address is routed. Tell the agent the address; it is needed for the Google sign-in origins and the runbook.",
+   "type": "OTHER",
+   "mandatory": true,
+   "requiredRoles": [
+    "PRODUCT_OWNER"
+   ],
+   "requiredSkills": [
+    "dns"
+   ]
+  },
+  {
+   "key": "EP3-S2-T2",
+   "story": "EP3-S2",
+   "title": "Owner or server session: the planner's entry and environment file on the home server",
+   "description": "On the home server add the planner next to LearningGerman: its own PostgreSQL 18 and data volumes, the app service from the published image with the same hardening, and an environment file filled in by hand from the example in docs/deployment.md (database password, token secret, Google client id, the two allowed addresses). Include the planner in the update job and in the nightly backup.",
+   "type": "OTHER",
+   "mandatory": true,
+   "requiredRoles": [
+    "PRODUCT_OWNER"
+   ],
+   "requiredSkills": [
+    "docker",
+    "operations"
+   ],
+   "dependsOn": [
+    "EP3-S1-T3",
+    "EP3-S2-T1"
+   ]
+  },
+  {
+   "key": "EP3-S2-T3",
+   "story": "EP3-S2",
+   "title": "Owner: add the planner's address to the Google OAuth client",
+   "description": "In the Google Cloud console add the planner's HTTPS address to the web client's authorised JavaScript origins.",
+   "type": "OTHER",
+   "mandatory": true,
+   "requiredRoles": [
+    "PRODUCT_OWNER"
+   ],
+   "requiredSkills": [
+    "google-cloud"
+   ],
+   "dependsOn": [
+    "EP3-S2-T1"
+   ]
+  },
+  {
+   "key": "EP3-S2-T4",
+   "story": "EP3-S2",
+   "title": "Runbook: update, rollback, logs, backup, restore",
+   "description": "docs/deployment.md: what runs where, every environment variable, how an update arrives and how to roll back to an earlier image, where the logs are, what the backup covers and how to restore it into a scratch database. No host names, addresses or values of secrets in the repository. Done when the owner can do a rollback from the text alone.",
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DOCUMENTATION"
+   ],
+   "requiredSkills": [
+    "technical-writing",
+    "operations"
+   ],
+   "dependsOn": [
+    "EP3-S1-T1"
+   ]
+  },
+  {
+   "key": "EP3-S2-T5",
+   "story": "EP3-S2",
+   "title": "First deployment verified from outside",
+   "description": "From outside the home network: the address answers over HTTPS and redirects plain HTTP, health is up, both owners sign in, an address that is not on the allow-list is refused, a plan item created by one owner is seen by the other, the data is still there after a restart of the container, and last night's backup restores into a scratch database. Record what was checked and what could not be.",
+   "type": "TEST",
+   "mandatory": true,
+   "requiredRoles": [
+    "TESTER"
+   ],
+   "requiredSkills": [
+    "operations"
+   ],
+   "dependsOn": [
+    "EP3-S2-T2",
+    "EP3-S2-T3",
+    "EP3-S2-T4"
+   ]
+  }
+ ]
+}

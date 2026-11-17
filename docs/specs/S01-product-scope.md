@@ -1,11 +1,12 @@
 # S01 — Product scope and working agreement
 
-**Status:** draft for the owner's approval, 2026-11-17. Nothing is built yet.
+**Status:** accepted by the owner 2026-11-17 — the answers to the open questions are in §14, and none of the
+proposals was refused. Nothing is built yet.
 **Sources:** the owner's brief and two rounds of questions (2026-11-17); the LearningGerman (LG) project's documents in
 infokuznia for stack, hosting and process (LG-DOC-18 architecture, LG-DOC-3 container contract, LG-DOC-56 container image,
 LG-DOC-4 working with infokuznia).
 
-Lines marked **Proposal** are my choices, not the owner's — say no to any of them.
+Lines marked **Proposal** were my choices, put to the owner with "say no to any of them".
 
 ## 1. What we are building
 
@@ -29,7 +30,11 @@ A private wedding planner for the two of you: a web app, a native Android app an
 | E-mail findings | Added automatically when the AI is confident; otherwise queued for review |
 | E-mail history | Last 3 months when an inbox is connected, then continuously |
 | In the first version | Plan + Gantt, tasks, priorities, inspirations with Android share, e-mail import, budget and payments, vendors, guest list |
-| Tracker | A project of its own in infokuznia; the LG flow may be changed where it helps |
+| Tracker | A project of its own in infokuznia, code `WP`, name `WeddingPlanner`; the LG flow may be changed where it helps |
+| Starter checklist | Yes: one wedding with Polish and Ukrainian formalities combined; anything on it can be deleted |
+| First deployment | Right after the plan and the Gantt chart work; the owner configures the domain first |
+| E-mail triage | Sees every message |
+| Phone notifications | Not in the first version |
 
 ## 3. Concepts
 
@@ -61,6 +66,13 @@ optionally the plan item or vendor it relates to.
 
 **Suggestion.** Something the e-mail import found: a proposed task, payment, plan item or vendor, with the e-mail it
 came from (sender, subject, date, a link that opens it in Gmail), the passage it is based on, and a confidence.
+
+**Starter checklist.** Offered when the wedding is set up: the usual steps as plan items and tasks, dated backwards
+from the wedding day. It covers one wedding with both countries' formalities — Poland and Ukraine — together with the
+general preparations. Entries are grouped (for example civil formalities, documents and translations, religious
+ceremony, traditions, guests travelling from abroad), and you can delete a single entry or a whole group.
+The legal entries are prompts to check with the registry office or consulate, each with its source; they are not
+legal advice, and they are researched when the checklist is built.
 
 ## 4. What each surface does
 
@@ -114,8 +126,7 @@ An AI that ranks entries is left out of v1.
 messages also sender, subject, date and the short passage behind the entry. Full message texts are not stored.
 
 **What leaves the server.** The sender, subject and beginning of *every* message go to the Anthropic API for triage;
-the full text only for wedding messages. This is what "read all my e-mails" costs in privacy — say so if it should be
-narrower (for example: only senders and words you list).
+the full text only for wedding messages. The owner confirmed this scope (§14, question 4).
 
 **Not in v1:** attachments (a PDF invoice is seen only through the e-mail's own text), Outlook, sending mail.
 The mail source is built as a replaceable part so Outlook or plain IMAP can be added.
@@ -153,7 +164,7 @@ Taken from LG (LG-DOC-18 and its three code maps): the same versions, so both ap
 - **A lighter backend structure.** Modules (identity, planning, budget, vendors, guests, inspirations, mail import)
   with checked boundaries, without LG's full hexagonal layering — that was introduced there for a much larger codebase.
 
-## 9. Deployment (later)
+## 9. Deployment
 
 The LG container path (LG-DOC-3, LG-DOC-56): one image holding the backend and the web app, non-root, configured only
 through environment variables, health endpoint, its own PostgreSQL, run by the home server next to LG, reached under a
@@ -166,7 +177,7 @@ public HTTPS name, backed up nightly from the host. Two points are decided when 
 The owner creates the project; I create and maintain everything inside it. (The tracker's agent tools cannot create
 a project, and its REST interface is not reachable with the agent token.)
 
-- **Proposal:** project code `WP`, name `WeddingPlanner`.
+- Project code `WP`, name `WeddingPlanner`.
 - **Epic** = a product area (§11). **Story** = a spec or a feature you can see, with acceptance criteria.
   **Task** = one unit of work on one branch.
 - **Task first.** A task exists before work on it starts. I claim it when I start, write `WP-TS-n: …` in the commit
@@ -178,23 +189,22 @@ a project, and its REST interface is not reachable with the agent token.)
 - **Decisions** are numbered in `docs/decisions.md` (D-001 …). `docs/state.md` holds one screen on where the project
   stands, updated after each finished task.
 
-**Changed from the LG flow:** no separate card and brief layer (the task is the card; `docs/infokuznia-ids.md` maps
-public ids to UUIDs), no separate docs repository, and one agent both does and completes a task.
+**Changed from the LG flow:** no separate card and brief layer (the task is the card; `docs/infokuznia-ids.json` maps
+our keys and the public ids to UUIDs), no separate docs repository, and one agent both does and completes a task.
 
 ## 11. Build order
 
 | Epic | Contents |
 |---|---|
 | 1 Foundation | Repository skeleton for all three parts, the test gate, sign-in with the allow-list, wedding setup, the API contract, infokuznia tooling and document sync |
-| 2 Plan, tasks, priorities | Plan items and tasks, lists, automatic and manual priority, dependencies, the Gantt chart on the web |
-| 3 Android app | Sign-in, home, lists, quick actions, offline reading |
-| 4 Inspirations | Storage and previews, the web board, the Android share target |
-| 5 Budget, vendors, guests | The three registers and their links to plan items, tasks and payments |
-| 6 E-mail import | Gmail connection and sync, triage and extraction, Suggestions inbox, auto-add |
-| 7 Deployment and operations | The image, the home-server entry, backups, the Android release build |
+| 2 Plan, tasks, priorities | Plan items and tasks, lists, automatic and manual priority, dependencies, the Gantt chart on the web, the starter checklist, the home screen |
+| 3 First deployment | The image, the home-server entry, the domain (owner), backups — the planner is usable on the web from here |
+| 4 Android app | Sign-in, home, lists, quick actions, offline reading, the release build for the second phone |
+| 5 Inspirations | Storage and previews, the web board, the Android share target |
+| 6 Budget, vendors, guests | The three registers and their links to plan items, tasks and payments |
+| 7 E-mail import | Gmail connection and sync, triage and extraction, Suggestions inbox, auto-add |
 
-E-mail import comes late because it writes into every other part. Deployment can be pulled forward — for example
-right after epic 2, so you can start using the planner while the rest is built.
+E-mail import comes last because it writes into every other part.
 
 ## 12. What I need from the owner
 
@@ -203,19 +213,20 @@ right after epic 2, so you can start using the planner while the rest is built.
 | Now | The infokuznia project (`WP`), and for my token's actor: the product-owner role (to create epics, stories and tasks) and the roles the tasks will ask for (architect, developer, tester, documentation, UX designer, analyst) |
 | Now | A decision on the repository's visibility: it is public, the LG repositories are private. No secrets or personal data will be committed either way |
 | Epic 1 | A Google OAuth client for sign-in (web and Android). I can build and test without it through a development login |
-| Epic 6 | Gmail API switched on for that Google project; an Anthropic API key on the server |
-| Epic 7 | The public host name and the server-side entries |
+| Epic 3 | The domain configured, and the server-side entries |
+| Epic 7 | Gmail API switched on for that Google project; an Anthropic API key on the server |
 
 ## 13. Not in the first version
 
 Public RSVP page, seating plan, sending invitations or e-mail, e-mail attachments, Outlook, iOS, more than one wedding,
 helpers with their own accounts, AI-ranked priorities, phone notifications for due dates.
 
-## 14. Open questions
+## 14. Questions answered by the owner (2026-11-17)
 
-1. Is `WP` / `WeddingPlanner` right for the infokuznia project?
-2. A starter checklist that pre-fills the plan with the usual steps, dated backwards from the wedding day — wanted?
-   If yes: generic, or for a particular country's formalities?
-3. Is the build order right, and should the first deployment come right after epic 2?
-4. Should the e-mail triage see every message (as specified), or only a narrower set?
-5. Phone notifications for due tasks are left out of v1 — agreed?
+1. Is `WP` / `WeddingPlanner` right for the infokuznia project? — **Yes.**
+2. A starter checklist that pre-fills the plan? — **Yes, for Poland and Ukraine: one wedding with combined
+   formalities; we must be able to delete the entries we do not want.**
+3. Should the first deployment come right after the plan and Gantt work? — **Yes; the owner configures the domain
+   first.**
+4. Should the e-mail triage see every message? — **Every message.**
+5. Phone notifications for due tasks left out of the first version? — **Agreed.**
