@@ -396,6 +396,42 @@
    "publicId": "WP-TS-37",
    "id": "64732481-32a7-48bb-bf88-892e7ac76e5b",
    "title": "Web: the inspirations board"
+  },
+  "EP6-S1-T1": {
+   "type": "task",
+   "publicId": "WP-TS-38",
+   "id": "3d235377-393a-42d6-9acb-8e345fc99a73",
+   "title": "Backend: payments on tasks, the budget and its summary"
+  },
+  "EP6-S1-T2": {
+   "type": "task",
+   "publicId": "WP-TS-39",
+   "id": "41659bf8-a7ac-4e7f-943d-660f804a92a0",
+   "title": "Web: payments on the task form and lists, the Budget page, the budget on Home"
+  },
+  "EP6-S2-T1": {
+   "type": "task",
+   "publicId": "WP-TS-40",
+   "id": "4db9d198-ef0d-4796-8fff-7d8dd0dacf78",
+   "title": "Backend: the vendor register and what hangs on a vendor"
+  },
+  "EP6-S2-T2": {
+   "type": "task",
+   "publicId": "WP-TS-41",
+   "id": "0988be3b-1322-4061-aaec-f0e15c5df5f2",
+   "title": "Web: the vendors list, a vendor's page, and choosing a vendor on entries and inspirations"
+  },
+  "EP6-S3-T1": {
+   "type": "task",
+   "publicId": "WP-TS-42",
+   "id": "e97c41c4-ff2a-492f-a20c-035b162bc279",
+   "title": "Backend: guests, households and the head count"
+  },
+  "EP6-S3-T2": {
+   "type": "task",
+   "publicId": "WP-TS-43",
+   "id": "e9d361cf-2dd7-4457-97b0-92cf64581aa8",
+   "title": "Web: the guest list"
   }
  }
 }

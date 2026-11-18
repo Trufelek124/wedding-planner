@@ -1,0 +1,111 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP6-S1-T1",
+   "story": "EP6-S1",
+   "title": "Backend: payments on tasks, the budget and its summary",
+   "description": "A task can carry money: an amount in the smallest unit of the wedding's currency (a whole number, never a fraction), a kind (deposit, instalment, final) and the date it was paid; its budget category is the entry's own category, so nothing is entered twice. Marking a payment paid records the date, in the wedding's time zone; un-marking clears it. The budget has a total and a planned amount per category, both optional. Its summary gives planned, committed (every payment that is not dropped) and paid, in total and per category, with what has no category counted apart. GET /api/home gains the budget at a glance and the next unpaid payments by due date. Validation messages are written for the person. Done when the story's criteria 1 to 4 and the server's part of 5 are covered by tests at the API and openapi.json is regenerated.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql"
+   ]
+  },
+  {
+   "key": "EP6-S1-T2",
+   "story": "EP6-S1",
+   "title": "Web: payments on the task form and lists, the Budget page, the budget on Home",
+   "description": "The task form takes an amount, a kind and paid or not; amounts are typed and shown as money of the wedding's currency and sent as whole numbers of its smallest unit. A payment shows its amount and whether it is paid wherever tasks are listed, and can be marked paid there. A page Budget: the total and the planned amount per category can be set; planned, committed and paid are shown in total and per category, with what goes over the plan marked in words as well as in colour, and the payments behind a category one click away. Home shows the budget at a glance and the next payments due. Usable by keyboard and at phone width, in light and dark. Done when the story's criteria pass in tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ],
+   "dependsOn": [
+    "EP6-S1-T1"
+   ]
+  },
+  {
+   "key": "EP6-S2-T1",
+   "story": "EP6-S2",
+   "title": "Backend: the vendor register and what hangs on a vendor",
+   "description": "A vendor has a name, a category, a status (considering, booked, dropped), a contact person, phone, e-mail, website, address, an agreed price and notes; create, read, change with the version it was based on, delete, list filtered by status and category. A plan item, a task and an inspiration can each point to a vendor; the vendor is checked through the module's interface. A vendor's page data lists its plan items, tasks and payments and the sum paid against the agreed price. Deleting a vendor that something points to asks first what happens to those links. Contact details are personal data: they never reach a log, and the records hide them in toString(). Done when the story's three criteria, and criterion 6 of the inspirations story for vendors, are covered by tests at the API and openapi.json is regenerated.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql"
+   ],
+   "dependsOn": [
+    "EP6-S1-T1"
+   ]
+  },
+  {
+   "key": "EP6-S2-T2",
+   "story": "EP6-S2",
+   "title": "Web: the vendors list, a vendor's page, and choosing a vendor on entries and inspirations",
+   "description": "A page Vendors: the list with status and category, filters kept in the address, add, change and delete with the question about links. A vendor's page shows the contact details as links that call, write or open, the agreed price against what is paid, and its plan items, tasks, payments and inspirations. The forms of plan items, tasks and inspirations get a Vendor choice, and the lists name the vendor. Usable by keyboard and at phone width, in light and dark. Done when the story's criteria pass in tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ],
+   "dependsOn": [
+    "EP6-S2-T1",
+    "EP6-S1-T2"
+   ]
+  },
+  {
+   "key": "EP6-S3-T1",
+   "story": "EP6-S3",
+   "title": "Backend: guests, households and the head count",
+   "description": "A guest has a name, a side (yours, your partner's, both), an optional household, a status (not invited, invited, confirmed, declined, maybe), a plus-one, a number of children, dietary needs, whether accommodation is needed, contact details and notes; create, read, change with the version it was based on, delete, list filtered by status and side. Households are named groups of guests. The status alone can be changed in one call. Counts per status and per side include plus-ones and children. Everything about a guest is personal data: none of it reaches a log, and the records hide it in toString(); NoPersonalDataInLogsIntegrationTest covers the new endpoints. Done when the story's criteria 1, 2, 4 and the server's part of 3 are covered by tests at the API and openapi.json is regenerated.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot",
+    "postgresql"
+   ]
+  },
+  {
+   "key": "EP6-S3-T2",
+   "story": "EP6-S3",
+   "title": "Web: the guest list",
+   "description": "A page Guests: the list grouped by household, filters by status and side kept in the address, the counts per status and side with plus-ones and children, a guest's status changed in one action from the list, add, change and delete with confirmation, and households added, renamed and removed. Test data is made up; no real guest ever appears in the repository or the tracker. Usable by keyboard and at phone width, in light and dark. Done when the story's criteria 1, 2 and 3 for the web pass in tests; the phone's part of criterion 3 comes with the Android app.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ],
+   "dependsOn": [
+    "EP6-S3-T1"
+   ]
+  }
+ ]
+}
