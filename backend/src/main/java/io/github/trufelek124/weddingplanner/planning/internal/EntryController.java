@@ -59,8 +59,9 @@ class EntryController {
             @Parameter(description = "true: only payments, which are the tasks that carry an amount; false: everything else.")
                     @RequestParam(required = false)
                     Boolean payment,
+            @Parameter(description = "Only the entries that concern this vendor.") @RequestParam(required = false) UUID vendorId,
             @RequestParam(defaultValue = "DUE_DATE") Sort sort) {
-        Filter filter = new Filter(kind, status, categoryId, withoutCategory, assigneeId, parentId, scheduled, payment);
+        Filter filter = new Filter(kind, status, categoryId, withoutCategory, assigneeId, parentId, scheduled, payment, vendorId);
         return entries.list(user, filter, priority, sort).stream().map(EntryResponse::of).toList();
     }
 

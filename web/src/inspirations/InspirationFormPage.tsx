@@ -117,6 +117,8 @@ function InspirationForm({ loaded, boards, planItems, onReload }: InspirationFor
       note: note.trim(),
       tags: tagsFrom(tags),
       planItemId: planItemId === '' ? null : planItemId,
+      // The vendor is said again as it is: a save replaces the whole inspiration.
+      vendorId: existing?.vendorId ?? null,
     }
   }
 

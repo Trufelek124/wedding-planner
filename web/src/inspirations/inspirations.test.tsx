@@ -175,7 +175,7 @@ describe('adding from the board', () => {
 
     expect(await screen.findByRole('article', { name: 'From TikTok' })).toBeInTheDocument()
     await expect(server.requests('POST /api/inspirations')[0]?.json()).resolves.toEqual({
-      url: 'https://www.tiktok.com/@x/video/1', boardId: DRESS.id, title: '', note: '', tags: [], planItemId: null,
+      url: 'https://www.tiktok.com/@x/video/1', boardId: DRESS.id, title: '', note: '', tags: [], planItemId: null, vendorId: null,
     })
     expect(screen.getByRole('status')).toHaveTextContent('The link was saved.')
     expect(screen.getByLabelText('Add a link')).toHaveValue('')
@@ -240,7 +240,7 @@ describe('adding from the board', () => {
 
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('2 pictures were saved as one idea.'))
     await expect(server.requests('POST /api/inspirations')[0]?.json()).resolves.toEqual({
-      url: null, boardId: null, title: '', note: '', tags: [], planItemId: null,
+      url: null, boardId: null, title: '', note: '', tags: [], planItemId: null, vendorId: null,
     })
     const upload = server.requests(`POST /api/inspirations/${created.id}/pictures`)[0]
     expect(upload?.headers.get('Content-Type')).toMatch(/^multipart\/form-data; boundary=/)
@@ -325,7 +325,7 @@ describe('the form of an inspiration', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Inspirations' })).toBeInTheDocument()
     await expect(server.requests('POST /api/inspirations')[0]?.json()).resolves.toEqual({
       url: 'https://www.pinterest.com/pin/1/', boardId: CAKE.id, title: 'Three tiers', note: 'Ask the baker about figs',
-      tags: ['naked cake', 'figs'], planItemId: flowers.id,
+      tags: ['naked cake', 'figs'], planItemId: flowers.id, vendorId: null,
     })
     expect(query(server.requests('GET /api/entries')[0])).toEqual({ kind: ['PLAN_ITEM'], sort: ['TITLE'] })
   })
@@ -351,7 +351,7 @@ describe('the form of an inspiration', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Inspirations' })).toBeInTheDocument()
     await expect(server.requests('POST /api/inspirations')[0]?.json()).resolves.toEqual({
-      url: null, boardId: DRESS.id, title: '', note: 'From the fitting', tags: ['lace'], planItemId: null,
+      url: null, boardId: DRESS.id, title: '', note: 'From the fitting', tags: ['lace'], planItemId: null, vendorId: null,
     })
     await expect(sizesSent(server.requests(`POST /api/inspirations/${created.id}/pictures`)[0])).resolves.toEqual([4])
   })
@@ -426,8 +426,24 @@ describe('the form of an inspiration', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Inspirations' })).toBeInTheDocument()
     await expect(server.requests(`PUT /api/inspirations/${arch.id}`)[0]?.json()).resolves.toEqual({
       version: 3, url: 'https://www.florist.example/arch', boardId: null, title: '', note: 'For the garden ceremony',
-      tags: ['arch', 'outdoor'], planItemId: flowers.id,
+      tags: ['arch', 'outdoor'], planItemId: flowers.id, vendorId: null,
     })
+  })
+
+  it('says the vendor of an inspiration again as it is', async () => {
+    const vendorId = 'aaaaaaaa-0000-4000-8000-000000000001'
+    const arch = inspiration({ note: 'Too big?', vendorId })
+    const server = inspirationsServer([arch], {
+      [`GET /api/inspirations/${arch.id}`]: Response.json(arch),
+      [`PUT /api/inspirations/${arch.id}`]: Response.json({ ...arch, version: 1 }),
+    })
+    open(`/inspirations/${arch.id}`)
+
+    await userEvent.type(await screen.findByLabelText(/^Note/), ' Maybe.')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(server.requests(`PUT /api/inspirations/${arch.id}`)).toHaveLength(1))
+    await expect(server.requests(`PUT /api/inspirations/${arch.id}`)[0]?.json()).resolves.toMatchObject({ note: 'Too big? Maybe.', vendorId })
   })
 
   it('offers the latest version when someone else changed it meanwhile, and overwrites nothing', async () => {

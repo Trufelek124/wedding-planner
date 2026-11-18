@@ -44,6 +44,8 @@ final class InspirationDtos {
         List<String> tags();
 
         UUID planItemId();
+
+        UUID vendorId();
     }
 
     @Schema(name = "NewInspiration", description = "An idea to keep: a link, or the start of one that pictures are added to.")
@@ -56,7 +58,8 @@ final class InspirationDtos {
             @Schema(description = "Free text; may be empty.") @NotNull @Size(max = NOTE_LENGTH, message = NOTE_TOO_LONG) String note,
             @Schema(description = "Kept in lower case, without a leading #.") @NotNull @Size(max = TAGS, message = TOO_MANY_TAGS)
                     List<@NotBlank(message = TAG_EMPTY) @Size(max = TAG_LENGTH, message = TAG_TOO_LONG) String> tags,
-            @Schema(description = "The plan item the idea belongs to.", nullable = true) UUID planItemId)
+            @Schema(description = "The plan item the idea belongs to.", nullable = true) UUID planItemId,
+            @Schema(description = "The vendor the idea concerns.", nullable = true) UUID vendorId)
             implements InspirationFields {}
 
     @Schema(name = "InspirationChange", description = "All fields of an inspiration as they should be from now on.")
@@ -68,7 +71,8 @@ final class InspirationDtos {
             @NotNull @Size(max = NOTE_LENGTH, message = NOTE_TOO_LONG) String note,
             @NotNull @Size(max = TAGS, message = TOO_MANY_TAGS)
                     List<@NotBlank(message = TAG_EMPTY) @Size(max = TAG_LENGTH, message = TAG_TOO_LONG) String> tags,
-            @Schema(nullable = true) UUID planItemId)
+            @Schema(nullable = true) UUID planItemId,
+            @Schema(nullable = true) UUID vendorId)
             implements InspirationFields {}
 
     @Schema(name = "Inspiration", description = "An idea the couple kept: a link or pictures, on a board, with a note and tags.")
@@ -81,6 +85,7 @@ final class InspirationDtos {
             @Schema(description = "In lower case, in alphabetical order.") List<String> tags,
             @Schema(nullable = true) UUID boardId,
             @Schema(description = "The plan item the idea belongs to.", nullable = true) UUID planItemId,
+            @Schema(description = "The vendor the idea concerns.", nullable = true) UUID vendorId,
             @Schema(description = "The member who saved it.", nullable = true) UUID addedById,
             @Schema(description = "Whether a title and a picture are still being fetched for the link, were found, or will not come.")
                     PreviewStatus previewStatus,
@@ -95,7 +100,7 @@ final class InspirationDtos {
             InspirationRow row = view.inspiration();
             return new InspirationResponse(
                     row.id(), row.url(), row.source(), row.title(), row.note(), row.tags(), row.boardId(), row.planItemId(),
-                    row.addedBy(), row.previewStatus(), row.previewTitle(),
+                    row.vendorId(), row.addedBy(), row.previewStatus(), row.previewTitle(),
                     view.pictures().stream().map(PictureResponse::of).toList(), row.version(), row.createdAt(), row.updatedAt());
         }
     }

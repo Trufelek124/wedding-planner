@@ -41,8 +41,11 @@ class InspirationController {
                     Boolean withoutBoard,
             @Parameter(description = "Only the inspirations that carry this tag.") @RequestParam(required = false) String tag,
             @Parameter(description = "Only the inspirations that belong to this plan item.") @RequestParam(required = false)
-                    UUID planItemId) {
-        return inspirations.list(user, boardId, withoutBoard, tag, planItemId).stream().map(InspirationResponse::of).toList();
+                    UUID planItemId,
+            @Parameter(description = "Only the inspirations that concern this vendor.") @RequestParam(required = false) UUID vendorId) {
+        return inspirations.list(user, boardId, withoutBoard, tag, planItemId, vendorId).stream()
+                .map(InspirationResponse::of)
+                .toList();
     }
 
     /** Every tag in use, in alphabetical order. */

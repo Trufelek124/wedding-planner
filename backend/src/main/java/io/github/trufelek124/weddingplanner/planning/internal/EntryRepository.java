@@ -5,6 +5,7 @@ import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Paym
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Priority;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.PriorityMode;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Status;
+import io.github.trufelek124.weddingplanner.vendors.VendorUse.Use;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -28,6 +29,7 @@ class EntryRepository {
      * An entry as stored, with who does it and how many tasks hang on it.
      *
      * @param priority the level a person chose; null while the planner works the level out
+     * @param vendorId the vendor the entry concerns, if any
      * @param amount for a payment: what it costs, in the smallest unit of the wedding's currency; null for any other entry
      * @param paidOn the day a payment was paid; null until it is done
      */
@@ -44,6 +46,7 @@ class EntryRepository {
             PriorityMode priorityMode,
             Priority priority,
             UUID parentId,
+            UUID vendorId,
             Long amount,
             PaymentKind paymentKind,
             LocalDate paidOn,
@@ -59,7 +62,7 @@ class EntryRepository {
     }
 
     /** No narrowing down: every entry of the wedding. */
-    static final Filter EVERYTHING = new Filter(null, null, null, false, null, null, null, null);
+    static final Filter EVERYTHING = new Filter(null, null, null, false, null, null, null, null, null);
 
     /**
      * What a list may be narrowed down by; null means "any".
@@ -75,11 +78,12 @@ class EntryRepository {
             UUID assigneeId,
             UUID parentId,
             Boolean scheduled,
-            Boolean payment) {}
+            Boolean payment,
+            UUID vendorId) {}
 
     private static final String SELECT = """
             SELECT e.id, e.kind, e.title, e.notes, e.category_id, e.start_date, e.due_date, e.status, e.completed_at,
-                   e.priority_mode, e.priority, e.parent_id, e.amount, e.payment_kind, e.paid_on,
+                   e.priority_mode, e.priority, e.parent_id, e.vendor_id, e.amount, e.payment_kind, e.paid_on,
                    e.version, e.created_at, e.updated_at,
                    (SELECT count(*) FROM entry task WHERE task.parent_id = e.id) AS task_count,
                    ARRAY(SELECT a.member_id FROM entry_assignee a WHERE a.entry_id = e.id) AS assignee_ids
@@ -133,16 +137,20 @@ class EntryRepository {
         if (filter.payment() != null) {
             where.append(filter.payment() ? " AND e.amount IS NOT NULL" : " AND e.amount IS NULL");
         }
+        if (filter.vendorId() != null) {
+            where.append(" AND e.vendor_id = :vendor");
+            params.put("vendor", filter.vendorId());
+        }
         return jdbc.sql(SELECT + where + " ORDER BY e.created_at, e.id").params(params).query(EntryRepository::row).list();
     }
 
     void insert(UUID weddingId, UUID createdBy, EntryRow entry) {
         jdbc.sql("""
                 INSERT INTO entry (id, wedding_id, kind, title, notes, category_id, start_date, due_date, status,
-                                   completed_at, priority_mode, priority, parent_id, amount, payment_kind, paid_on,
-                                   version, created_by, created_at, updated_at)
+                                   completed_at, priority_mode, priority, parent_id, vendor_id, amount, payment_kind,
+                                   paid_on, version, created_by, created_at, updated_at)
                 VALUES (:id, :wedding, :kind, :title, :notes, :category, :start, :due, :status,
-                        :completed, :mode, :priority, :parent, :amount, :paymentKind, :paidOn,
+                        :completed, :mode, :priority, :parent, :vendor, :amount, :paymentKind, :paidOn,
                         0, :createdBy, :now, :now)
                 """)
                 .params(fields(entry))
@@ -160,7 +168,7 @@ class EntryRepository {
                 UPDATE entry
                 SET kind = :kind, title = :title, notes = :notes, category_id = :category, start_date = :start,
                     due_date = :due, status = :status, completed_at = :completed, priority_mode = :mode,
-                    priority = :priority, parent_id = :parent, amount = :amount, payment_kind = :paymentKind,
+                    priority = :priority, parent_id = :parent, vendor_id = :vendor, amount = :amount, payment_kind = :paymentKind,
                     paid_on = :paidOn, version = version + 1, updated_at = :now
                 WHERE wedding_id = :wedding AND id = :id AND version = :version
                 """)
@@ -195,6 +203,30 @@ class EntryRepository {
         jdbc.sql("DELETE FROM entry WHERE wedding_id = ? AND id = ?").params(weddingId, id).update();
     }
 
+    /** What the entries that point to each vendor come to. Dropped payments are not counted as money. */
+    Map<UUID, Use> useByVendor(UUID weddingId) {
+        Map<UUID, Use> all = new HashMap<>();
+        jdbc.sql("""
+                SELECT vendor_id,
+                       count(*) FILTER (WHERE kind = 'PLAN_ITEM') AS plan_items,
+                       count(*) FILTER (WHERE kind = 'TASK') AS tasks,
+                       count(*) FILTER (WHERE amount IS NOT NULL AND status <> 'DROPPED') AS payments,
+                       COALESCE(sum(amount) FILTER (WHERE status <> 'DROPPED'), 0)::bigint AS committed,
+                       COALESCE(sum(amount) FILTER (WHERE status = 'DONE'), 0)::bigint AS paid
+                FROM entry
+                WHERE wedding_id = ? AND vendor_id IS NOT NULL
+                GROUP BY vendor_id
+                """)
+                .param(weddingId)
+                .query(row -> {
+                    all.put(
+                            row.getObject("vendor_id", UUID.class),
+                            new Use(row.getInt("plan_items"), row.getInt("tasks"), row.getInt("payments"),
+                                    row.getLong("committed"), row.getLong("paid"), 0));
+                });
+        return all;
+    }
+
     private void replaceAssignees(UUID entryId, List<UUID> memberIds) {
         jdbc.sql("DELETE FROM entry_assignee WHERE entry_id = ?").param(entryId).update();
         for (UUID memberId : memberIds) {
@@ -216,6 +248,7 @@ class EntryRepository {
         // Only a level a person chose is stored; the automatic one is worked out when asked for.
         fields.put("priority", entry.priority() == null ? null : entry.priority().name());
         fields.put("parent", entry.parentId());
+        fields.put("vendor", entry.vendorId());
         fields.put("amount", entry.amount());
         fields.put("paymentKind", entry.paymentKind() == null ? null : entry.paymentKind().name());
         fields.put("paidOn", entry.paidOn());
@@ -237,6 +270,7 @@ class EntryRepository {
                 PriorityMode.valueOf(row.getString("priority_mode")),
                 row.getString("priority") == null ? null : Priority.valueOf(row.getString("priority")),
                 row.getObject("parent_id", UUID.class),
+                row.getObject("vendor_id", UUID.class),
                 row.getObject("amount", Long.class),
                 row.getString("payment_kind") == null ? null : PaymentKind.valueOf(row.getString("payment_kind")),
                 row.getObject("paid_on", LocalDate.class),

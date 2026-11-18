@@ -356,13 +356,18 @@
             "format" : "date-time",
             "type" : "string"
           },
+          "vendorId" : {
+            "description" : "The vendor the entry concerns.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
           "version" : {
             "description" : "Send this back with a change; it tells whether someone else saved in between.",
             "format" : "int32",
             "type" : "integer"
           }
         },
-        "required" : [ "amount", "assigneeIds", "categoryId", "completedAt", "conflictsWithIds", "createdAt", "dependsOnIds", "dueDate", "id", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "priorityReason", "startDate", "status", "taskCount", "title", "updatedAt", "version" ],
+        "required" : [ "amount", "assigneeIds", "categoryId", "completedAt", "conflictsWithIds", "createdAt", "dependsOnIds", "dueDate", "id", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "priorityReason", "startDate", "status", "taskCount", "title", "updatedAt", "vendorId", "version" ],
         "type" : "object"
       },
       "EntryChange" : {
@@ -431,13 +436,17 @@
             "minLength" : 0,
             "type" : "string"
           },
+          "vendorId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
           "version" : {
             "description" : "The version of the entry this change is based on.",
             "format" : "int32",
             "type" : "integer"
           }
         },
-        "required" : [ "amount", "assigneeIds", "categoryId", "dueDate", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "startDate", "status", "title", "version" ],
+        "required" : [ "amount", "assigneeIds", "categoryId", "dueDate", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "startDate", "status", "title", "vendorId", "version" ],
         "type" : "object"
       },
       "EntryConversion" : {
@@ -588,13 +597,18 @@
             "description" : "The page the idea comes from; null for pictures of one's own.",
             "type" : [ "string", "null" ]
           },
+          "vendorId" : {
+            "description" : "The vendor the idea concerns.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
           "version" : {
             "description" : "Send this back with a change; it tells whether someone else saved in between.",
             "format" : "int32",
             "type" : "integer"
           }
         },
-        "required" : [ "addedById", "boardId", "createdAt", "id", "note", "pictures", "planItemId", "previewStatus", "previewTitle", "source", "tags", "title", "updatedAt", "url", "version" ],
+        "required" : [ "addedById", "boardId", "createdAt", "id", "note", "pictures", "planItemId", "previewStatus", "previewTitle", "source", "tags", "title", "updatedAt", "url", "vendorId", "version" ],
         "type" : "object"
       },
       "InspirationChange" : {
@@ -633,13 +647,17 @@
             "minLength" : 0,
             "type" : [ "string", "null" ]
           },
+          "vendorId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
           "version" : {
             "description" : "The version of the inspiration this change is based on.",
             "format" : "int32",
             "type" : "integer"
           }
         },
-        "required" : [ "boardId", "note", "planItemId", "tags", "title", "url", "version" ],
+        "required" : [ "boardId", "note", "planItemId", "tags", "title", "url", "vendorId", "version" ],
         "type" : "object"
       },
       "Me" : {
@@ -746,9 +764,14 @@
             "maxLength" : 200,
             "minLength" : 0,
             "type" : "string"
+          },
+          "vendorId" : {
+            "description" : "The vendor the entry concerns.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "amount", "assigneeIds", "categoryId", "dueDate", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "startDate", "status", "title" ],
+        "required" : [ "amount", "assigneeIds", "categoryId", "dueDate", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "startDate", "status", "title", "vendorId" ],
         "type" : "object"
       },
       "NewInspiration" : {
@@ -792,9 +815,78 @@
             "maxLength" : 2000,
             "minLength" : 0,
             "type" : [ "string", "null" ]
+          },
+          "vendorId" : {
+            "description" : "The vendor the idea concerns.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "boardId", "note", "planItemId", "tags", "title", "url" ],
+        "required" : [ "boardId", "note", "planItemId", "tags", "title", "url", "vendorId" ],
+        "type" : "object"
+      },
+      "NewVendor" : {
+        "description" : "A vendor to add to the register.",
+        "properties" : {
+          "address" : {
+            "description" : "May be empty.",
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "agreedPrice" : {
+            "description" : "What was agreed, in the smallest unit of the wedding's currency; null while nothing is agreed.",
+            "format" : "int64",
+            "maximum" : 1000000000000,
+            "minimum" : 0,
+            "type" : [ "integer", "null" ]
+          },
+          "categoryId" : {
+            "description" : "One of the plan's categories.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "contactPerson" : {
+            "description" : "May be empty.",
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "description" : "May be empty.",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "notes" : {
+            "description" : "Free text; may be empty.",
+            "maxLength" : 10000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phone" : {
+            "description" : "As the person writes it; may be empty.",
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "CONSIDERING", "BOOKED", "DROPPED" ],
+            "type" : "string"
+          },
+          "website" : {
+            "description" : "A web address; https:// is put in front of one that has no scheme. May be empty.",
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "address", "agreedPrice", "categoryId", "contactPerson", "email", "name", "notes", "phone", "status", "website" ],
         "type" : "object"
       },
       "Picture" : {
@@ -882,9 +974,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -937,6 +1029,162 @@
           }
         },
         "required" : [ "count", "tag" ],
+        "type" : "object"
+      },
+      "Vendor" : {
+        "description" : "Someone the wedding is made with: how to reach them, what was agreed, and what hangs on them. Its plan items and tasks are GET /api/entries?vendorId=…, its inspirations GET /api/inspirations?vendorId=….",
+        "properties" : {
+          "address" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "agreedPrice" : {
+            "description" : "What was agreed, in the smallest unit of the wedding's currency; null while nothing is agreed.",
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "categoryId" : {
+            "description" : "One of the plan's categories.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "committed" : {
+            "description" : "What those payments come to, in the smallest unit of the wedding's currency.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "contactPerson" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "email" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "inspirations" : {
+            "description" : "How many inspirations point to this vendor.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "paid" : {
+            "description" : "The part of it that is paid.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "payments" : {
+            "description" : "How many of those tasks are payments that are not dropped.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "phone" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "planItems" : {
+            "description" : "How many plan items point to this vendor.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "CONSIDERING", "BOOKED", "DROPPED" ],
+            "type" : "string"
+          },
+          "tasks" : {
+            "description" : "How many tasks point to it, payments among them.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "Send this back with a change; it tells whether someone else saved in between.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "website" : {
+            "description" : "A web address starting with http:// or https://, or empty.",
+            "type" : "string"
+          }
+        },
+        "required" : [ "address", "agreedPrice", "categoryId", "committed", "contactPerson", "createdAt", "email", "id", "inspirations", "name", "notes", "paid", "payments", "phone", "planItems", "status", "tasks", "updatedAt", "version", "website" ],
+        "type" : "object"
+      },
+      "VendorChange" : {
+        "description" : "All fields of a vendor as they should be from now on.",
+        "properties" : {
+          "address" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "agreedPrice" : {
+            "description" : "What was agreed, in the smallest unit of the wedding's currency; null while nothing is agreed.",
+            "format" : "int64",
+            "maximum" : 1000000000000,
+            "minimum" : 0,
+            "type" : [ "integer", "null" ]
+          },
+          "categoryId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "contactPerson" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "notes" : {
+            "maxLength" : 10000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phone" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "CONSIDERING", "BOOKED", "DROPPED" ],
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "The version of the vendor this change is based on.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "website" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "address", "agreedPrice", "categoryId", "contactPerson", "email", "name", "notes", "phone", "status", "version", "website" ],
         "type" : "object"
       },
       "Wedding" : {
@@ -1267,7 +1515,7 @@
     },
     "/api/boards" : {
       "get" : {
-        "operationId" : "list_3",
+        "operationId" : "list_4",
         "responses" : {
           "200" : {
             "content" : {
@@ -1334,7 +1582,7 @@
     },
     "/api/boards/{id}" : {
       "delete" : {
-        "operationId" : "delete_3",
+        "operationId" : "delete_4",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1418,7 +1666,7 @@
     },
     "/api/budget" : {
       "get" : {
-        "operationId" : "get_3",
+        "operationId" : "get_4",
         "responses" : {
           "200" : {
             "content" : {
@@ -1444,7 +1692,7 @@
         "tags" : [ "budget-controller" ]
       },
       "put" : {
-        "operationId" : "change_2",
+        "operationId" : "change_3",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1482,7 +1730,7 @@
     },
     "/api/categories" : {
       "get" : {
-        "operationId" : "list_2",
+        "operationId" : "list_3",
         "responses" : {
           "200" : {
             "content" : {
@@ -1549,7 +1797,7 @@
     },
     "/api/categories/{id}" : {
       "delete" : {
-        "operationId" : "delete_2",
+        "operationId" : "delete_3",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1624,7 +1872,7 @@
     },
     "/api/entries" : {
       "get" : {
-        "operationId" : "list_1",
+        "operationId" : "list_2",
         "parameters" : [ {
           "in" : "query",
           "name" : "kind",
@@ -1709,6 +1957,15 @@
             "type" : "boolean"
           }
         }, {
+          "description" : "Only the entries that concern this vendor.",
+          "in" : "query",
+          "name" : "vendorId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
           "in" : "query",
           "name" : "sort",
           "required" : false,
@@ -1746,7 +2003,7 @@
         "tags" : [ "entry-controller" ]
       },
       "post" : {
-        "operationId" : "create",
+        "operationId" : "create_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1784,7 +2041,7 @@
     },
     "/api/entries/{id}" : {
       "delete" : {
-        "operationId" : "delete_1",
+        "operationId" : "delete_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1821,7 +2078,7 @@
         "tags" : [ "entry-controller" ]
       },
       "get" : {
-        "operationId" : "get_2",
+        "operationId" : "get_3",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1856,7 +2113,7 @@
         "tags" : [ "entry-controller" ]
       },
       "put" : {
-        "operationId" : "change_1",
+        "operationId" : "change_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2113,7 +2370,7 @@
     },
     "/api/inspirations" : {
       "get" : {
-        "operationId" : "list",
+        "operationId" : "list_1",
         "parameters" : [ {
           "description" : "Only the inspirations on this board.",
           "in" : "query",
@@ -2143,6 +2400,15 @@
           "description" : "Only the inspirations that belong to this plan item.",
           "in" : "query",
           "name" : "planItemId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "Only the inspirations that concern this vendor.",
+          "in" : "query",
+          "name" : "vendorId",
           "required" : false,
           "schema" : {
             "format" : "uuid",
@@ -2246,7 +2512,7 @@
     },
     "/api/inspirations/{id}" : {
       "delete" : {
-        "operationId" : "delete",
+        "operationId" : "delete_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2274,7 +2540,7 @@
         "tags" : [ "inspiration-controller" ]
       },
       "get" : {
-        "operationId" : "get_1",
+        "operationId" : "get_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2309,7 +2575,7 @@
         "tags" : [ "inspiration-controller" ]
       },
       "put" : {
-        "operationId" : "change",
+        "operationId" : "change_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2536,6 +2802,213 @@
           }
         },
         "tags" : [ "me-controller" ]
+      }
+    },
+    "/api/vendors" : {
+      "get" : {
+        "operationId" : "list",
+        "parameters" : [ {
+          "description" : "Only vendors in one of these states.",
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "CONSIDERING", "BOOKED", "DROPPED" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "categoryId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Vendor"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "vendor-controller" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NewVendor"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Vendor"
+                }
+              }
+            },
+            "description" : "Created"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "vendor-controller" ]
+      }
+    },
+    "/api/vendors/{id}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "For a vendor that plan items, tasks or inspirations point to: REMOVE lets them stay without a vendor. Without it such a vendor is not deleted and the answer is the vendor-in-use problem.",
+          "in" : "query",
+          "name" : "links",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "REMOVE" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "vendor-controller" ]
+      },
+      "get" : {
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Vendor"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "vendor-controller" ]
+      },
+      "put" : {
+        "operationId" : "change",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/VendorChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Vendor"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "vendor-controller" ]
       }
     },
     "/api/wedding" : {

@@ -17,12 +17,15 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.context.TestPropertySource;
 
-/** Everything a sign-in can go through, with the most talkative logging, must leave no address, name or token in the log. */
+/**
+ * Everything a sign-in can go through, with the most talkative logging, must leave no address, name or token in the log.
+ * The web framework is at TRACE: only there does it print what every endpoint is called with, through toString().
+ */
 @ExtendWith(OutputCaptureExtension.class)
 @TestPropertySource(properties = {
     "logging.level.io.github.trufelek124.weddingplanner=TRACE",
     "logging.level.org.springframework.security=DEBUG",
-    "logging.level.org.springframework.web=DEBUG"
+    "logging.level.org.springframework.web=TRACE"
 })
 class NoPersonalDataInLogsIntegrationTest extends PostgresIntegrationTest {
 

@@ -14,6 +14,7 @@ import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationTyp
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationTypes.Source;
 import io.github.trufelek124.weddingplanner.inspirations.internal.PictureRepository.PictureRow;
 import io.github.trufelek124.weddingplanner.planning.PlanItems;
+import io.github.trufelek124.weddingplanner.vendors.Vendors;
 import io.github.trufelek124.weddingplanner.wedding.Membership;
 import io.github.trufelek124.weddingplanner.wedding.Weddings;
 import java.net.URI;
@@ -42,6 +43,7 @@ class InspirationService {
     private final PreviewWorker previews;
     private final BoardRepository boards;
     private final PlanItems planItems;
+    private final Vendors vendors;
     private final Weddings weddings;
     private final Clock clock;
 
@@ -52,6 +54,7 @@ class InspirationService {
             PreviewWorker previews,
             BoardRepository boards,
             PlanItems planItems,
+            Vendors vendors,
             Weddings weddings,
             Clock clock) {
         this.inspirations = inspirations;
@@ -60,15 +63,17 @@ class InspirationService {
         this.previews = previews;
         this.boards = boards;
         this.planItems = planItems;
+        this.vendors = vendors;
         this.weddings = weddings;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
-    List<InspirationView> list(UserId user, UUID boardId, Boolean withoutBoard, String tag, UUID planItemId) {
+    List<InspirationView> list(UserId user, UUID boardId, Boolean withoutBoard, String tag, UUID planItemId, UUID vendorId) {
         Membership membership = weddings.membershipOf(user);
         String asked = tag == null || tag.isBlank() ? null : tagAsKept(tag);
-        List<InspirationRow> found = inspirations.list(membership.weddingId(), new Filter(boardId, withoutBoard, asked, planItemId));
+        List<InspirationRow> found =
+                inspirations.list(membership.weddingId(), new Filter(boardId, withoutBoard, asked, planItemId, vendorId));
         Map<UUID, List<PictureRow>> theirPictures = pictures.of(found.stream().map(InspirationRow::id).toList()).stream()
                 .collect(Collectors.groupingBy(PictureRow::inspirationId));
         return found.stream().map(row -> new InspirationView(row, theirPictures.getOrDefault(row.id(), List.of()))).toList();
@@ -92,8 +97,8 @@ class InspirationService {
         InspirationRow inspiration = new InspirationRow(
                 UUID.randomUUID(), link.map(URI::toString).orElse(null), link.map(Links::sourceOf).orElse(Source.PHOTO),
                 request.title().strip(), request.note().strip(), tagsAsKept(request.tags()), request.boardId(),
-                request.planItemId(), membership.memberId(), link.isPresent() ? PreviewStatus.PENDING : PreviewStatus.NONE, "",
-                0, now, now);
+                request.planItemId(), request.vendorId(), membership.memberId(),
+                link.isPresent() ? PreviewStatus.PENDING : PreviewStatus.NONE, "", 0, now, now);
         inspirations.insert(membership.weddingId(), inspiration);
         if (link.isPresent()) {
             previews.wakeOnceSaved();
@@ -110,7 +115,8 @@ class InspirationService {
         InspirationRow after = new InspirationRow(
                 id, link.map(URI::toString).orElse(null), link.map(Links::sourceOf).orElse(Source.PHOTO),
                 request.title().strip(), request.note().strip(), tagsAsKept(request.tags()), request.boardId(),
-                request.planItemId(), before.addedBy(), before.previewStatus(), before.previewTitle(), before.version(),
+                request.planItemId(), request.vendorId(), before.addedBy(), before.previewStatus(), before.previewTitle(),
+                before.version(),
                 before.createdAt(), now);
         if (!inspirations.update(membership.weddingId(), after, request.version(), now)) {
             throw new ApiException(
@@ -156,6 +162,9 @@ class InspirationService {
         }
         if (request.planItemId() != null && !planItems.exists(membership.weddingId(), request.planItemId())) {
             problems.add(new FieldProblem("planItemId", "Choose one of your plan items."));
+        }
+        if (request.vendorId() != null && !vendors.exists(membership.weddingId(), request.vendorId())) {
+            problems.add(new FieldProblem("vendorId", "Choose one of your vendors."));
         }
         if (!problems.isEmpty()) {
             throw new ApiException(ProblemCode.BAD_REQUEST, "The request is not valid.", problems);

@@ -18,6 +18,7 @@ import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Task
 import io.github.trufelek124.weddingplanner.planning.internal.PriorityRule.Assessment;
 import io.github.trufelek124.weddingplanner.planning.internal.PriorityRule.Facts;
 import io.github.trufelek124.weddingplanner.planning.internal.PriorityRule.Reason;
+import io.github.trufelek124.weddingplanner.vendors.Vendors;
 import io.github.trufelek124.weddingplanner.wedding.Membership;
 import io.github.trufelek124.weddingplanner.wedding.Weddings;
 import java.time.Clock;
@@ -39,6 +40,7 @@ class EntryService {
     private final EntryRepository entries;
     private final CategoryRepository categories;
     private final DependencyRepository dependencies;
+    private final Vendors vendors;
     private final Weddings weddings;
     private final Clock clock;
 
@@ -46,11 +48,13 @@ class EntryService {
             EntryRepository entries,
             CategoryRepository categories,
             DependencyRepository dependencies,
+            Vendors vendors,
             Weddings weddings,
             Clock clock) {
         this.entries = entries;
         this.categories = categories;
         this.dependencies = dependencies;
+        this.vendors = vendors;
         this.weddings = weddings;
         this.clock = clock;
     }
@@ -107,7 +111,7 @@ class EntryService {
         EntryRow after = new EntryRow(
                 before.id(), before.kind(), before.title(), before.notes(), before.categoryId(), before.startDate(),
                 before.dueDate(), status, completedAt(status, before, now), before.priorityMode(), before.priority(),
-                before.parentId(), before.amount(), before.paymentKind(),
+                before.parentId(), before.vendorId(), before.amount(), before.paymentKind(),
                 paidOn(before.amount(), status, null, before, today(membership)), before.assigneeIds(), before.taskCount(),
                 before.version(), before.createdAt(), now);
         save(membership, after, before.version(), now);
@@ -139,7 +143,8 @@ class EntryService {
                     before.id(), to, before.title(), before.notes(), before.categoryId(),
                     to == Kind.TASK ? null : before.startDate(), before.dueDate(), before.status(), before.completedAt(),
                     before.priorityMode(), before.priority(), to == Kind.PLAN_ITEM ? null : before.parentId(),
-                    before.amount(), before.paymentKind(), before.paidOn(), before.assigneeIds(), before.taskCount(),
+                    before.vendorId(), before.amount(), before.paymentKind(), before.paidOn(), before.assigneeIds(),
+                    before.taskCount(),
                     before.version(), before.createdAt(), now);
             save(membership, after, before.version(), now);
             if (to == Kind.TASK) {
@@ -213,7 +218,7 @@ class EntryService {
     static final int NEXT_PAYMENTS = 5;
 
     private static final Filter STILL_TO_DO =
-            new Filter(null, List.of(Status.NOT_STARTED, Status.IN_PROGRESS), null, false, null, null, null, null);
+            new Filter(null, List.of(Status.NOT_STARTED, Status.IN_PROGRESS), null, false, null, null, null, null, null);
 
     /**
      * What the home screen shows of the plan.
@@ -353,6 +358,9 @@ class EntryService {
                 problems.add(new FieldProblem("parentId", "Choose one of the plan items."));
             }
         }
+        if (request.vendorId() != null && !vendors.exists(weddingId, request.vendorId())) {
+            problems.add(new FieldProblem("vendorId", "Choose one of your vendors."));
+        }
         LocalDate today = today(membership);
         if (request.amount() != null && kind == Kind.PLAN_ITEM) {
             problems.add(new FieldProblem("amount", "Only a task can carry an amount. Leave it empty here."));
@@ -378,7 +386,7 @@ class EntryService {
         return new EntryRow(
                 id, kind, request.title().strip(), request.notes().strip(), request.categoryId(), request.startDate(),
                 request.dueDate(), request.status(), completedAt(request.status(), before, now), request.priorityMode(),
-                chosen, request.parentId(), request.amount(), request.paymentKind(),
+                chosen, request.parentId(), request.vendorId(), request.amount(), request.paymentKind(),
                 paidOn(request.amount(), request.status(), request.paidOn(), before, today), assignees,
                 before == null ? 0 : before.taskCount(), before == null ? 0 : before.version(),
                 before == null ? now : before.createdAt(), now);

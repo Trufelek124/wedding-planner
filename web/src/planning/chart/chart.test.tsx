@@ -191,7 +191,7 @@ describe('rescheduling on the chart', () => {
     await expect(server.requests(`PUT /api/entries/${venue.id}`)[0]?.json()).resolves.toEqual({
       title: 'Book the venue', notes: 'Ask about the garden.', categoryId: null, startDate: '2026-12-04', dueDate: '2026-12-13',
       status: 'NOT_STARTED', assigneeIds: [], priorityMode: 'AUTO', priority: null, parentId: null,
-      amount: null, paymentKind: null, paidOn: null, version: 4,
+      vendorId: null, amount: null, paymentKind: null, paidOn: null, version: 4,
     })
     expect(await screen.findByRole('button', { name: 'Book the venue, 4 Dec 2026 – 13 Dec 2026' })).toBeInTheDocument()
   })

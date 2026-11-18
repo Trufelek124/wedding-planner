@@ -66,6 +66,8 @@ final class PlanningDtos {
 
         UUID parentId();
 
+        UUID vendorId();
+
         Long amount();
 
         PaymentKind paymentKind();
@@ -86,6 +88,7 @@ final class PlanningDtos {
             @NotNull PriorityMode priorityMode,
             @Schema(description = "With priorityMode MANUAL: the chosen priority. With AUTO: null.", nullable = true) Priority priority,
             @Schema(description = "Tasks only: the plan item this task belongs to.", nullable = true) UUID parentId,
+            @Schema(description = "The vendor the entry concerns.", nullable = true) UUID vendorId,
             @Schema(description = AMOUNT_DESCRIPTION, nullable = true)
                     @Positive(message = AMOUNT_ABOVE_ZERO)
                     @Max(value = MOST_MONEY, message = AMOUNT_TOO_LARGE)
@@ -107,6 +110,7 @@ final class PlanningDtos {
             @NotNull PriorityMode priorityMode,
             @Schema(nullable = true) Priority priority,
             @Schema(nullable = true) UUID parentId,
+            @Schema(nullable = true) UUID vendorId,
             @Schema(description = AMOUNT_DESCRIPTION, nullable = true)
                     @Positive(message = AMOUNT_ABOVE_ZERO)
                     @Max(value = MOST_MONEY, message = AMOUNT_TOO_LARGE)
@@ -138,6 +142,7 @@ final class PlanningDtos {
             @Schema(description = "Why the entry has this level.") Reason priorityReason,
             @Schema(description = "The members who do it: none, one or both.") List<UUID> assigneeIds,
             @Schema(description = "Tasks only: the plan item it belongs to.", nullable = true) UUID parentId,
+            @Schema(description = "The vendor the entry concerns.", nullable = true) UUID vendorId,
             @Schema(
                             description = "For a payment: what it costs, in the smallest unit of the wedding's currency "
                                     + "(grosze). null for an entry that carries no money.",
@@ -159,7 +164,8 @@ final class PlanningDtos {
             return new EntryResponse(
                     row.id(), row.kind(), row.title(), row.notes(), row.categoryId(), row.startDate(), row.dueDate(),
                     row.status(), row.completedAt(), row.priorityMode(), view.priority(), view.priorityReason(),
-                    row.assigneeIds(), row.parentId(), row.amount(), row.paymentKind(), row.paidOn(), row.taskCount(),
+                    row.assigneeIds(), row.parentId(), row.vendorId(), row.amount(), row.paymentKind(), row.paidOn(),
+                    row.taskCount(),
                     view.dependsOnIds(), view.conflictsWithIds(),
                     row.version(), row.createdAt(), row.updatedAt());
         }

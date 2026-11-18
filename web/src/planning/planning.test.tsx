@@ -170,6 +170,7 @@ describe('adding and changing an entry', () => {
       priorityMode: 'AUTO',
       priority: null,
       parentId: null,
+      vendorId: null,
       amount: null,
       paymentKind: null,
       paidOn: null,
@@ -232,7 +233,7 @@ describe('adding and changing an entry', () => {
     await expect(server.requests(`PUT ${path}`)[0]?.json()).resolves.toEqual({
       version: 4, title: 'Call the florist on Monday', notes: 'Peonies?', categoryId: null, startDate: null,
       dueDate: '2027-03-01', status: 'NOT_STARTED', assigneeIds: [PIOTR_MEMBER], priorityMode: 'AUTO', priority: null, parentId: null,
-      amount: null, paymentKind: null, paidOn: null,
+      vendorId: null, amount: null, paymentKind: null, paidOn: null,
     })
   })
 
@@ -283,6 +284,20 @@ describe('adding and changing an entry', () => {
     await expect(server.requests(`PUT ${path}`)[0]?.json()).resolves.toMatchObject({
       title: 'Pay the venue deposit (first half)', amount: 250_000, paymentKind: 'DEPOSIT', paidOn: '2026-11-10', status: 'DONE',
     })
+  })
+
+  it('says the vendor of an entry again as it is', async () => {
+    const vendorId = 'aaaaaaaa-0000-4000-8000-000000000001'
+    const call = entry({ title: 'Call the venue', vendorId })
+    const path = `/api/entries/${call.id}`
+    const server = planningServer([call], { [`GET ${path}`]: Response.json(call), [`PUT ${path}`]: Response.json({ ...call, version: 1 }) })
+    open(`/entries/${call.id}`)
+
+    await userEvent.type(await screen.findByLabelText('Title'), ' again')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(server.requests(`PUT ${path}`)).toHaveLength(1))
+    await expect(server.requests(`PUT ${path}`)[0]?.json()).resolves.toMatchObject({ title: 'Call the venue again', vendorId })
   })
 
   it('sends no paid date for a payment that is no longer done', async () => {

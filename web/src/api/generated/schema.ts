@@ -107,7 +107,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         post: operations["add_3"];
         delete?: never;
@@ -126,7 +126,7 @@ export interface paths {
         get?: never;
         put: operations["rename_2"];
         post?: never;
-        delete: operations["delete_3"];
+        delete: operations["delete_4"];
         options?: never;
         head?: never;
         patch?: never;
@@ -139,8 +139,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_3"];
-        put: operations["change_2"];
+        get: operations["get_4"];
+        put: operations["change_3"];
         post?: never;
         delete?: never;
         options?: never;
@@ -155,7 +155,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_2"];
+        get: operations["list_3"];
         put?: never;
         post: operations["add_2"];
         delete?: never;
@@ -174,7 +174,7 @@ export interface paths {
         get?: never;
         put: operations["rename_1"];
         post?: never;
-        delete: operations["delete_2"];
+        delete: operations["delete_3"];
         options?: never;
         head?: never;
         patch?: never;
@@ -187,9 +187,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_1"];
+        get: operations["list_2"];
         put?: never;
-        post: operations["create"];
+        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -203,10 +203,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_2"];
-        put: operations["change_1"];
+        get: operations["get_3"];
+        put: operations["change_2"];
         post?: never;
-        delete: operations["delete_1"];
+        delete: operations["delete_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -283,7 +283,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list"];
+        get: operations["list_1"];
         put?: never;
         post: operations["add"];
         delete?: never;
@@ -315,10 +315,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_1"];
-        put: operations["change"];
+        get: operations["get_2"];
+        put: operations["change_1"];
         post?: never;
-        delete: operations["delete"];
+        delete: operations["delete_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -367,6 +367,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vendors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list"];
+        put?: never;
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vendors/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_1"];
+        put: operations["change"];
+        post?: never;
+        delete: operations["delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -625,6 +657,11 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             /**
+             * Format: uuid
+             * @description The vendor the entry concerns.
+             */
+            vendorId: string | null;
+            /**
              * Format: int32
              * @description Send this back with a change; it tells whether someone else saved in between.
              */
@@ -661,6 +698,8 @@ export interface components {
             /** @enum {string} */
             status: "NOT_STARTED" | "IN_PROGRESS" | "DONE" | "DROPPED";
             title: string;
+            /** Format: uuid */
+            vendorId: string | null;
             /**
              * Format: int32
              * @description The version of the entry this change is based on.
@@ -750,6 +789,11 @@ export interface components {
             /** @description The page the idea comes from; null for pictures of one's own. */
             url: string | null;
             /**
+             * Format: uuid
+             * @description The vendor the idea concerns.
+             */
+            vendorId: string | null;
+            /**
              * Format: int32
              * @description Send this back with a change; it tells whether someone else saved in between.
              */
@@ -765,6 +809,8 @@ export interface components {
             tags: string[];
             title: string;
             url: string | null;
+            /** Format: uuid */
+            vendorId: string | null;
             /**
              * Format: int32
              * @description The version of the inspiration this change is based on.
@@ -831,6 +877,11 @@ export interface components {
             /** @enum {string} */
             status: "NOT_STARTED" | "IN_PROGRESS" | "DONE" | "DROPPED";
             title: string;
+            /**
+             * Format: uuid
+             * @description The vendor the entry concerns.
+             */
+            vendorId: string | null;
         };
         /** @description An idea to keep: a link, or the start of one that pictures are added to. */
         NewInspiration: {
@@ -852,6 +903,39 @@ export interface components {
             title: string;
             /** @description The page the idea comes from, starting with http:// or https://; null for pictures of one's own. */
             url: string | null;
+            /**
+             * Format: uuid
+             * @description The vendor the idea concerns.
+             */
+            vendorId: string | null;
+        };
+        /** @description A vendor to add to the register. */
+        NewVendor: {
+            /** @description May be empty. */
+            address: string;
+            /**
+             * Format: int64
+             * @description What was agreed, in the smallest unit of the wedding's currency; null while nothing is agreed.
+             */
+            agreedPrice: number | null;
+            /**
+             * Format: uuid
+             * @description One of the plan's categories.
+             */
+            categoryId: string | null;
+            /** @description May be empty. */
+            contactPerson: string;
+            /** @description May be empty. */
+            email: string;
+            name: string;
+            /** @description Free text; may be empty. */
+            notes: string;
+            /** @description As the person writes it; may be empty. */
+            phone: string;
+            /** @enum {string} */
+            status: "CONSIDERING" | "BOOKED" | "DROPPED";
+            /** @description A web address; https:// is put in front of one that has no scheme. May be empty. */
+            website: string;
         };
         /** @description A picture of an inspiration. Its bytes are at /api/inspirations/{inspirationId}/pictures/{id}. */
         Picture: {
@@ -900,7 +984,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -924,6 +1008,98 @@ export interface components {
             /** Format: int32 */
             count: number;
             tag: string;
+        };
+        /** @description Someone the wedding is made with: how to reach them, what was agreed, and what hangs on them. Its plan items and tasks are GET /api/entries?vendorId=…, its inspirations GET /api/inspirations?vendorId=…. */
+        Vendor: {
+            /** @description May be empty. */
+            address: string;
+            /**
+             * Format: int64
+             * @description What was agreed, in the smallest unit of the wedding's currency; null while nothing is agreed.
+             */
+            agreedPrice: number | null;
+            /**
+             * Format: uuid
+             * @description One of the plan's categories.
+             */
+            categoryId: string | null;
+            /**
+             * Format: int64
+             * @description What those payments come to, in the smallest unit of the wedding's currency.
+             */
+            committed: number;
+            /** @description May be empty. */
+            contactPerson: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description May be empty. */
+            email: string;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int32
+             * @description How many inspirations point to this vendor.
+             */
+            inspirations: number;
+            name: string;
+            notes: string;
+            /**
+             * Format: int64
+             * @description The part of it that is paid.
+             */
+            paid: number;
+            /**
+             * Format: int32
+             * @description How many of those tasks are payments that are not dropped.
+             */
+            payments: number;
+            /** @description May be empty. */
+            phone: string;
+            /**
+             * Format: int32
+             * @description How many plan items point to this vendor.
+             */
+            planItems: number;
+            /** @enum {string} */
+            status: "CONSIDERING" | "BOOKED" | "DROPPED";
+            /**
+             * Format: int32
+             * @description How many tasks point to it, payments among them.
+             */
+            tasks: number;
+            /** Format: date-time */
+            updatedAt: string;
+            /**
+             * Format: int32
+             * @description Send this back with a change; it tells whether someone else saved in between.
+             */
+            version: number;
+            /** @description A web address starting with http:// or https://, or empty. */
+            website: string;
+        };
+        /** @description All fields of a vendor as they should be from now on. */
+        VendorChange: {
+            address: string;
+            /**
+             * Format: int64
+             * @description What was agreed, in the smallest unit of the wedding's currency; null while nothing is agreed.
+             */
+            agreedPrice: number | null;
+            /** Format: uuid */
+            categoryId: string | null;
+            contactPerson: string;
+            email: string;
+            name: string;
+            notes: string;
+            phone: string;
+            /** @enum {string} */
+            status: "CONSIDERING" | "BOOKED" | "DROPPED";
+            /**
+             * Format: int32
+             * @description The version of the vendor this change is based on.
+             */
+            version: number;
+            website: string;
         };
         Wedding: {
             currency: string;
@@ -1174,7 +1350,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1271,7 +1447,7 @@ export interface operations {
             };
         };
     };
-    delete_3: {
+    delete_4: {
         parameters: {
             query?: {
                 /** @description For a board with inspirations: keep them without a board, or delete them too. */
@@ -1303,7 +1479,7 @@ export interface operations {
             };
         };
     };
-    get_3: {
+    get_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1332,7 +1508,7 @@ export interface operations {
             };
         };
     };
-    change_2: {
+    change_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1365,7 +1541,7 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1462,7 +1638,7 @@ export interface operations {
             };
         };
     };
-    delete_2: {
+    delete_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1491,7 +1667,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_2: {
         parameters: {
             query?: {
                 kind?: "PLAN_ITEM" | "TASK";
@@ -1510,6 +1686,8 @@ export interface operations {
                 priority?: ("CRITICAL" | "HIGH" | "NORMAL" | "LOW")[];
                 /** @description true: only payments, which are the tasks that carry an amount; false: everything else. */
                 payment?: boolean;
+                /** @description Only the entries that concern this vendor. */
+                vendorId?: string;
                 sort?: "DUE_DATE" | "PRIORITY" | "TITLE" | "CREATED";
             };
             header?: never;
@@ -1538,7 +1716,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    create_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1571,7 +1749,7 @@ export interface operations {
             };
         };
     };
-    get_2: {
+    get_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1602,7 +1780,7 @@ export interface operations {
             };
         };
     };
-    change_1: {
+    change_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1637,7 +1815,7 @@ export interface operations {
             };
         };
     };
-    delete_1: {
+    delete_2: {
         parameters: {
             query?: {
                 /** @description For a plan item with tasks: what happens to them. Without it such a plan item is not deleted and the answer is the entry-has-tasks problem. */
@@ -1832,7 +2010,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    list_1: {
         parameters: {
             query?: {
                 /** @description Only the inspirations on this board. */
@@ -1843,6 +2021,8 @@ export interface operations {
                 tag?: string;
                 /** @description Only the inspirations that belong to this plan item. */
                 planItemId?: string;
+                /** @description Only the inspirations that concern this vendor. */
+                vendorId?: string;
             };
             header?: never;
             path?: never;
@@ -1932,7 +2112,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    get_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1963,7 +2143,7 @@ export interface operations {
             };
         };
     };
-    change: {
+    change_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1998,7 +2178,7 @@ export interface operations {
             };
         };
     };
-    delete: {
+    delete_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2149,6 +2329,170 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Me"];
                 };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: {
+                /** @description Only vendors in one of these states. */
+                status?: ("CONSIDERING" | "BOOKED" | "DROPPED")[];
+                categoryId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Vendor"][];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewVendor"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Vendor"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Vendor"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    change: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VendorChange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Vendor"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete: {
+        parameters: {
+            query?: {
+                /** @description For a vendor that plan items, tasks or inspirations point to: REMOVE lets them stay without a vendor. Without it such a vendor is not deleted and the answer is the vendor-in-use problem. */
+                links?: "REMOVE";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Any error. */
             default: {

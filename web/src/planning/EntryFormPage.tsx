@@ -134,6 +134,8 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
       priorityMode: byHand ? ('MANUAL' as const) : ('AUTO' as const),
       priority: byHand ? priority : null,
       parentId: kind === 'PLAN_ITEM' || parentId === '' ? null : parentId,
+      // The vendor is said again as it is: a save replaces the whole entry.
+      vendorId: existing?.vendorId ?? null,
       // A paid date belongs to a payment that is done; left empty, the server takes the day it has, or today.
       amount: isPayment ? moneyTyped(amountTyped, wedding.currency) : null,
       paymentKind: isPayment && paymentKind !== '' ? paymentKind : null,

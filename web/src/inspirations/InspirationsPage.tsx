@@ -101,7 +101,7 @@ export function InspirationsPage() {
     setLinkProblem(null)
     setProblem(null)
     setSaid('')
-    createInspiration({ url: link.trim(), boardId: ontoBoard, title: '', note: '', tags: [], planItemId: null })
+    createInspiration({ url: link.trim(), boardId: ontoBoard, title: '', note: '', tags: [], planItemId: null, vendorId: null })
       .then(() => {
         setLink('')
         setSaid('The link was saved.')
@@ -126,7 +126,7 @@ export function InspirationsPage() {
     setBusy(true)
     setProblem(null)
     setSaid('')
-    createInspiration({ url: null, boardId: ontoBoard, title: '', note: '', tags: [], planItemId: null })
+    createInspiration({ url: null, boardId: ontoBoard, title: '', note: '', tags: [], planItemId: null, vendorId: null })
       .then((created) =>
         addPictures(created.id, files).catch(async (error: unknown) => {
           // Without its pictures the new idea would be an empty card: take it back.

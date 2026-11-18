@@ -54,8 +54,9 @@ closing comment quotes its summary lines and its exit code.
 - Only addresses in `ALLOWED_EMAILS` can sign in, with Google or with the development login. The development
   login exists only while `DEV_LOGIN_ENABLED=true`; never set that where the server is reachable by others.
 - Nothing personal in logs: users are named by id. A record that holds an address, a name or a token overrides
-  `toString()` to hide it, because request and response bodies reach debug logs through that method.
-  `NoPersonalDataInLogsIntegrationTest` checks this with debug logging on.
+  `toString()` to hide it, because the web framework prints what every endpoint is called with through that method
+  once its logging is at TRACE. `NoPersonalDataInLogsIntegrationTest` checks this at that level; a module that
+  holds personal data gets a test like it (`VendorsLeaveNoPersonalDataInLogsIntegrationTest`).
 - In tests, `TestSignIn.signIn(http, PostgresIntegrationTest.ANNA)` signs an owner in through the real endpoint.
 
 ## The web app
@@ -90,6 +91,17 @@ closing comment quotes its summary lines and its exit code.
 - Tests replace the server with `fakeServer` from `src/test-server.ts` and drive the screens as a person would.
 - Google's button is drawn by Google's own library (`src/auth/GoogleButton.tsx`); the page's content security
   policy in `SecurityConfiguration` allows exactly that library. It has not yet been tried against Google.
+
+## The backend's modules
+
+`api`, `appinfo`, `webapp`, `identity`, `wedding`, `vendors`, `planning`, `inspirations`. A module uses another only
+through the types in that module's own package, and never in a circle (`ModularityTest`).
+
+- `planning` and `inspirations` use `vendors` (`Vendors.exists`), not the other way round. What the register needs
+  from them it asks through interfaces of its own that they implement: `VendorUse` (what points to each vendor,
+  and what its payments come to) and `VendorCategories`. A new kind of record that can point to a vendor implements
+  `VendorUse` in its own module.
+- `inspirations` uses `planning` (`PlanItems.exists`).
 
 ## Changing the API
 

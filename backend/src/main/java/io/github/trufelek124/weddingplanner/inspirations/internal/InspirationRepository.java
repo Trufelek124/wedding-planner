@@ -24,6 +24,7 @@ class InspirationRepository {
      * @param url null for pictures of one's own
      * @param tags in lower case, in alphabetical order
      * @param planItemId the plan item the idea belongs to, if any
+     * @param vendorId the vendor the idea concerns, if any
      * @param addedBy the member who saved it; null once that member is gone
      * @param previewTitle the title the linked page gives itself; empty when none was fetched
      */
@@ -36,6 +37,7 @@ class InspirationRepository {
             List<String> tags,
             UUID boardId,
             UUID planItemId,
+            UUID vendorId,
             UUID addedBy,
             PreviewStatus previewStatus,
             String previewTitle,
@@ -47,12 +49,12 @@ class InspirationRepository {
     record PendingPreview(UUID id, String url, int attempts) {}
 
     /** What a list may be narrowed down by; null means "any". */
-    record Filter(UUID boardId, Boolean withoutBoard, String tag, UUID planItemId) {}
+    record Filter(UUID boardId, Boolean withoutBoard, String tag, UUID planItemId, UUID vendorId) {}
 
     record TagCount(String tag, int count) {}
 
     private static final String SELECT = """
-            SELECT i.id, i.url, i.source, i.title, i.note, i.board_id, i.entry_id, i.added_by, i.preview_status,
+            SELECT i.id, i.url, i.source, i.title, i.note, i.board_id, i.entry_id, i.vendor_id, i.added_by, i.preview_status,
                    i.preview_title, i.version, i.created_at, i.updated_at,
                    ARRAY(SELECT t.tag FROM inspiration_tag t WHERE t.inspiration_id = i.id ORDER BY t.tag) AS tags
             FROM inspiration i
@@ -91,14 +93,29 @@ class InspirationRepository {
             where.append(" AND i.entry_id = :planItem");
             params.put("planItem", filter.planItemId());
         }
+        if (filter.vendorId() != null) {
+            where.append(" AND i.vendor_id = :vendor");
+            params.put("vendor", filter.vendorId());
+        }
         return jdbc.sql(SELECT + where + " ORDER BY i.created_at DESC, i.id").params(params).query(InspirationRepository::row).list();
+    }
+
+    /** How many inspirations point to each vendor that any points to. */
+    Map<UUID, Integer> countByVendor(UUID weddingId) {
+        Map<UUID, Integer> counts = new HashMap<>();
+        jdbc.sql("SELECT vendor_id, count(*) AS inspirations FROM inspiration WHERE wedding_id = ? AND vendor_id IS NOT NULL GROUP BY vendor_id")
+                .param(weddingId)
+                .query(row -> {
+                    counts.put(row.getObject("vendor_id", UUID.class), row.getInt("inspirations"));
+                });
+        return counts;
     }
 
     void insert(UUID weddingId, InspirationRow inspiration) {
         jdbc.sql("""
-                INSERT INTO inspiration (id, wedding_id, url, source, title, note, board_id, entry_id, version,
+                INSERT INTO inspiration (id, wedding_id, url, source, title, note, board_id, entry_id, vendor_id, version,
                                          added_by, preview_status, preview_next_at, created_at, updated_at)
-                VALUES (:id, :wedding, :url, :source, :title, :note, :board, :planItem, 0, :addedBy,
+                VALUES (:id, :wedding, :url, :source, :title, :note, :board, :planItem, :vendor, 0, :addedBy,
                         :preview, CASE WHEN :preview = 'PENDING' THEN :now END, :now, :now)
                 """)
                 .params(fields(inspiration))
@@ -116,7 +133,7 @@ class InspirationRepository {
         boolean saved = jdbc.sql("""
                 UPDATE inspiration
                 SET url = :url, source = :source, title = :title, note = :note, board_id = :board, entry_id = :planItem,
-                    version = version + 1, updated_at = :now
+                    vendor_id = :vendor, version = version + 1, updated_at = :now
                 WHERE wedding_id = :wedding AND id = :id AND version = :version
                 """)
                         .params(fields(inspiration))
@@ -235,6 +252,7 @@ class InspirationRepository {
         fields.put("note", inspiration.note());
         fields.put("board", inspiration.boardId());
         fields.put("planItem", inspiration.planItemId());
+        fields.put("vendor", inspiration.vendorId());
         return fields;
     }
 
@@ -249,6 +267,7 @@ class InspirationRepository {
                 List.of(tags),
                 row.getObject("board_id", UUID.class),
                 row.getObject("entry_id", UUID.class),
+                row.getObject("vendor_id", UUID.class),
                 row.getObject("added_by", UUID.class),
                 PreviewStatus.valueOf(row.getString("preview_status")),
                 row.getString("preview_title"),
