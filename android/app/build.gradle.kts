@@ -61,6 +61,9 @@ android {
         unitTests {
             // Lets the JVM tests render screens with real resources (Robolectric).
             isIncludeAndroidResources = true
+            // The tests that take a picture of a screen write it under build/outputs/roborazzi, to be looked at.
+            // They record, and never compare with a stored picture: no picture is kept in the repository.
+            all { it.systemProperty("roborazzi.test.record", "true") }
         }
     }
 }
@@ -83,6 +86,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("org.robolectric:robolectric:4.18")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.79.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.79.0")
 }
 
 // Hands the generated models to the Android build as a generated source directory, so that

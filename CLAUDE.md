@@ -33,6 +33,9 @@ start `dockerd` yourself. npm and Gradle inside the build then need the session'
 (`/root/.ccr/README.md`); build from a copy of the `Dockerfile` with those added, with `--network host`, and never
 commit that copy.
 A missing tool or a refused download host is an environment matter — ask the owner; never lower a version to get by.
+From a cloud session Maven Central has answered 404 for files that exist; Gradle then reports "Could not find" for a
+dependency that is there. That is the session's network, not the build: do not change a version, and do not run
+`--refresh-dependencies`, which makes Gradle ask again for everything it already has and remember each wrong 404.
 
 | Part | Check | Run it locally |
 |---|---|---|
@@ -92,6 +95,19 @@ closing comment quotes its summary lines and its exit code.
 - Tests replace the server with `fakeServer` from `src/test-server.ts` and drive the screens as a person would.
 - Google's button is drawn by Google's own library (`src/auth/GoogleButton.tsx`); the page's content security
   policy in `SecurityConfiguration` allows exactly that library. It has not yet been tried against Google.
+
+## The Android app
+
+How it is put together is D-005: one module, Ktor on OkHttp, Room, WorkManager, DataStore with a Keystore key,
+Credential Manager, a container written by hand, no dependency-injection framework. A task adds a library when it
+first uses it, at the version D-005 names.
+
+- Everything is tested on the JVM (Robolectric); there is no emulator in a cloud session.
+- A screen has a test that writes its picture: `compose.picture("name")` (`ui/Pictures.kt`), in a test class with
+  `@GraphicsMode(GraphicsMode.Mode.NATIVE)` and `@Config(qualifiers = PHONE)`. The pictures land in
+  `android/app/build/outputs/roborazzi/`; whoever changes a screen opens its picture. None is committed.
+- What only a phone shows (Google sign-in, the share sheet, TalkBack) is the owner's to try, and is listed as not
+  verified.
 
 ## The backend's modules
 
