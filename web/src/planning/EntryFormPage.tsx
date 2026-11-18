@@ -1,6 +1,7 @@
 import { useId, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ApiError } from '../api/client.ts'
+import { newId } from '../api/ids.ts'
 import { Field } from '../ui/Field.tsx'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
 import { listVendors, VENDOR_STATUS_LABEL, type Vendor } from '../vendors/vendorsApi.ts'
@@ -112,6 +113,8 @@ function EntryForm({ existing, kind, parentAsked, vendorAsked, categories, planI
   const back = cameFrom(location.state) ?? (kind === 'PLAN_ITEM' ? '/plan' : '/tasks')
 
   const datesHint = useId()
+  // A new entry's id is chosen when the form opens: saving twice, after no answer came, adds it once.
+  const [newEntryId] = useState(newId)
   const [title, setTitle] = useState(existing?.title ?? '')
   const [notes, setNotes] = useState(existing?.notes ?? '')
   const [categoryId, setCategoryId] = useState(existing?.categoryId ?? '')
@@ -184,7 +187,7 @@ function EntryForm({ existing, kind, parentAsked, vendorAsked, categories, planI
     setAmountProblem(null)
     void attempt(async () => {
       if (existing === null) {
-        await createEntry({ kind, ...fields() })
+        await createEntry({ id: newEntryId, kind, ...fields() })
       } else {
         await changeEntry(existing.id, { version: existing.version, ...fields() })
       }

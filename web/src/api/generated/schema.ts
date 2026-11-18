@@ -1067,6 +1067,11 @@ export interface components {
              * @description The day a task is due, or the day a plan item ends.
              */
             dueDate: string | null;
+            /**
+             * Format: uuid
+             * @description Chosen by whoever sends the entry, so that sending it twice adds it once: a request with an id that an entry already has is answered with that entry and changes nothing. Left out, the server chooses the id.
+             */
+            id: string | null;
             /** @enum {string} */
             kind: "PLAN_ITEM" | "TASK";
             /** @description Free text; may be empty. */

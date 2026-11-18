@@ -61,6 +61,60 @@ class EntriesIntegrationTest extends PostgresIntegrationTest {
         assertThat(titles(http.getAs(anna, "/api/entries?kind=TASK"))).containsExactly("Pay the venue deposit", "Call the florist");
     }
 
+    // ---------------------------------------------------------------- sent twice
+
+    @Test
+    void anEntryCanBringItsOwnId() throws Exception {
+        String id = UUID.randomUUID().toString();
+
+        Map<String, Object> task = created(with(task("Call the florist"), "id", id));
+
+        assertThat(task).containsEntry("id", id).containsEntry("title", "Call the florist");
+        assertThat(TestHttp.json(http.getAs(anna, "/api/entries/" + id))).containsEntry("title", "Call the florist");
+    }
+
+    @Test
+    void anEntrySentTwiceIsAddedOnce() throws Exception {
+        String id = UUID.randomUUID().toString();
+        Map<String, Object> first = created(with(task("Call the florist"), "id", id));
+
+        // The answer did not arrive, so the phone sends the same again. In between the other owner ticked it off.
+        http.putJsonAs(piotr, "/api/entries/" + id + "/status", "{\"status\":\"DONE\"}");
+        Map<String, Object> second = created(with(task("Call the florist"), "id", id));
+
+        assertThat(second).containsEntry("id", id).containsEntry("status", "DONE");
+        assertThat(second.get("createdAt")).isEqualTo(first.get("createdAt"));
+        assertThat(titles(http.getAs(anna, "/api/entries"))).containsExactly("Call the florist");
+    }
+
+    @Test
+    void aSecondRequestWithAnIdInUseChangesNothingWhateverItSays() throws Exception {
+        String id = UUID.randomUUID().toString();
+        created(with(task("Call the florist"), "id", id));
+
+        Map<String, Object> answer = created(with(task("Something else entirely"), "id", id, "notes", "overwritten?"));
+
+        assertThat(answer).containsEntry("title", "Call the florist").containsEntry("notes", "").containsEntry("version", 0);
+        assertThat(titles(http.getAs(anna, "/api/entries"))).containsExactly("Call the florist");
+    }
+
+    @Test
+    void withoutAnIdTheServerChoosesOneEachTime() throws Exception {
+        Map<String, Object> first = created(task("Call the florist"));
+        Map<String, Object> second = created(with(task("Call the florist"), "id", null));
+
+        assertThat(first.get("id")).isNotEqualTo(second.get("id"));
+        assertThat(titles(http.getAs(anna, "/api/entries"))).containsExactly("Call the florist", "Call the florist");
+    }
+
+    @Test
+    void anIdThatIsNoIdIsRefused() throws Exception {
+        HttpResponse<String> response = http.postJsonAs(anna, "/api/entries", TestHttp.jsonOf(with(task("Call the florist"), "id", "not-an-id")));
+
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(titles(http.getAs(anna, "/api/entries"))).isEmpty();
+    }
+
     @Test
     void aTaskIsTickedOffInOneActionAndRemembersWhen() throws Exception {
         String id = id(created(task("Call the florist")));

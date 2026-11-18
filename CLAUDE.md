@@ -170,6 +170,9 @@ Rules of the contract:
 - An old phone app meets a newer server: clients ignore unknown fields, and treat an unknown `type` as "some error".
 - Money is whole numbers of the smallest unit (grosze), never a decimal fraction. The server refuses `12.5` where a
   whole number belongs instead of cutting it down. A payment is a task with an amount (D-004).
+- Whoever adds an entry may choose its id (`NewEntry.id`), and both clients do: a request sent again after no
+  answer came is answered with the entry that is already there, and nothing is added twice or overwritten. The web
+  takes the id from `newId()` (`src/api/ids.ts`) when the form opens.
 - The API description itself is served (`/v3/api-docs`) only when `API_DOCS_ENABLED=true`.
 
 ## The tracker: infokuznia, project `WP`

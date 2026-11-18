@@ -84,11 +84,19 @@ class EntryService {
 
     // ------------------------------------------------------------ writing
 
+    /**
+     * Adds an entry. A sender that did not learn whether its request arrived sends it again with the
+     * same id: the entry is then there already, and is answered as it is now, not added a second time.
+     */
     @Transactional
     EntryView create(UserId user, NewEntry request) {
         Membership membership = weddings.membershipOf(user);
+        if (request.id() != null && entries.find(membership.weddingId(), request.id()).isPresent()) {
+            return shown(membership, request.id());
+        }
         Instant now = clock.instant();
-        EntryRow entry = checked(membership, UUID.randomUUID(), request.kind(), request, null, now);
+        UUID id = request.id() != null ? request.id() : UUID.randomUUID();
+        EntryRow entry = checked(membership, id, request.kind(), request, null, now);
         entries.insert(membership.weddingId(), membership.memberId(), entry);
         return shown(membership, entry.id());
     }

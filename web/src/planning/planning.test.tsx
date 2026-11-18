@@ -159,6 +159,7 @@ describe('adding and changing an entry', () => {
 
     expect(await screen.findByRole('heading', { name: 'Tasks' })).toBeInTheDocument()
     await expect(server.requests('POST /api/entries')[0]?.json()).resolves.toEqual({
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/) as string,
       kind: 'TASK',
       title: 'Call the florist',
       notes: 'Ask about peonies.',
@@ -175,6 +176,25 @@ describe('adding and changing an entry', () => {
       paymentKind: null,
       paidOn: null,
     })
+  })
+
+  it('sends the same id when saving again after no answer came, so the task is added once', async () => {
+    const server = planningServer([], {})
+    open('/tasks')
+    await userEvent.click(await screen.findByRole('link', { name: 'Add a task' }))
+    await userEvent.type(await screen.findByLabelText('Title'), 'Call the florist')
+
+    // The server may have taken it, but no answer came back.
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('The server cannot be reached. Check your connection and try again.')).toBeInTheDocument()
+    server.answer('POST /api/entries', () => Response.json(entry({ title: 'Call the florist' }), { status: 201 }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByRole('heading', { name: 'Tasks' })).toBeInTheDocument()
+    const sent = await Promise.all(server.requests('POST /api/entries').map((request) => request.json() as Promise<{ id: string }>))
+    expect(sent).toHaveLength(2)
+    expect(sent[0]?.id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(sent[1]?.id).toBe(sent[0]?.id)
   })
 
   it('adds a plan item with its dates and a priority set by hand', async () => {

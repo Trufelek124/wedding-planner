@@ -974,6 +974,11 @@
             "format" : "date",
             "type" : [ "string", "null" ]
           },
+          "id" : {
+            "description" : "Chosen by whoever sends the entry, so that sending it twice adds it once: a request with an id that an entry already has is answered with that entry and changes nothing. Left out, the server chooses the id.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
           "kind" : {
             "enum" : [ "PLAN_ITEM", "TASK" ],
             "type" : "string"
@@ -1028,7 +1033,7 @@
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "amount", "assigneeIds", "categoryId", "dueDate", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "startDate", "status", "title", "vendorId" ],
+        "required" : [ "amount", "assigneeIds", "categoryId", "dueDate", "id", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "startDate", "status", "title", "vendorId" ],
         "type" : "object"
       },
       "NewGuest" : {

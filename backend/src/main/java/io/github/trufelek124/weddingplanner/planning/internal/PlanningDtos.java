@@ -77,6 +77,12 @@ final class PlanningDtos {
 
     @Schema(name = "NewEntry", description = "A plan item or a task to add.")
     record NewEntry(
+            @Schema(
+                            description = "Chosen by whoever sends the entry, so that sending it twice adds it once: a request with an "
+                                    + "id that an entry already has is answered with that entry and changes nothing. Left out, the "
+                                    + "server chooses the id.",
+                            nullable = true)
+                    UUID id,
             @NotNull(message = "Say whether this is a plan item or a task.") Kind kind,
             @NotBlank(message = TITLE_NEEDED) @Size(max = TITLE_LENGTH, message = TITLE_TOO_LONG) String title,
             @Schema(description = "Free text; may be empty.") @NotNull @Size(max = NOTES_LENGTH, message = NOTES_TOO_LONG) String notes,
