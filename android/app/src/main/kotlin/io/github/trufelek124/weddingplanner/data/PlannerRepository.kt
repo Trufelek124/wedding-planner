@@ -1,6 +1,6 @@
 package io.github.trufelek124.weddingplanner.data
 
-import androidx.room.InvalidationTracker
+import android.database.SQLException
 import io.github.trufelek124.weddingplanner.api.Api
 import io.github.trufelek124.weddingplanner.api.ApiFailure
 import io.ktor.http.HttpMethod
@@ -13,7 +13,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -59,10 +61,17 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
     private var forgotten = 0
 
     /**
+     * Counts the writes. Everything that changes what the phone holds goes through this class, and
+     * says so here: whoever watches reads again. The database's own word of a change is not relied
+     * on; it can miss one that is made in the moment someone starts to watch.
+     */
+    private val writes = MutableStateFlow(0)
+
+    /**
      * What the phone holds, with the waiting changes already in it, again whenever it changes;
      * null while nothing was loaded for whoever is signed in.
      */
-    val planner: Flow<Planner?> = database.invalidationTracker.changesOf(PlannerDatabase.TABLES).map { dao.stored()?.let(::plannerOf) }
+    val planner: Flow<Planner?> = writes.map { dao.stored()?.let(::plannerOf) }
 
     /**
      * Brings the phone and the server together: first sends what waits on the phone, then loads the
@@ -75,7 +84,7 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
     // ---------------------------------------------------------------- changing a task
 
     /** Ticks a task off, or takes the tick away again. Shown at once; sent with the next [sync]. */
-    suspend fun setStatus(entryId: String, status: Status) = writing.withLock {
+    suspend fun setStatus(entryId: String, status: Status) = written {
         val row = dao.entry(entryId)
         val waiting = dao.changeOf(entryId)
         when {
@@ -109,14 +118,14 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
      *
      * @return the new task's id
      */
-    suspend fun add(fields: TaskFields): String = writing.withLock {
+    suspend fun add(fields: TaskFields): String = written {
         val id = UUID.randomUUID().toString()
         dao.putChange(ChangeRow(entryId = id, kind = ChangeKind.ADD, baseVersion = 0, body = fields.toJson().toString(), title = fields.title))
         id
     }
 
     /** Changes a task. A change that is already waiting for the same task is replaced by this one. */
-    suspend fun edit(entryId: String, fields: TaskFields) = writing.withLock {
+    suspend fun edit(entryId: String, fields: TaskFields) = written {
         val row = dao.entry(entryId)
         val waiting = dao.changeOf(entryId)
         val body = fields.toJson().toString()
@@ -140,12 +149,24 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
         }
     }
 
+    /** True while the phone is neither talking to the server nor writing: only then may its database be closed. */
+    val quiet: Boolean get() = !talking.isLocked && !writing.isLocked
+
     /** How many changes are waiting to be sent, not counting those the person has to look at first. */
     suspend fun stillToSend(): Int = dao.changes().count { it.trouble == null }
 
     /** Gives up the change that waits for this task: what the server has stands. */
-    suspend fun letGo(entryId: String) = writing.withLock {
+    suspend fun letGo(entryId: String) = written {
         dao.changeOf(entryId)?.let { dao.deleteChange(it.seq) }
+    }
+
+    /** Writes, alone, and then says that something was written. */
+    private suspend fun <T> written(write: suspend () -> T): T = writing.withLock {
+        try {
+            write()
+        } finally {
+            writes.update { it + 1 }
+        }
     }
 
     // ---------------------------------------------------------------- talking to the server
@@ -200,9 +221,9 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
     }
 
     /** The server took the change as it was read before sending; what was changed again meanwhile goes on waiting. */
-    private suspend fun taken(since: Int, sent: ChangeRow, answer: EntryWire) = writing.withLock {
+    private suspend fun taken(since: Int, sent: ChangeRow, answer: EntryWire) = written {
         if (forgotten != since) {
-            return@withLock
+            return@written
         }
         val row = rowOf(answer, dao.entry(sent.entryId)?.position ?: ((dao.lastPosition() ?: -1) + 1))
         val now = dao.change(sent.seq)
@@ -219,9 +240,9 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
     }
 
     private suspend fun troubled(since: Int, sent: ChangeRow, trouble: String, latest: EntryWire? = null, refusals: Map<String, String>? = null) =
-        writing.withLock {
+        written {
             if (forgotten != since) {
-                return@withLock
+                return@written
             }
             if (latest != null) {
                 dao.putEntry(rowOf(latest, dao.entry(sent.entryId)?.position ?: ((dao.lastPosition() ?: -1) + 1)))
@@ -253,7 +274,7 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
                 else -> Load.FAILED
             }
         }
-        return writing.withLock {
+        return written {
             // A sign-out while the server was answering: what came back is nobody's any more.
             if (forgotten != since) {
                 Load.SIGNED_OUT
@@ -270,13 +291,18 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
      * the files are cleaned out too.
      */
     suspend fun forget() {
-        writing.withLock {
+        written {
             forgotten += 1
             dao.forget()
             withContext(Dispatchers.IO) {
-                val files = database.openHelper.writableDatabase
-                files.execSQL("VACUUM")
-                files.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() }
+                try {
+                    val files = database.openHelper.writableDatabase
+                    files.execSQL("VACUUM")
+                    files.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() }
+                } catch (busy: SQLException) {
+                    // The rows are gone all the same. A database that is being read at this moment
+                    // cannot be cleaned out; signing out does not fail over that.
+                }
             }
         }
     }
@@ -290,8 +316,6 @@ internal enum class Sending {
     SIGNED_OUT,
     FAILED,
 }
-
-private fun InvalidationTracker.changesOf(tables: Array<String>): Flow<Set<String>> = createFlow(*tables)
 
 private const val SEPARATOR = ","
 

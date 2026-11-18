@@ -23,14 +23,27 @@ class StandInServer {
     val calls = mutableListOf<Call>()
     private val answers = mutableMapOf<String, suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData>()
 
+    /** Asked when no answer was named for a route; null from it means "unreachable" as before. */
+    var otherwise: (suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData?)? = null
+
+    /** No connection at all: nothing gets an answer, whatever was named. */
+    var down = false
+
     val engine = MockEngine { request ->
         val route = "${request.method.value} ${request.url.encodedPath}"
         calls += Call(
             route, request.headers[HttpHeaders.Authorization], request.headers[HttpHeaders.Origin], String(request.body.toByteArray()),
             request.body.contentType?.withoutParameters()?.toString(),
         )
-        val answer = answers[route] ?: throw IOException("Failed to connect")
-        answer(request)
+        if (down) {
+            throw IOException("Failed to connect")
+        }
+        val answer = answers[route]
+        if (answer != null) {
+            answer(request)
+        } else {
+            otherwise?.invoke(this, request) ?: throw IOException("Failed to connect")
+        }
     }
 
     fun routes(route: String): List<Call> = calls.filter { it.route == route }

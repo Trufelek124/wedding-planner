@@ -11,6 +11,8 @@ import androidx.compose.ui.graphics.Color
 private val Light = lightColorScheme(
     primary = Color(0xFF2F5D50),
     onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFD8E8E2),
+    onPrimaryContainer = Color(0xFF12332A),
     // What is chosen at the moment: a chip, the place in the bar at the bottom.
     secondary = Color(0xFF2F5D50),
     onSecondary = Color(0xFFFFFFFF),
@@ -42,6 +44,8 @@ private val Light = lightColorScheme(
 private val Dark = darkColorScheme(
     primary = Color(0xFF9AD0BD),
     onPrimary = Color(0xFF10231D),
+    primaryContainer = Color(0xFF2C4A41),
+    onPrimaryContainer = Color(0xFFD3EDE4),
     secondary = Color(0xFF9AD0BD),
     onSecondary = Color(0xFF10231D),
     secondaryContainer = Color(0xFF2C4A41),

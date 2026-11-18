@@ -10,12 +10,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import io.github.trufelek124.weddingplanner.StandInGoogle
 import io.github.trufelek124.weddingplanner.StandInPhone
+import io.github.trufelek124.weddingplanner.SwitchedOffAfterwards
 import io.github.trufelek124.weddingplanner.api.StandInServer
 import io.github.trufelek124.weddingplanner.data.StandIn
 import io.github.trufelek124.weddingplanner.data.planner
 import io.github.trufelek124.weddingplanner.signin.GoogleAnswer
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -43,6 +43,9 @@ class AppRootTest {
     val folder = TemporaryFolder()
 
     @get:Rule(order = 1)
+    val switchedOff = SwitchedOffAfterwards { if (::phone.isInitialized) phone else null }
+
+    @get:Rule(order = 2)
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private lateinit var phone: StandInPhone
@@ -57,11 +60,6 @@ class AppRootTest {
         server.json("POST /api/auth/refresh", StandInServer.session(accessToken = "access-2", refreshToken = "refresh-2"))
         server.nothing("POST /api/auth/sign-out")
         server.planner()
-    }
-
-    @After
-    fun off() {
-        phone.off()
     }
 
     /** Someone signed in earlier, and the app was closed since: nothing is left in memory. */

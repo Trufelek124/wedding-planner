@@ -45,6 +45,10 @@ class Session(
     private var accessToken: String? = null
     private val renewing = Mutex()
 
+    /** True while a sign-out is removing the account from the phone. */
+    @Volatile
+    private var ending = false
+
     /** At start-up: whoever was signed in still is, without asking the server. Works without a connection. */
     suspend fun restore() {
         val saved = store.read()
@@ -95,6 +99,10 @@ class Session(
      * moment share one renewal: the refresh token can be used only once.
      */
     private suspend fun renew(refused: String?): String? = renewing.withLock {
+        // A sign-out has taken the token away and is still clearing up: none is fetched in its place.
+        if (ending) {
+            return null
+        }
         val current = accessToken
         if (current != null && current != refused) {
             // Someone else renewed it while this call was waiting.
@@ -132,10 +140,20 @@ class Session(
         return user
     }
 
+    /**
+     * Everything of the account goes from the phone first, and only then does the sign-in appear:
+     * whoever signs in next finds nothing. While that takes its time no token is handed out any
+     * more, and whatever goes wrong in between, the session is over at the end.
+     */
     private suspend fun end(byTheServer: Boolean) {
-        accessToken = null
-        store.clear()
-        forgetEverything()
-        changes.value = SessionState.SignedOut(ended = byTheServer)
+        ending = true
+        try {
+            accessToken = null
+            store.clear()
+            forgetEverything()
+        } finally {
+            changes.value = SessionState.SignedOut(ended = byTheServer)
+            ending = false
+        }
     }
 }

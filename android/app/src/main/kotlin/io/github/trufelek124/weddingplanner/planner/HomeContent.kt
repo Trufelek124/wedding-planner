@@ -32,15 +32,21 @@ import java.time.LocalDate
  * @param foot what stands under everything: when this was loaded, who is signed in, the way out
  */
 @Composable
-fun HomeContent(planner: Planner, today: LocalDate, modifier: Modifier = Modifier, foot: @Composable () -> Unit = {}) {
+fun HomeContent(
+    planner: Planner,
+    today: LocalDate,
+    modifier: Modifier = Modifier,
+    actions: TaskActions? = null,
+    foot: @Composable () -> Unit = {},
+) {
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
         item(key = "hero") { Hero(planner, today) }
 
         if (planner.overdue.isEmpty() && planner.next.isEmpty()) {
             item(key = "nothing") { NothingHere(stringResource(R.string.home_nothing_waiting)) }
         } else {
-            entries("overdue", R.string.home_overdue, planner.overdue, planner)
-            entries("next", R.string.home_next, planner.next, planner)
+            entries("overdue", R.string.home_overdue, planner.overdue, planner, actions)
+            entries("next", R.string.home_next, planner.next, planner, actions)
         }
 
         if (hasMoney(planner.budget)) {
@@ -50,13 +56,14 @@ fun HomeContent(planner: Planner, today: LocalDate, modifier: Modifier = Modifie
             item(key = "payments-title") { GroupTitle(stringResource(R.string.home_next_payments)) }
             items(planner.nextPayments, key = { "payment-${it.id}" }) { payment ->
                 // The same entries may stand in full under "Next" already: here each says only what it costs and when.
-                EntryLine(
-                    title = payment.title,
+                TaskLine(
+                    entry = payment,
                     facts = listOfNotNull(
+                        waitingInWords(payment.waiting)?.let { Fact(it, strong = true) },
                         payment.amount?.let { Fact(money(it, planner.currency)) },
                         Fact(payment.dueDate?.let { "due ${shortDate(it)}" } ?: "no date"),
                     ),
-                    closed = false,
+                    actions = actions,
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
@@ -66,13 +73,13 @@ fun HomeContent(planner: Planner, today: LocalDate, modifier: Modifier = Modifie
     }
 }
 
-private fun LazyListScope.entries(group: String, title: Int, entries: List<Entry>, planner: Planner) {
+private fun LazyListScope.entries(group: String, title: Int, entries: List<Entry>, planner: Planner, actions: TaskActions?) {
     if (entries.isEmpty()) {
         return
     }
     item(key = "$group-title") { GroupTitle(stringResource(title)) }
     items(entries, key = { "$group-${it.id}" }) { entry ->
-        EntryLine(entry, planner)
+        EntryLine(entry, planner, actions = actions)
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }

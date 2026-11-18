@@ -257,6 +257,56 @@ class SessionTest {
     // ---------------------------------------------------------------- nothing personal in what gets printed
 
     @Test
+    fun `while a sign-out is removing the account no token is handed out and none is asked for`() = runTest {
+        val removing = CompletableDeferred<Unit>()
+        val mayGoOn = CompletableDeferred<Unit>()
+        file = File(folder.root, "session.preferences_pb")
+        store = SessionStore(PreferenceDataStoreFactory.create(scope = backgroundScope) { file }, AesGcmCipher { key })
+        session = Session(
+            api = { api },
+            store = store,
+            forgetEverything = {
+                removing.complete(Unit)
+                mayGoOn.await()
+            },
+        )
+        api = Api(server.engine, ServerAddress.parse("https://planner.example"), session.accessTokens)
+        server.json("POST /api/auth/google", StandInServer.session())
+        server.json("POST /api/auth/refresh", StandInServer.session(accessToken = "access-2", refreshToken = "refresh-2"))
+        server.nothing("POST /api/auth/sign-out")
+        session.restore()
+        session.signInWithGoogle("id-token")
+
+        val signingOut = async { session.signOut() }
+        removing.await()
+        // Something of the app still asks for the token in this moment.
+        assertNull(session.accessTokens.current())
+        assertNull(session.accessTokens.renewed("access-1"))
+        mayGoOn.complete(Unit)
+        signingOut.await()
+
+        assertEquals(SessionState.SignedOut(), session.state.value)
+        assertTrue(server.routes("POST /api/auth/refresh").isEmpty())
+    }
+
+    @Test
+    fun `a sign-out whose clearing up fails is a sign-out all the same`() = runTest {
+        file = File(folder.root, "session.preferences_pb")
+        store = SessionStore(PreferenceDataStoreFactory.create(scope = backgroundScope) { file }, AesGcmCipher { key })
+        session = Session(api = { api }, store = store, forgetEverything = { throw IllegalStateException("the database is busy") })
+        api = Api(server.engine, ServerAddress.parse("https://planner.example"), session.accessTokens)
+        server.json("POST /api/auth/google", StandInServer.session())
+        session.restore()
+        session.signInWithGoogle("id-token")
+
+        runCatching { session.signOut() }
+
+        assertEquals(SessionState.SignedOut(), session.state.value)
+        assertNull(store.read())
+        assertNull(session.accessTokens.current())
+    }
+
+    @Test
     fun `what the session holds prints no name and no token`() {
         val user = SignedInUser("11111111-1111-4111-8111-111111111111", "Anna Kowalska")
         val printed = listOf(user, StoredSession(user, "refresh-secret"), SessionState.SignedIn(user)).joinToString { it.toString() }

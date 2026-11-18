@@ -2,6 +2,7 @@ package io.github.trufelek124.weddingplanner
 
 import android.app.Activity
 import android.content.Context
+import android.os.Looper
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.github.trufelek124.weddingplanner.data.PlannerDatabase
@@ -22,6 +23,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
+import org.junit.rules.ExternalResource
+import org.robolectric.Shadows.shadowOf
 
 /** Google's account picker as a test wants it to answer. */
 class StandInGoogle(var answer: GoogleAnswer = GoogleAnswer.Cancelled) : GoogleAccounts {
@@ -85,6 +88,22 @@ class StandInPhone(
     /** Everything the phone keeps in its files, read as text: to look for what must not be there. */
     fun everythingKept(): String = folder.listFiles().orEmpty().filter { it.isFile }.joinToString("") { it.readBytes().toString(Charsets.ISO_8859_1) }
 
+    /**
+     * Switches the phone off once the app has come to rest: with the screen gone, whatever it was
+     * still doing with the server or the database is given a moment to end, so that the database
+     * is not closed under it.
+     */
+    fun offWhenAtRest() {
+        val until = System.currentTimeMillis() + 5_000
+        var restful = 0
+        while (restful < 5 && System.currentTimeMillis() < until) {
+            shadowOf(Looper.getMainLooper()).idle()
+            restful = if (container.planner.quiet) restful + 1 else 0
+            Thread.sleep(10)
+        }
+        off()
+    }
+
     /** Switches the phone off. What it stored stays in the folder. */
     fun off() {
         runBlocking { running.coroutineContext.job.cancelAndJoin() }
@@ -95,5 +114,16 @@ class StandInPhone(
     fun restarted(): StandInPhone {
         off()
         return StandInPhone(folder, server, google, key, clock)
+    }
+}
+
+/**
+ * Switches a test's phone off after the test, and after the screen is gone: give it an order
+ * between the folder's and the screen's rule. Closing the phone while the screen is still up
+ * closes the database under an app that is still at work.
+ */
+class SwitchedOffAfterwards(private val phone: () -> StandInPhone?) : ExternalResource() {
+    override fun after() {
+        phone()?.offWhenAtRest()
     }
 }

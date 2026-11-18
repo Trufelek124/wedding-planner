@@ -20,6 +20,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,7 +81,13 @@ private fun WaysToLook(asTimeline: Boolean, onChange: (Boolean) -> Unit, modifie
  * @param today the date where the wedding takes place, by the phone's clock
  */
 @Composable
-fun PlanContent(planner: Planner, today: LocalDate, modifier: Modifier = Modifier, foot: @Composable () -> Unit = {}) {
+fun PlanContent(
+    planner: Planner,
+    today: LocalDate,
+    modifier: Modifier = Modifier,
+    actions: TaskActions? = null,
+    foot: @Composable () -> Unit = {},
+) {
     var everything by rememberSaveable { mutableStateOf(false) }
     var asTimeline by rememberSaveable { mutableStateOf(false) }
     val all = planner.planItems
@@ -108,18 +115,18 @@ fun PlanContent(planner: Planner, today: LocalDate, modifier: Modifier = Modifie
         }
         if (scheduled.isNotEmpty()) {
             item(key = "scheduled") { GroupTitle(stringResource(R.string.plan_scheduled)) }
-            items(scheduled, key = { it.id }) { item -> PlanItem(item, planner) }
+            items(scheduled, key = { it.id }) { item -> PlanItem(item, planner, actions) }
         }
         if (notScheduled.isNotEmpty()) {
             item(key = "not-scheduled") { GroupTitle(stringResource(R.string.plan_not_scheduled)) }
-            items(notScheduled, key = { it.id }) { item -> PlanItem(item, planner) }
+            items(notScheduled, key = { it.id }) { item -> PlanItem(item, planner, actions) }
         }
         item(key = "foot") { foot() }
     }
 }
 
 @Composable
-private fun PlanItem(item: Entry, planner: Planner) {
+private fun PlanItem(item: Entry, planner: Planner, actions: TaskActions?) {
     val tasks = planner.tasksOf(item)
     var open by rememberSaveable(item.id) { mutableStateOf(false) }
     Column {
@@ -144,10 +151,13 @@ private fun PlanItem(item: Entry, planner: Planner) {
             if (open) {
                 Column(modifier = Modifier.padding(start = 16.dp)) {
                     for (task in tasks) {
-                        EntryLine(task, planner, withPlanItem = false)
+                        EntryLine(task, planner, withPlanItem = false, actions = actions)
                     }
                 }
             }
+        }
+        if (actions != null && item.status.open) {
+            TextButton(onClick = { actions.add(item.id) }) { Text(stringResource(R.string.task_add_to_this)) }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
@@ -155,7 +165,7 @@ private fun PlanItem(item: Entry, planner: Planner) {
 
 /** Single things to do, with or without a date, in the server's order: by date, those without one last. */
 @Composable
-fun TasksContent(planner: Planner, modifier: Modifier = Modifier, foot: @Composable () -> Unit = {}) {
+fun TasksContent(planner: Planner, modifier: Modifier = Modifier, actions: TaskActions? = null, foot: @Composable () -> Unit = {}) {
     var everything by rememberSaveable { mutableStateOf(false) }
     var paymentsOnly by rememberSaveable { mutableStateOf(false) }
     val all = planner.tasks
@@ -185,7 +195,7 @@ fun TasksContent(planner: Planner, modifier: Modifier = Modifier, foot: @Composa
             }
         }
         items(shown, key = { it.id }) { task ->
-            EntryLine(task, planner)
+            EntryLine(task, planner, actions = actions)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
         item(key = "foot") { foot() }

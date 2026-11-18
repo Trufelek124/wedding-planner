@@ -47,6 +47,10 @@ class SendWorker(context: Context, parameters: WorkerParameters) : CoroutineWork
             // Signing out removed what was waiting: there is nothing of anyone's to send.
             return Result.success()
         }
+        if (container.planner.stillToSend() == 0) {
+            // The app sent it itself in the meantime.
+            return Result.success()
+        }
         container.planner.sync()
         return if (container.planner.stillToSend() > 0) Result.retry() else Result.success()
     }

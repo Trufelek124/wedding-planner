@@ -303,7 +303,7 @@ class PlannerScreensTest : SignedInPhoneTest() {
 
         compose.onNodeWithText("213 days to go").assertIsDisplayed()
         compose.picture("home-large-text")
-        scrollTo(hasText("Signed in as Anna"))
+        scrollTo(hasText("Sign out"))
         compose.onNodeWithText("Sign out").assertIsDisplayed()
 
         goTo("Tasks")
@@ -338,7 +338,9 @@ class PlannerScreensTest : SignedInPhoneTest() {
 
         compose.onNodeWithContentDescription("Load again").performClick()
 
-        waitFor("212 days to go")
+        // The new load has nothing overdue or next: once it says so, it is the one on the screen.
+        waitFor("Nothing is waiting for you. What has to happen is in the plan; single things to do are under tasks.")
+        compose.onNodeWithText("212 days to go").assertIsDisplayed()
         scrollTo(hasText("Loaded on 19 Nov 2026 at 14:05"))
         compose.onNodeWithText("Loaded on 19 Nov 2026 at 14:05").assertIsDisplayed()
     }

@@ -117,10 +117,21 @@ first uses it, at the version D-005 names.
   they work without a connection and say from when it is. The tables are in `Rows.kt`; their layout is written to
   `android/app/schemas/` at every build and committed. Until the phone keeps something the server does not have,
   an older copy is dropped and loaded again; from then on a change of the tables needs a migration.
+- A change made on the phone (a tick, a new task, an edit) is written to the table `waiting_change` first, laid
+  over what the screens show at once, and sent by `PlannerRepository.sync()`, which then loads again: by the app
+  while it is open, and by `SendWorker` (WorkManager) once there is a connection when it is not. One change waits
+  per task; a further one is folded into it. A new task gets its id on the phone. An edit carries the version it
+  was made on and is never sent over a newer one: the task then shows the latest version and says that it has to
+  be looked at. What the phone sends is JSON written by hand in `data/Changes.kt`, held against the generated
+  request models by `ChangesAgreeWithTheContractTest`.
+- The screens follow `PlannerRepository.planner`, which reads again after every write the repository itself
+  makes. Write to the database only through the repository, or the screens do not hear of it.
+- Signing out removes the waiting changes too, and asks first when there are any. It must always end signed out:
+  what clears up after it may fail, the sign-out may not.
 - The phone reads the server's answers into classes of its own (`data/Wire.kt`): only the fields it uses, and a
   value from a fixed set as text, so a field or a value a newer server adds does not break an app that is already
   on a phone. `WireAgreesWithTheContractTest` holds them against the generated models, and the tests' own answers
-  (`StandIn`) against the contract. The generated models are for what the phone sends.
+  (`StandIn`) against the contract.
 - How a fact reads is in `planner/Words.kt`, the same words as the web's `labels.ts`; money is `money()` in
   `money/Money.kt`, on whole numbers of the smallest unit as on the web. Screen texts are in `strings.xml`.
 - The plan's timeline (`planner/timeline/`) is drawn by us, like the web's chart (D-001): where a bar lies is
@@ -133,6 +144,10 @@ first uses it, at the version D-005 names.
   container with a `StandInServer`, a key outside the Keystore, a `StandInGoogle`, a clock set by hand and a real
   database in a folder; `AppRootTest` and `PlannerScreensTest` drive the screens with it as a person would, and
   check the log and what is left in the phone's files.
+- A screen test that changes something uses `LivingPlanner`, a stand-in server that keeps what it is sent, and
+  waits for what it then checks (`waitFor` a text, `waitUntil` a state of the server): the app answers a tap on
+  threads of its own. The test's phone is switched off by the `SwitchedOffAfterwards` rule, after the screen is
+  gone; closing it earlier closes the database under an app that is still at work.
 - A character that cannot be seen (a no-break space, a minus sign that is not a hyphen) is written as its escape
   (`\u00a0`), in Kotlin as in TypeScript.
 - A screen has a test that writes its picture: `compose.picture("name")` (`ui/Pictures.kt`), in a test class with

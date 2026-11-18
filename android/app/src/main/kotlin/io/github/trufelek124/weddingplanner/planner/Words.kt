@@ -6,6 +6,7 @@ import io.github.trufelek124.weddingplanner.data.Kind
 import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.data.Priority
 import io.github.trufelek124.weddingplanner.data.Status
+import io.github.trufelek124.weddingplanner.data.Waiting
 import io.github.trufelek124.weddingplanner.money.money
 import java.time.Instant
 import java.time.LocalDate
@@ -104,6 +105,14 @@ fun whenInWords(entry: Entry): String? {
     }
 }
 
+/** Where a change made on this phone stands, for the line of the entry; null when nothing waits. */
+fun waitingInWords(waiting: Waiting?): String? = when (waiting) {
+    Waiting.TO_BE_SENT -> "Waiting to be sent"
+    Waiting.CHANGED_MEANWHILE -> "Not sent: changed on another device"
+    Waiting.REFUSED -> "Not saved: open it to see why"
+    null -> null
+}
+
 /** A few words about an entry. [strong] marks the one to see first: a level that asks for attention. */
 data class Fact(val text: String, val strong: Boolean = false)
 
@@ -115,9 +124,12 @@ data class Fact(val text: String, val strong: Boolean = false)
  * @param withPlanItem false where the task already stands under its plan item
  */
 fun factsOf(entry: Entry, planner: Planner, withPlanItem: Boolean = true): List<Fact> = listOfNotNull(
+    waitingInWords(entry.waiting)?.let { Fact(it, strong = true) },
     statusLabel(entry.status).takeIf { entry.kind == Kind.PLAN_ITEM || entry.status != Status.NOT_STARTED }?.let(::Fact),
-    // The level is a word and says why; the weight only helps the eye find what is urgent.
-    Fact(priorityInWords(entry), strong = entry.status.open && (entry.priority == Priority.CRITICAL || entry.priority == Priority.HIGH)),
+    // The level is a word and says why; the weight only helps the eye find what is urgent. A task that
+    // exists only on the phone has no level yet: the server works it out.
+    Fact(priorityInWords(entry), strong = entry.status.open && (entry.priority == Priority.CRITICAL || entry.priority == Priority.HIGH))
+        .takeUnless { entry.priorityReason == Entry.NOT_WORKED_OUT },
     moneyInWords(entry, planner.currency)?.let(::Fact),
     whenInWords(entry)?.let(::Fact),
     entry.parentId.takeIf { withPlanItem }?.let { planner.entry(it)?.title }?.let(::Fact),

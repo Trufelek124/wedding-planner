@@ -152,8 +152,11 @@ class Planner(
 
     fun entry(id: String): Entry? = byId[id]
 
-    /** How many changes made on this phone the server does not have yet. */
+    /** How many changes made on this phone are on their way to the server. */
     val waiting: Int get() = entries.count { it.waiting == Waiting.TO_BE_SENT }
+
+    /** How many changes exist only on this phone, those that could not be sent included: what a sign-out would lose. */
+    val unsent: Int get() = entries.count { it.waiting != null } + gone.size
 
     /** "Anna & Marek": the members who do it, in the wedding's order; null when nobody is named. */
     fun peopleOf(entry: Entry): String? =

@@ -13,12 +13,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.Density
 import io.github.trufelek124.weddingplanner.StandInPhone
+import io.github.trufelek124.weddingplanner.SwitchedOffAfterwards
 import io.github.trufelek124.weddingplanner.api.StandInServer
 import io.github.trufelek124.weddingplanner.data.planner
 import io.github.trufelek124.weddingplanner.ui.AppRoot
 import io.github.trufelek124.weddingplanner.ui.PlannerTheme
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -33,6 +33,9 @@ abstract class SignedInPhoneTest {
     val folder = TemporaryFolder()
 
     @get:Rule(order = 1)
+    val switchedOff = SwitchedOffAfterwards { if (::phone.isInitialized) phone else null }
+
+    @get:Rule(order = 2)
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     protected lateinit var phone: StandInPhone
@@ -47,11 +50,6 @@ abstract class SignedInPhoneTest {
         server.json("GET /api/auth/config", """{"googleClientId":"client-1.apps.example","devLoginEnabled":false}""")
         server.planner()
         runBlocking { phone.container.session.signInForDevelopment("anna@example.com") }
-    }
-
-    @After
-    fun off() {
-        phone.off()
     }
 
     /** Opens the app and waits for Home. */
@@ -69,6 +67,18 @@ abstract class SignedInPhoneTest {
     protected fun aPhoneThatLoadedEarlier() {
         runBlocking { phone.container.planner.load() }
         phone = phone.restarted()
+    }
+
+    /**
+     * Waits for something that is not on the screen, such as a request having been sent. The app's
+     * own work runs between the looks: left alone, it would wait for the test and the test for it.
+     */
+    protected fun waitUntil(what: () -> Boolean) {
+        compose.waitUntil(WAIT) {
+            compose.waitForIdle()
+            what()
+        }
+        compose.waitForIdle()
     }
 
     protected fun waitFor(text: String) {

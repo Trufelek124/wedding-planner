@@ -64,6 +64,64 @@
     <string name="tasks_shown">tasks shown</string>
     <string name="tasks_hidden">tasks hidden</string>
 
+    <!-- Changing tasks -->
+    <string name="tick_done">Done: %1$s</string>
+    <string name="tick_paid">Paid: %1$s</string>
+    <string name="task_open">change it</string>
+    <string name="task_add">Add a task</string>
+    <string name="task_add_to_this">Add a task to this</string>
+    <string name="task_change">Change the task</string>
+    <string name="task_not_there">This task is no longer there.</string>
+    <string name="back">Back</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="task_title">Title</string>
+    <string name="task_title_needed">Enter a title.</string>
+    <string name="task_due">Due</string>
+    <string name="task_due_hint">Day.month.year, like 15.01.2027. Empty for no date.</string>
+    <string name="task_day_unreadable">Enter a day like 15.01.2027.</string>
+    <string name="task_pick_day">Pick a day for: %1$s</string>
+    <string name="task_use_day">Use this day</string>
+    <string name="task_status">Status</string>
+    <string name="task_who">Who does it</string>
+    <string name="task_parent">Belongs to</string>
+    <string name="task_no_parent">No step of the plan</string>
+    <string name="task_category">Category</string>
+    <string name="task_no_category">No category</string>
+    <string name="task_vendor">Vendor</string>
+    <string name="task_no_vendor">No vendor</string>
+    <string name="task_urgency">How urgent</string>
+    <string name="task_urgency_worked_out">Worked out</string>
+    <string name="task_is_payment">This is a payment</string>
+    <string name="task_amount">Amount in %1$s</string>
+    <string name="task_amount_hint">Like 2500 or 2500.50.</string>
+    <string name="task_amount_unreadable">Enter an amount like 2500 or 2500.50.</string>
+    <string name="task_part">Which part of the price</string>
+    <string name="task_part_deposit">Deposit</string>
+    <string name="task_part_instalment">Instalment</string>
+    <string name="task_part_final">Final payment</string>
+    <string name="task_paid_on">Paid on</string>
+    <string name="task_paid_on_hint">Day.month.year. Empty for today.</string>
+    <string name="task_notes">Notes</string>
+    <string name="task_not_saved_yet">Not saved yet: put right what is marked above.</string>
+    <string name="task_waiting">A change to this task is waiting to be sent. What you save now takes its place.</string>
+    <string name="task_refused">This was not saved on the server. Put right what is marked, then save again.</string>
+    <string name="task_changed_meanwhile">Your change to this task was not sent: someone changed it on another device in the meantime. This is the latest version. Saving from here changes that version.</string>
+    <string name="task_keep_latest">Keep the latest version</string>
+    <plurals name="changes_waiting">
+        <item quantity="one">%d change is waiting to be sent.</item>
+        <item quantity="other">%d changes are waiting to be sent.</item>
+    </plurals>
+    <string name="change_gone">Your change to “%1$s” could not be sent: the task no longer exists.</string>
+    <string name="change_gone_ok">OK</string>
+    <string name="sign_out_ask">Sign out?</string>
+    <plurals name="sign_out_loses">
+        <item quantity="one">%d change made on this phone has not reached the server and will be lost.</item>
+        <item quantity="other">%d changes made on this phone have not reached the server and will be lost.</item>
+    </plurals>
+    <string name="sign_out_anyway">Sign out</string>
+    <string name="sign_out_stay">Stay signed in</string>
+
     <!-- The plan as a timeline -->
     <string name="view_list">List</string>
     <string name="view_timeline">Timeline</string>

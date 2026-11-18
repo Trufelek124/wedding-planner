@@ -191,7 +191,8 @@ class TimelineScreenTest : SignedInPhoneTest() {
 
         compose.onNodeWithText("List").assertIsSelected()
         compose.onNode(line("Send the save-the-dates", "Done", "by 1 Nov 2026")).assertIsDisplayed()
-        compose.onNode(line("Choose the music", "Not started", "Normal — no date")).assertExists()
+        scrollTo(hasText("Choose the music"))
+        compose.onNode(line("Choose the music", "Not started", "Normal — no date")).assertIsDisplayed()
     }
 
     @Test

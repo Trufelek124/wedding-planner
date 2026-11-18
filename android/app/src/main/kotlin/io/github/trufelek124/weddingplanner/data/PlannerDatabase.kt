@@ -146,9 +146,6 @@ abstract class PlannerDatabase : RoomDatabase() {
 
     companion object {
 
-        /** The tables a screen has to hear about when they change. */
-        val TABLES = arrayOf("planner", "entry", "category", "vendor", "member", "waiting_change")
-
         fun onThePhone(context: Context): PlannerDatabase = Room.databaseBuilder(context, PlannerDatabase::class.java, "planner.db").build()
     }
 }
