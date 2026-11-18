@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
+import { listVendors } from '../vendors/vendorsApi.ts'
 import { EntryMeta } from './EntryMeta.tsx'
 import { FilterBar } from './FilterBar.tsx'
 import { useFilters } from './filters.ts'
@@ -20,12 +21,18 @@ export function PlanPage() {
   const items = useLoaded(key, (signal) => listEntries({ ...query, kind: 'PLAN_ITEM' }, signal))
   const tasks = useLoaded('tasks', (signal) => listEntries({ kind: 'TASK', sort: 'DUE_DATE' }, signal))
   const categories = useLoaded('categories', listCategories)
+  const vendors = useLoaded('vendors', (signal) => listVendors({}, signal))
   const status = useStatusChange(() => {
     items.reload()
     tasks.reload()
   })
 
-  if (items.state.status === 'failed' || tasks.state.status === 'failed' || categories.state.status === 'failed') {
+  if (
+    items.state.status === 'failed' ||
+    tasks.state.status === 'failed' ||
+    categories.state.status === 'failed' ||
+    vendors.state.status === 'failed'
+  ) {
     return (
       <PageRetry
         message="The plan could not be loaded. Try again."
@@ -33,11 +40,17 @@ export function PlanPage() {
           items.retry()
           tasks.retry()
           categories.retry()
+          vendors.retry()
         }}
       />
     )
   }
-  if (items.state.status === 'loading' || tasks.state.status === 'loading' || categories.state.status === 'loading') {
+  if (
+    items.state.status === 'loading' ||
+    tasks.state.status === 'loading' ||
+    categories.state.status === 'loading' ||
+    vendors.state.status === 'loading'
+  ) {
     return <PageWaiting what="Loading…" />
   }
 
@@ -47,6 +60,7 @@ export function PlanPage() {
   const group = {
     tasks: tasks.state.data,
     categories: categories.state.data,
+    vendors: vendors.state.data,
     pending: status.pending,
     shown: status.shown,
     onStatus: status.change,
@@ -88,6 +102,7 @@ interface PlanGroupProps {
   items: Entry[]
   tasks: Entry[]
   categories: Category[]
+  vendors: readonly { id: string; name: string }[]
   pending: PendingStatus | null
   shown: (entry: Entry) => Status
   onStatus: (entry: Entry, status: Status) => void
@@ -95,7 +110,7 @@ interface PlanGroupProps {
   back: string
 }
 
-function PlanGroup({ title, items, tasks, categories, pending, shown, onStatus, back }: PlanGroupProps) {
+function PlanGroup({ title, items, tasks, categories, vendors, pending, shown, onStatus, back }: PlanGroupProps) {
   if (items.length === 0) {
     return null
   }
@@ -113,7 +128,7 @@ function PlanGroup({ title, items, tasks, categories, pending, shown, onStatus, 
                 <Link className="entry-title" to={`/entries/${item.id}`} state={{ back }}>
                   {item.title}
                 </Link>
-                <EntryMeta entry={item} categories={categories} />
+                <EntryMeta entry={item} categories={categories} vendors={vendors} />
                 {own.length > 0 && (
                   <details className="entry-tasks">
                     <summary>
@@ -126,6 +141,7 @@ function PlanGroup({ title, items, tasks, categories, pending, shown, onStatus, 
                           key={task.id}
                           task={task}
                           categories={categories}
+                          vendors={vendors}
                           status={shown(task)}
                           busy={pending?.id === task.id}
                           back={back}

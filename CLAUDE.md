@@ -83,7 +83,8 @@ closing comment quotes its summary lines and its exit code.
   never put an `/api/…` address into `src`. Signing out lets go of all of them.
 - Money is shown with `money()` and read from what a person typed with `moneyTyped()` (`src/money/money.ts`), both
   on whole numbers of the currency's smallest unit; nothing divides by 100 on its own. Over a limit is said in
-  words, with the colour and the sign only beside them. A bar of money is `Meter` (`src/budget/Meter.tsx`).
+  words, with the colour and the sign (`src/ui/Warning.tsx`) only beside them. A bar of money is `Meter`
+  (`src/budget/Meter.tsx`).
 - A list tells the form where to return to (`state={{ back }}`), filters included.
 - Every colour, size and radius comes from the tokens at the top of `src/index.css`; light and dark both work.
 - What a person reads is written for that person. This includes the server's validation messages

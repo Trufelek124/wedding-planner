@@ -7,15 +7,18 @@ interface EntryMetaProps {
   categories: Category[]
   /** For a task: the title of the plan item it belongs to. */
   planItem?: string | undefined
+  /** The vendors, where the list names the one an entry concerns. */
+  vendors?: readonly { id: string; name: string }[] | undefined
 }
 
 /** The line under an entry's title: when, where it belongs, who, and how urgent. */
-export function EntryMeta({ entry, categories, planItem }: EntryMetaProps) {
+export function EntryMeta({ entry, categories, planItem, vendors }: EntryMetaProps) {
   const wedding = useCurrentWedding()
   const category = categories.find((candidate) => candidate.id === entry.categoryId)?.name
   const people = namesOf(wedding, entry.assigneeIds)
   const reason = priorityReason(entry)
-  const facts = [when(entry), planItem, category, people].filter((fact): fact is string => Boolean(fact))
+  const vendor = vendors?.find((candidate) => candidate.id === entry.vendorId)?.name
+  const facts = [when(entry), planItem, category, vendor, people].filter((fact): fact is string => Boolean(fact))
   const itsMoney = moneyInWords(entry, wedding.currency)
 
   return (

@@ -4,6 +4,7 @@ import type { Schemas } from './api/client.ts'
 type Entry = Schemas['Entry']
 type Home = Schemas['Home']
 type Budget = Schemas['Budget']
+type Vendor = Schemas['Vendor']
 type Inspiration = Schemas['Inspiration']
 type Picture = Schemas['Picture']
 type Board = Schemas['Board']
@@ -158,6 +159,7 @@ export function planningServer(entries: Entry[], extra: Record<string, Handler> 
     'POST /api/auth/refresh': session(),
     'GET /api/wedding': weddingOfAnnaAndPiotr(),
     'GET /api/categories': Response.json([VENUE, FLOWERS]),
+    'GET /api/vendors': Response.json([]),
     'GET /api/entries': (request) => {
       const kind = new URL(request.url).searchParams.get('kind')
       return Response.json(entries.filter((candidate) => kind === null || candidate.kind === kind))
@@ -237,6 +239,7 @@ export function inspirationsServer(inspirations: Inspiration[], extra: Record<st
     'GET /api/inspirations': Response.json(inspirations),
     'GET /api/inspirations/tags': Response.json([...tags].map(([tag, count]) => ({ tag, count }))),
     'GET /api/entries': Response.json([]),
+    'GET /api/vendors': Response.json([]),
     ...pictures,
     ...extra,
   })
@@ -255,6 +258,36 @@ export function budget(overrides: Partial<Budget> = {}): Budget {
     ],
     uncategorised: { committed: 0, paid: 0, payments: 0 },
     version: 0,
+    ...overrides,
+  }
+}
+
+let vendorNumber = 0
+
+/** A vendor as the server sends it, with made-up details; name only what the test is about. */
+export function vendor(overrides: Partial<Vendor> = {}): Vendor {
+  vendorNumber += 1
+  return {
+    id: `aaaaaaaa-0000-4000-8000-${String(vendorNumber).padStart(12, '0')}`,
+    name: `Vendor ${vendorNumber}`,
+    categoryId: null,
+    status: 'CONSIDERING',
+    contactPerson: '',
+    phone: '',
+    email: '',
+    website: '',
+    address: '',
+    agreedPrice: null,
+    notes: '',
+    planItems: 0,
+    tasks: 0,
+    payments: 0,
+    committed: 0,
+    paid: 0,
+    inspirations: 0,
+    version: 0,
+    createdAt: '2026-11-18T10:00:00Z',
+    updatedAt: '2026-11-18T10:00:00Z',
     ...overrides,
   }
 }

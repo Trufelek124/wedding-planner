@@ -16,6 +16,9 @@ import { PlanPage } from './planning/PlanPage.tsx'
 import { TasksPage } from './planning/TasksPage.tsx'
 import { Shell } from './shell/Shell.tsx'
 import { CardScreen, Retry, Waiting } from './ui/Screen.tsx'
+import { VendorFormPage } from './vendors/VendorFormPage.tsx'
+import { VendorPage } from './vendors/VendorPage.tsx'
+import { VendorsPage } from './vendors/VendorsPage.tsx'
 import { SetupPage } from './wedding/SetupPage.tsx'
 import { useWedding } from './wedding/useWedding.ts'
 import { WeddingContext, WeddingUpdateContext } from './wedding/WeddingContext.ts'
@@ -73,6 +76,10 @@ function SignedIn({ user }: { user: Me }) {
                   <Route path="entries/:id" element={<EntryFormPage />} />
                   <Route path="budget" element={<BudgetPage />} />
                   <Route path="budget/plan" element={<BudgetPlanPage />} />
+                  <Route path="vendors" element={<VendorsPage />} />
+                  <Route path="vendors/new" element={<VendorFormPage />} />
+                  <Route path="vendors/:id" element={<VendorPage />} />
+                  <Route path="vendors/:id/edit" element={<VendorFormPage />} />
                   <Route path="inspirations" element={<InspirationsPage />} />
                   <Route path="inspirations/boards" element={<BoardsPage />} />
                   <Route path="inspirations/new" element={<InspirationFormPage />} />

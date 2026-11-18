@@ -5,6 +5,7 @@ import { listEntries, type Entry } from '../planning/planningApi.ts'
 import { useLoaded } from '../planning/useLoaded.ts'
 import { Field } from '../ui/Field.tsx'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
+import { listVendors, type Vendor } from '../vendors/vendorsApi.ts'
 import { InspirationPicture } from './InspirationPicture.tsx'
 import {
   addPictures,
@@ -33,8 +34,14 @@ export function InspirationFormPage() {
   const inspiration = useLoaded(id ?? 'new', (signal) => (id === undefined ? Promise.resolve(null) : getInspiration(id, signal)))
   const boards = useLoaded('boards', listBoards)
   const planItems = useLoaded('plan-items', (signal) => listEntries({ kind: 'PLAN_ITEM', sort: 'TITLE' }, signal))
+  const vendors = useLoaded('vendors', (signal) => listVendors({}, signal))
 
-  if (inspiration.state.status === 'failed' || boards.state.status === 'failed' || planItems.state.status === 'failed') {
+  if (
+    inspiration.state.status === 'failed' ||
+    boards.state.status === 'failed' ||
+    planItems.state.status === 'failed' ||
+    vendors.state.status === 'failed'
+  ) {
     return (
       <PageRetry
         message="This could not be loaded. It may have been deleted. Try again, or go back to the inspirations."
@@ -42,11 +49,17 @@ export function InspirationFormPage() {
           inspiration.retry()
           boards.retry()
           planItems.retry()
+          vendors.retry()
         }}
       />
     )
   }
-  if (inspiration.state.status === 'loading' || boards.state.status === 'loading' || planItems.state.status === 'loading') {
+  if (
+    inspiration.state.status === 'loading' ||
+    boards.state.status === 'loading' ||
+    planItems.state.status === 'loading' ||
+    vendors.state.status === 'loading'
+  ) {
     return <PageWaiting what="Loading…" />
   }
 
@@ -58,6 +71,7 @@ export function InspirationFormPage() {
       loaded={existing}
       boards={boards.state.data}
       planItems={planItems.state.data}
+      vendors={vendors.state.data}
       onReload={inspiration.retry}
     />
   )
@@ -67,19 +81,21 @@ interface InspirationFormProps {
   loaded: Inspiration | null
   boards: Board[]
   planItems: Entry[]
+  vendors: Vendor[]
   onReload: () => void
 }
 
-/** What the page that led here said: where to return to, and the board that was being looked at. */
-function cameWith(state: unknown): { back: string | null; boardId: string | null } {
+/** What the page that led here said: where to return to, and the board or the vendor that was being looked at. */
+function cameWith(state: unknown): { back: string | null; boardId: string | null; vendorId: string | null } {
   const said = typeof state === 'object' && state !== null ? (state as Record<string, unknown>) : {}
   return {
     back: typeof said.back === 'string' ? said.back : null,
     boardId: typeof said.boardId === 'string' ? said.boardId : null,
+    vendorId: typeof said.vendorId === 'string' ? said.vendorId : null,
   }
 }
 
-function InspirationForm({ loaded, boards, planItems, onReload }: InspirationFormProps) {
+function InspirationForm({ loaded, boards, planItems, vendors, onReload }: InspirationFormProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const came = cameWith(location.state)
@@ -93,6 +109,9 @@ function InspirationForm({ loaded, boards, planItems, onReload }: InspirationFor
   const [note, setNote] = useState(loaded?.note ?? '')
   const [tags, setTags] = useState(tagsToText(loaded?.tags ?? []))
   const [planItemId, setPlanItemId] = useState(loaded?.planItemId ?? '')
+  const [vendorId, setVendorId] = useState(
+    loaded?.vendorId ?? (loaded === null && vendors.some((vendor) => vendor.id === came.vendorId) ? came.vendorId : null) ?? '',
+  )
   /** For a new inspiration: the pictures that go with it when it is saved. */
   const [chosen, setChosen] = useState<File[]>([])
 
@@ -117,8 +136,7 @@ function InspirationForm({ loaded, boards, planItems, onReload }: InspirationFor
       note: note.trim(),
       tags: tagsFrom(tags),
       planItemId: planItemId === '' ? null : planItemId,
-      // The vendor is said again as it is: a save replaces the whole inspiration.
-      vendorId: existing?.vendorId ?? null,
+      vendorId: vendorId === '' ? null : vendorId,
     }
   }
 
@@ -428,6 +446,19 @@ function InspirationForm({ loaded, boards, planItems, onReload }: InspirationFor
               {planItems.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.title}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+
+        <Field label="Vendor" optional hint="Who this idea concerns." error={fieldError('vendorId')}>
+          {(control) => (
+            <select {...control} name="vendorId" value={vendorId} onChange={(event) => setVendorId(event.target.value)}>
+              <option value="">No vendor</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name}
                 </option>
               ))}
             </select>

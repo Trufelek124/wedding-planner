@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
+import { listVendors } from '../vendors/vendorsApi.ts'
 import { FilterBar } from './FilterBar.tsx'
 import { useFilters } from './filters.ts'
 import { listCategories, listEntries } from './planningApi.ts'
@@ -15,9 +16,15 @@ export function TasksPage() {
   const tasks = useLoaded(key, (signal) => listEntries({ ...query, kind: 'TASK' }, signal))
   const planItems = useLoaded('plan-items', (signal) => listEntries({ kind: 'PLAN_ITEM', sort: 'TITLE' }, signal))
   const categories = useLoaded('categories', listCategories)
+  const vendors = useLoaded('vendors', (signal) => listVendors({}, signal))
   const status = useStatusChange(tasks.reload)
 
-  if (tasks.state.status === 'failed' || planItems.state.status === 'failed' || categories.state.status === 'failed') {
+  if (
+    tasks.state.status === 'failed' ||
+    planItems.state.status === 'failed' ||
+    categories.state.status === 'failed' ||
+    vendors.state.status === 'failed'
+  ) {
     return (
       <PageRetry
         message="The tasks could not be loaded. Try again."
@@ -25,16 +32,23 @@ export function TasksPage() {
           tasks.retry()
           planItems.retry()
           categories.retry()
+          vendors.retry()
         }}
       />
     )
   }
-  if (tasks.state.status === 'loading' || planItems.state.status === 'loading' || categories.state.status === 'loading') {
+  if (
+    tasks.state.status === 'loading' ||
+    planItems.state.status === 'loading' ||
+    categories.state.status === 'loading' ||
+    vendors.state.status === 'loading'
+  ) {
     return <PageWaiting what="Loading…" />
   }
 
   const all = tasks.state.data
   const categoryList = categories.state.data
+  const vendorList = vendors.state.data
   const planItemTitles = new Map(planItems.state.data.map((item) => [item.id, item.title]))
 
   return (
@@ -65,6 +79,7 @@ export function TasksPage() {
               task={task}
               categories={categoryList}
               planItem={task.parentId === null ? undefined : planItemTitles.get(task.parentId)}
+              vendors={vendorList}
               status={status.shown(task)}
               busy={status.pending?.id === task.id}
               back={back}

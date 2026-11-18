@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { ApiError } from '../api/client.ts'
 import { Field } from '../ui/Field.tsx'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
+import { listVendors, VENDOR_STATUS_LABEL, type Vendor } from '../vendors/vendorsApi.ts'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
 import { moneyToType, moneyTyped } from '../money/money.ts'
 import { KIND_LABEL, PAYMENT_KIND_LABEL, PRIORITY_LABEL, priorityInWords, STATUS_LABEL } from './labels.ts'
@@ -37,8 +38,14 @@ export function EntryFormPage() {
   const entry = useLoaded(id ?? 'new', (signal) => (id === undefined ? Promise.resolve(null) : getEntry(id, signal)))
   const categories = useLoaded('categories', listCategories)
   const planItems = useLoaded('plan-items', (signal) => listEntries({ kind: 'PLAN_ITEM', sort: 'TITLE' }, signal))
+  const vendors = useLoaded('vendors', (signal) => listVendors({}, signal))
 
-  if (entry.state.status === 'failed' || categories.state.status === 'failed' || planItems.state.status === 'failed') {
+  if (
+    entry.state.status === 'failed' ||
+    categories.state.status === 'failed' ||
+    planItems.state.status === 'failed' ||
+    vendors.state.status === 'failed'
+  ) {
     return (
       <PageRetry
         message="This could not be loaded. It may have been deleted. Try again, or go back to the list."
@@ -46,11 +53,17 @@ export function EntryFormPage() {
           entry.retry()
           categories.retry()
           planItems.retry()
+          vendors.retry()
         }}
       />
     )
   }
-  if (entry.state.status === 'loading' || categories.state.status === 'loading' || planItems.state.status === 'loading') {
+  if (
+    entry.state.status === 'loading' ||
+    categories.state.status === 'loading' ||
+    planItems.state.status === 'loading' ||
+    vendors.state.status === 'loading'
+  ) {
     return <PageWaiting what="Loading…" />
   }
 
@@ -62,8 +75,10 @@ export function EntryFormPage() {
       existing={existing}
       kind={existing?.kind ?? kindAsked}
       parentAsked={params.get('parent')}
+      vendorAsked={params.get('vendor')}
       categories={categories.state.data}
       planItems={planItems.state.data}
+      vendors={vendors.state.data}
       onLoaded={entry.set}
       onReload={entry.retry}
     />
@@ -74,8 +89,11 @@ interface EntryFormProps {
   existing: Entry | null
   kind: Kind
   parentAsked: string | null
+  /** For a new entry: the vendor whose page it is added from. */
+  vendorAsked: string | null
   categories: Category[]
   planItems: Entry[]
+  vendors: Vendor[]
   onLoaded: (entry: Entry) => void
   onReload: () => void
 }
@@ -86,7 +104,7 @@ function cameFrom(state: unknown): string | null {
   return typeof state === 'object' && state !== null && 'back' in state && typeof state.back === 'string' ? state.back : null
 }
 
-function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoaded, onReload }: EntryFormProps) {
+function EntryForm({ existing, kind, parentAsked, vendorAsked, categories, planItems, vendors, onLoaded, onReload }: EntryFormProps) {
   const wedding = useCurrentWedding()
   const navigate = useNavigate()
   const location = useLocation()
@@ -107,6 +125,9 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
   const decidedNow = existing?.priorityMode === 'AUTO' && !byHand ? priorityInWords(existing) : null
   const [priority, setPriority] = useState<Priority>(existing?.priority ?? 'NORMAL')
   const [parentId, setParentId] = useState(existing?.parentId ?? parentAsked ?? '')
+  const [vendorId, setVendorId] = useState(
+    existing?.vendorId ?? (existing === null && vendors.some((vendor) => vendor.id === vendorAsked) ? vendorAsked : null) ?? '',
+  )
   // Money is typed as people write it and sent as whole numbers of the currency's smallest unit.
   const [amountTyped, setAmountTyped] = useState(existing?.amount == null ? '' : moneyToType(existing.amount, wedding.currency))
   const [paymentKind, setPaymentKind] = useState<PaymentKind | ''>(existing?.paymentKind ?? '')
@@ -134,8 +155,7 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
       priorityMode: byHand ? ('MANUAL' as const) : ('AUTO' as const),
       priority: byHand ? priority : null,
       parentId: kind === 'PLAN_ITEM' || parentId === '' ? null : parentId,
-      // The vendor is said again as it is: a save replaces the whole entry.
-      vendorId: existing?.vendorId ?? null,
+      vendorId: vendorId === '' ? null : vendorId,
       // A paid date belongs to a payment that is done; left empty, the server takes the day it has, or today.
       amount: isPayment ? moneyTyped(amountTyped, wedding.currency) : null,
       paymentKind: isPayment && paymentKind !== '' ? paymentKind : null,
@@ -306,6 +326,19 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
             )}
           </Field>
         )}
+
+        <Field label="Vendor" optional hint="Who this concerns. It then shows on the vendor's page." error={fieldError('vendorId')}>
+          {(control) => (
+            <select {...control} name="vendorId" value={vendorId} onChange={(event) => setVendorId(event.target.value)}>
+              <option value="">No vendor</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.status === 'BOOKED' ? vendor.name : `${vendor.name} (${VENDOR_STATUS_LABEL[vendor.status].toLowerCase()})`}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
 
         {kind === 'TASK' && (
           <fieldset className="choice">

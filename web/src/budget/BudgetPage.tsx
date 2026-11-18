@@ -3,6 +3,7 @@ import { money } from '../money/money.ts'
 import { NO_CATEGORY } from '../planning/filters.ts'
 import { useLoaded } from '../planning/useLoaded.ts'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
+import { Warning } from '../ui/Warning.tsx'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
 import { fetchBudget, type Budget } from './budgetApi.ts'
 import { Meter } from './Meter.tsx'
@@ -201,13 +202,4 @@ function State({ planned, committed, currency }: { planned: number | null; commi
     )
   }
   return <span>{committed === planned ? 'Exactly as planned' : `${money(planned - committed, currency)} left`}</span>
-}
-
-function Warning() {
-  return (
-    <svg className="warning-sign" viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      <path d="M8 6v4M8 11.6v.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
 }

@@ -6,6 +6,8 @@ interface TaskRowProps {
   task: Entry
   categories: Category[]
   planItem?: string | undefined
+  /** The vendors, where the list names the one a task concerns. */
+  vendors?: readonly { id: string; name: string }[] | undefined
   /** The status to show: the task's own, or the one that is being saved. */
   status: Status
   busy: boolean
@@ -15,7 +17,7 @@ interface TaskRowProps {
 }
 
 /** A task in a list: a box to tick it off (for a payment: to mark it paid), its title leading to the form, and its facts. */
-export function TaskRow({ task, categories, planItem, status, busy, back, onStatus }: TaskRowProps) {
+export function TaskRow({ task, categories, planItem, vendors, status, busy, back, onStatus }: TaskRowProps) {
   const done = status === 'DONE'
   return (
     <li className="entry" data-done={done}>
@@ -32,7 +34,7 @@ export function TaskRow({ task, categories, planItem, status, busy, back, onStat
         <Link className="entry-title" to={`/entries/${task.id}`} state={back === undefined ? undefined : { back }}>
           {task.title}
         </Link>
-        <EntryMeta entry={task} categories={categories} planItem={planItem} />
+        <EntryMeta entry={task} categories={categories} planItem={planItem} vendors={vendors} />
       </div>
     </li>
   )
