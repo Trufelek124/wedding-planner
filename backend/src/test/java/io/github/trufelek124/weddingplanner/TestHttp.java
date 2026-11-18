@@ -101,6 +101,14 @@ public final class TestHttp {
         return fields.stream().map(field -> (String) field.get("field")).toList();
     }
 
+    /** The same with what is said about each field, as "field: message": the messages are read by people. */
+    @SuppressWarnings("unchecked")
+    public static List<String> fieldMessages(HttpResponse<String> response) {
+        Map<String, Object> problem = json(response);
+        List<Map<String, Object>> fields = (List<Map<String, Object>>) problem.getOrDefault("fieldProblems", List.of());
+        return fields.stream().map(field -> field.get("field") + ": " + field.get("message")).toList();
+    }
+
     public static String jsonOf(Map<String, ?> value) {
         return JSON.writeValueAsString(value);
     }

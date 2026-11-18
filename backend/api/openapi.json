@@ -28,6 +28,36 @@
         "required" : [ "devLoginEnabled", "googleClientId" ],
         "type" : "object"
       },
+      "Board" : {
+        "description" : "A heading inspirations are collected under, for example Flowers.",
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "inspirationCount" : {
+            "description" : "How many inspirations are on it.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "inspirationCount", "name" ],
+        "type" : "object"
+      },
+      "BoardName" : {
+        "properties" : {
+          "name" : {
+            "maxLength" : 60,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
       "Category" : {
         "description" : "A heading entries can be filed under, for example Venue.",
         "properties" : {
@@ -298,6 +328,112 @@
         "required" : [ "daysLeft", "next", "overdue", "today", "weddingDate" ],
         "type" : "object"
       },
+      "Inspiration" : {
+        "description" : "An idea the couple kept: a link or pictures, on a board, with a note and tags.",
+        "properties" : {
+          "addedById" : {
+            "description" : "The member who saved it.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "boardId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "note" : {
+            "type" : "string"
+          },
+          "planItemId" : {
+            "description" : "The plan item the idea belongs to.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "source" : {
+            "description" : "Where it comes from, worked out from the link; PHOTO when there is no link.",
+            "enum" : [ "INSTAGRAM", "TIKTOK", "PINTEREST", "WEB", "PHOTO" ],
+            "type" : "string"
+          },
+          "tags" : {
+            "description" : "In lower case, in alphabetical order.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "title" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "url" : {
+            "description" : "The page the idea comes from; null for pictures of one's own.",
+            "type" : [ "string", "null" ]
+          },
+          "version" : {
+            "description" : "Send this back with a change; it tells whether someone else saved in between.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "addedById", "boardId", "createdAt", "id", "note", "planItemId", "source", "tags", "title", "updatedAt", "url", "version" ],
+        "type" : "object"
+      },
+      "InspirationChange" : {
+        "description" : "All fields of an inspiration as they should be from now on.",
+        "properties" : {
+          "boardId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "note" : {
+            "maxLength" : 10000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "planItemId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "tags" : {
+            "items" : {
+              "maxLength" : 40,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 20,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "title" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "url" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          },
+          "version" : {
+            "description" : "The version of the inspiration this change is based on.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "boardId", "note", "planItemId", "tags", "title", "url", "version" ],
+        "type" : "object"
+      },
       "Me" : {
         "description" : "The signed-in person.",
         "properties" : {
@@ -390,6 +526,52 @@
         "required" : [ "assigneeIds", "categoryId", "dueDate", "kind", "notes", "parentId", "priority", "priorityMode", "startDate", "status", "title" ],
         "type" : "object"
       },
+      "NewInspiration" : {
+        "description" : "An idea to keep: a link, or the start of one that pictures are added to.",
+        "properties" : {
+          "boardId" : {
+            "description" : "The board it goes on; null for none yet.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "note" : {
+            "description" : "Free text; may be empty.",
+            "maxLength" : 10000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "planItemId" : {
+            "description" : "The plan item the idea belongs to.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "tags" : {
+            "description" : "Kept in lower case, without a leading #.",
+            "items" : {
+              "maxLength" : 40,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 20,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "title" : {
+            "description" : "May be empty.",
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "url" : {
+            "description" : "The page the idea comes from, starting with http:// or https://; null for pictures of one's own.",
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "boardId", "note", "planItemId", "tags", "title", "url" ],
+        "type" : "object"
+      },
       "Problem" : {
         "description" : "An error, as RFC 9457 problem details.",
         "properties" : {
@@ -430,9 +612,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -471,6 +653,20 @@
           }
         },
         "required" : [ "accessToken", "accessTokenExpiresAt", "refreshToken", "user" ],
+        "type" : "object"
+      },
+      "TagCount" : {
+        "description" : "A tag in use and how many inspirations carry it.",
+        "properties" : {
+          "count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tag" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "count", "tag" ],
         "type" : "object"
       },
       "Wedding" : {
@@ -799,9 +995,160 @@
         "tags" : [ "auth-controller" ]
       }
     },
+    "/api/boards" : {
+      "get" : {
+        "operationId" : "list_3",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Board"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "board-controller" ]
+      },
+      "post" : {
+        "operationId" : "add_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BoardName"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Board"
+                }
+              }
+            },
+            "description" : "Created"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "board-controller" ]
+      }
+    },
+    "/api/boards/{id}" : {
+      "delete" : {
+        "operationId" : "delete_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "For a board with inspirations: keep them without a board, or delete them too.",
+          "in" : "query",
+          "name" : "inspirations",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "KEEP", "DELETE" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "board-controller" ]
+      },
+      "put" : {
+        "operationId" : "rename_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BoardName"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Board"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "board-controller" ]
+      }
+    },
     "/api/categories" : {
       "get" : {
-        "operationId" : "list_1",
+        "operationId" : "list_2",
         "responses" : {
           "200" : {
             "content" : {
@@ -830,7 +1177,7 @@
         "tags" : [ "category-controller" ]
       },
       "post" : {
-        "operationId" : "add",
+        "operationId" : "add_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -868,7 +1215,7 @@
     },
     "/api/categories/{id}" : {
       "delete" : {
-        "operationId" : "delete_1",
+        "operationId" : "delete_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -943,7 +1290,7 @@
     },
     "/api/entries" : {
       "get" : {
-        "operationId" : "list",
+        "operationId" : "list_1",
         "parameters" : [ {
           "in" : "query",
           "name" : "kind",
@@ -1086,7 +1433,7 @@
     },
     "/api/entries/{id}" : {
       "delete" : {
-        "operationId" : "delete",
+        "operationId" : "delete_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1123,7 +1470,7 @@
         "tags" : [ "entry-controller" ]
       },
       "get" : {
-        "operationId" : "get_1",
+        "operationId" : "get_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1158,7 +1505,7 @@
         "tags" : [ "entry-controller" ]
       },
       "put" : {
-        "operationId" : "change",
+        "operationId" : "change_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1411,6 +1758,249 @@
           }
         },
         "tags" : [ "home-controller" ]
+      }
+    },
+    "/api/inspirations" : {
+      "get" : {
+        "operationId" : "list",
+        "parameters" : [ {
+          "description" : "Only the inspirations on this board.",
+          "in" : "query",
+          "name" : "boardId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "true: only the inspirations that are on no board.",
+          "in" : "query",
+          "name" : "withoutBoard",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "description" : "Only the inspirations that carry this tag.",
+          "in" : "query",
+          "name" : "tag",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Only the inspirations that belong to this plan item.",
+          "in" : "query",
+          "name" : "planItemId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Inspiration"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "inspiration-controller" ]
+      },
+      "post" : {
+        "operationId" : "add",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NewInspiration"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Inspiration"
+                }
+              }
+            },
+            "description" : "Created"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "inspiration-controller" ]
+      }
+    },
+    "/api/inspirations/tags" : {
+      "get" : {
+        "operationId" : "tags",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TagCount"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "inspiration-controller" ]
+      }
+    },
+    "/api/inspirations/{id}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "inspiration-controller" ]
+      },
+      "get" : {
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Inspiration"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "inspiration-controller" ]
+      },
+      "put" : {
+        "operationId" : "change",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InspirationChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Inspiration"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "inspiration-controller" ]
       }
     },
     "/api/me" : {

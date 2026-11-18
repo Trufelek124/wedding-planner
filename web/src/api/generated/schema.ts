@@ -100,6 +100,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/boards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_3"];
+        put?: never;
+        post: operations["add_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/boards/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["rename_2"];
+        post?: never;
+        delete: operations["delete_3"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/categories": {
         parameters: {
             query?: never;
@@ -107,9 +139,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_1"];
+        get: operations["list_2"];
         put?: never;
-        post: operations["add"];
+        post: operations["add_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -126,7 +158,7 @@ export interface paths {
         get?: never;
         put: operations["rename_1"];
         post?: never;
-        delete: operations["delete_1"];
+        delete: operations["delete_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -139,7 +171,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list"];
+        get: operations["list_1"];
         put?: never;
         post: operations["create"];
         delete?: never;
@@ -155,10 +187,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_1"];
-        put: operations["change"];
+        get: operations["get_2"];
+        put: operations["change_1"];
         post?: never;
-        delete: operations["delete"];
+        delete: operations["delete_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -228,6 +260,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/inspirations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list"];
+        put?: never;
+        post: operations["add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inspirations/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["tags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inspirations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_1"];
+        put: operations["change"];
+        post?: never;
+        delete: operations["delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me": {
         parameters: {
             query?: never;
@@ -290,6 +370,20 @@ export interface components {
             devLoginEnabled: boolean;
             /** @description The Google OAuth client to sign in with; null when Google sign-in is not set up. */
             googleClientId: string | null;
+        };
+        /** @description A heading inspirations are collected under, for example Flowers. */
+        Board: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int32
+             * @description How many inspirations are on it.
+             */
+            inspirationCount: number;
+            name: string;
+        };
+        BoardName: {
+            name: string;
         };
         /** @description A heading entries can be filed under, for example Venue. */
         Category: {
@@ -431,6 +525,60 @@ export interface components {
              */
             weddingDate: string | null;
         };
+        /** @description An idea the couple kept: a link or pictures, on a board, with a note and tags. */
+        Inspiration: {
+            /**
+             * Format: uuid
+             * @description The member who saved it.
+             */
+            addedById: string | null;
+            /** Format: uuid */
+            boardId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            note: string;
+            /**
+             * Format: uuid
+             * @description The plan item the idea belongs to.
+             */
+            planItemId: string | null;
+            /**
+             * @description Where it comes from, worked out from the link; PHOTO when there is no link.
+             * @enum {string}
+             */
+            source: "INSTAGRAM" | "TIKTOK" | "PINTEREST" | "WEB" | "PHOTO";
+            /** @description In lower case, in alphabetical order. */
+            tags: string[];
+            /** @description May be empty. */
+            title: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** @description The page the idea comes from; null for pictures of one's own. */
+            url: string | null;
+            /**
+             * Format: int32
+             * @description Send this back with a change; it tells whether someone else saved in between.
+             */
+            version: number;
+        };
+        /** @description All fields of an inspiration as they should be from now on. */
+        InspirationChange: {
+            /** Format: uuid */
+            boardId: string | null;
+            note: string;
+            /** Format: uuid */
+            planItemId: string | null;
+            tags: string[];
+            title: string;
+            url: string | null;
+            /**
+             * Format: int32
+             * @description The version of the inspiration this change is based on.
+             */
+            version: number;
+        };
         /** @description The signed-in person. */
         Me: {
             displayName: string;
@@ -477,6 +625,27 @@ export interface components {
             status: "NOT_STARTED" | "IN_PROGRESS" | "DONE" | "DROPPED";
             title: string;
         };
+        /** @description An idea to keep: a link, or the start of one that pictures are added to. */
+        NewInspiration: {
+            /**
+             * Format: uuid
+             * @description The board it goes on; null for none yet.
+             */
+            boardId: string | null;
+            /** @description Free text; may be empty. */
+            note: string;
+            /**
+             * Format: uuid
+             * @description The plan item the idea belongs to.
+             */
+            planItemId: string | null;
+            /** @description Kept in lower case, without a leading #. */
+            tags: string[];
+            /** @description May be empty. */
+            title: string;
+            /** @description The page the idea comes from, starting with http:// or https://; null for pictures of one's own. */
+            url: string | null;
+        };
         /** @description An error, as RFC 9457 problem details. */
         Problem: {
             /** @description What went wrong this time, if there is more to say. */
@@ -501,7 +670,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -519,6 +688,12 @@ export interface components {
             /** @description Exchanged for a new session when the access token expires; used once. Null for a browser: there it travels in a cookie that scripts cannot read. */
             refreshToken: string | null;
             user: components["schemas"]["Me"];
+        };
+        /** @description A tag in use and how many inspirations carry it. */
+        TagCount: {
+            /** Format: int32 */
+            count: number;
+            tag: string;
         };
         Wedding: {
             currency: string;
@@ -769,7 +944,136 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Board"][];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    add_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoardName"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Board"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rename_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoardName"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Board"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_3: {
+        parameters: {
+            query?: {
+                /** @description For a board with inspirations: keep them without a board, or delete them too. */
+                inspirations?: "KEEP" | "DELETE";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -798,7 +1102,7 @@ export interface operations {
             };
         };
     };
-    add: {
+    add_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -866,7 +1170,7 @@ export interface operations {
             };
         };
     };
-    delete_1: {
+    delete_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -895,7 +1199,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    list_1: {
         parameters: {
             query?: {
                 kind?: "PLAN_ITEM" | "TASK";
@@ -971,7 +1275,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    get_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1002,7 +1306,7 @@ export interface operations {
             };
         };
     };
-    change: {
+    change_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1037,7 +1341,7 @@ export interface operations {
             };
         };
     };
-    delete: {
+    delete_1: {
         parameters: {
             query?: {
                 /** @description For a plan item with tasks: what happens to them. Without it such a plan item is not deleted and the answer is the entry-has-tasks problem. */
@@ -1220,6 +1524,201 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Home"];
                 };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: {
+                /** @description Only the inspirations on this board. */
+                boardId?: string;
+                /** @description true: only the inspirations that are on no board. */
+                withoutBoard?: boolean;
+                /** @description Only the inspirations that carry this tag. */
+                tag?: string;
+                /** @description Only the inspirations that belong to this plan item. */
+                planItemId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Inspiration"][];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewInspiration"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Inspiration"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    tags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagCount"][];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Inspiration"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    change: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InspirationChange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Inspiration"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Any error. */
             default: {
