@@ -432,6 +432,54 @@
    "publicId": "WP-TS-43",
    "id": "e9d361cf-2dd7-4457-97b0-92cf64581aa8",
    "title": "Web: the guest list"
+  },
+  "EP4-S1-T1": {
+   "type": "task",
+   "publicId": "WP-TS-44",
+   "id": "893c6351-5e59-4d7f-a5d9-1afe4428b89e",
+   "title": "Decision: how the Android app is put together"
+  },
+  "EP4-S1-T2": {
+   "type": "task",
+   "publicId": "WP-TS-45",
+   "id": "bfa9f81a-5c5d-48bd-b3a5-28d1a28a8329",
+   "title": "Android: sign-in and the session"
+  },
+  "EP4-S1-T3": {
+   "type": "task",
+   "publicId": "WP-TS-46",
+   "id": "d53937c1-8b02-42e0-9630-bab98d56726d",
+   "title": "Android: Home, the plan and the tasks, readable without a connection"
+  },
+  "EP4-S1-T4": {
+   "type": "task",
+   "publicId": "WP-TS-47",
+   "id": "b4de0ffa-ecb8-4845-9134-967780180f16",
+   "title": "Android: the read-only timeline"
+  },
+  "EP4-S2-T1": {
+   "type": "task",
+   "publicId": "WP-TS-48",
+   "id": "c08d3b92-d74d-444f-9e99-a2b54fd79526",
+   "title": "Android: tick off, add and edit a task, also without a connection"
+  },
+  "EP4-S3-T1": {
+   "type": "task",
+   "publicId": "WP-TS-49",
+   "id": "129fe19b-c303-42ed-a776-dc976c2fb764",
+   "title": "The gate builds the release variant, signed only with what the owner's machine holds"
+  },
+  "EP4-S3-T2": {
+   "type": "task",
+   "publicId": "WP-TS-50",
+   "id": "ea17fe43-faaa-424a-97ab-884c406134b9",
+   "title": "Owner: create the signing key, register its fingerprint and install the release build on the second phone"
+  },
+  "EP5-S2-T1": {
+   "type": "task",
+   "publicId": "WP-TS-51",
+   "id": "65c689a1-2eca-48ca-a511-20ba2718aec4",
+   "title": "Android: share a link or pictures to the planner"
   }
  }
 }

@@ -1,0 +1,152 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP4-S1-T1",
+   "story": "EP4-S1",
+   "title": "Decision: how the Android app is put together",
+   "description": "Choose and record, as a decision, the libraries the phone app uses to talk to the server, keep the session, cache what it loaded, do work in the background and sign in with Google, how its code is laid out, and how its screens are tested and looked at without a phone or an emulator. The scope fixes Kotlin, Compose and Room (S01 section 8) and asks for the same choices as the other app on the owner's server where the job is the same. Prove the choices with the smallest slice that builds: the dependencies resolve, the gate passes, and one screen can be rendered to a picture on the JVM. Done when the decision is in docs/decisions.md and mirrored, and CLAUDE.md says what follows for the next tasks.",
+   "type": "ARCHITECTURE",
+   "mandatory": true,
+   "requiredRoles": [
+    "ARCHITECT"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  },
+  {
+   "key": "EP4-S1-T2",
+   "story": "EP4-S1",
+   "title": "Android: sign-in and the session",
+   "description": "The app signs in against the backend: with Google through the system's own account picker, and in debug builds with the development login where the server offers it. The access token is renewed with the refresh token, which is kept encrypted on the phone; a server that refuses the session leads back to the sign-in. Signing out tells the server and removes everything of the account from the phone. Someone who is not one of the owners, and a wedding that is not set up yet, are told so in words. No address, name or token is written to the log. Done when the story's criteria 1 and 4 are covered by tests on the JVM against a stand-in server; signing in with Google on a real phone waits for the owner's OAuth client and is listed as not verified.",
+   "dependsOn": [
+    "EP4-S1-T1"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  },
+  {
+   "key": "EP4-S1-T3",
+   "story": "EP4-S1",
+   "title": "Android: Home, the plan and the tasks, readable without a connection",
+   "description": "Home with the countdown from the server, what is overdue and what is next; the plan list and the task list with the same facts as on the web, money and vendor included. What was loaded last is kept on the phone and shown when there is no connection, with when it was loaded; pulling down loads again. Navigation between the three, usable with TalkBack and with large text. Done when the story's criteria 2 (without the timeline) and 3 are covered by tests on the JVM and the screens were looked at as rendered pictures.",
+   "dependsOn": [
+    "EP4-S1-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  },
+  {
+   "key": "EP4-S1-T4",
+   "story": "EP4-S1",
+   "title": "Android: the read-only timeline",
+   "description": "The plan's dated items as bars on a timeline that can be scrolled and read, with today and the wedding day marked and an item's name and dates said in words; nothing can be moved on the phone. Done when the story's criterion 2 is complete in tests and the timeline was looked at as a rendered picture with 200 items.",
+   "dependsOn": [
+    "EP4-S1-T3"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  },
+  {
+   "key": "EP4-S2-T1",
+   "story": "EP4-S2",
+   "title": "Android: tick off, add and edit a task, also without a connection",
+   "description": "A task can be ticked off from a list, added and edited on the phone, a payment's money included. A change made without a connection is kept, shown as waiting, and sent when the connection returns; it survives the app being closed. A change based on a version the server no longer has is not sent over the newer one: the app says so and offers the server's version. Done when the story's three criteria are covered by tests on the JVM.",
+   "dependsOn": [
+    "EP4-S1-T3"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  },
+  {
+   "key": "EP4-S3-T1",
+   "story": "EP4-S3",
+   "title": "The gate builds the release variant, signed only with what the owner's machine holds",
+   "description": "The release build is part of the gate, unsigned where no key is configured. The signing key, its alias and its passwords come from the owner's machine through Gradle properties or the environment and are never in the repository; docs say how the owner creates the key, where its fingerprint goes for Google sign-in, and how the build is installed on the second phone. Done when the story's criteria 2 and 3 are covered and the gate passes.",
+   "dependsOn": [
+    "EP4-S1-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  },
+  {
+   "key": "EP4-S3-T2",
+   "story": "EP4-S3",
+   "title": "Owner: create the signing key, register its fingerprint and install the release build on the second phone",
+   "description": "Following the instructions of the release-build task: create the key on the owner's machine, add its fingerprint and the app's id to the Google OAuth setup, build the signed release, install it on the second phone and sign in with Google.",
+   "type": "OTHER",
+   "mandatory": true,
+   "requiredRoles": [
+    "PRODUCT_OWNER"
+   ],
+   "requiredSkills": [
+    "android",
+    "google-cloud"
+   ],
+   "dependsOn": [
+    "EP4-S3-T1"
+   ]
+  },
+  {
+   "key": "EP5-S2-T1",
+   "story": "EP5-S2",
+   "title": "Android: share a link or pictures to the planner",
+   "description": "The app appears in Android's share sheet for links and for pictures. After choosing it: pick a board, add a note, save; from Instagram and TikTok that is at most two taps. A share made without a connection is kept, shown as waiting, and sent later; one made while signed out asks for the sign-in and is not lost. Done when the story's four criteria are covered by tests on the JVM; sharing from the two apps on a real phone is the owner's to try.",
+   "dependsOn": [
+    "EP4-S1-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  }
+ ]
+}
