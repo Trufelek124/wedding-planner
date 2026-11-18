@@ -372,6 +372,30 @@
    "publicId": "WP-TS-33",
    "id": "c13c27ba-f78f-49e3-a439-1801129d9ca0",
    "title": "First deployment verified from outside"
+  },
+  "EP5-S1-T1": {
+   "type": "task",
+   "publicId": "WP-TS-34",
+   "id": "a3504a6d-ee53-430c-b282-453a43b584e5",
+   "title": "Backend: boards and inspirations with their API"
+  },
+  "EP5-S1-T2": {
+   "type": "task",
+   "publicId": "WP-TS-35",
+   "id": "6a7d1b5d-ad5e-4016-b3d6-a49d91f33d32",
+   "title": "Backend: pictures of an inspiration, stored on the server and served to the owners only"
+  },
+  "EP5-S1-T3": {
+   "type": "task",
+   "publicId": "WP-TS-36",
+   "id": "ae1ef8bf-8dcf-4864-a1bc-e0c2c62dd440",
+   "title": "Backend: link previews that cannot be turned against the server's own network"
+  },
+  "EP5-S1-T4": {
+   "type": "task",
+   "publicId": "WP-TS-37",
+   "id": "64732481-32a7-48bb-bf88-892e7ac76e5b",
+   "title": "Web: the inspirations board"
   }
  }
 }

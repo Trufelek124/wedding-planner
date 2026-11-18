@@ -1,0 +1,48 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP5-S1-T1",
+   "story": "EP5-S1",
+   "title": "Backend: boards and inspirations with their API",
+   "description": "Module inspirations: boards as a list the owners edit, with starter boards offered once; an inspiration with an optional link, the source worked out from the link, a board, a note, tags, a title, who added it and an optional plan item; create, read, change with the version it was based on, delete, list filtered by board and tag, and the tags in use. Removing a board asks what happens to its inspirations. The plan item is checked through the planning module's interface and the link is cleared when the plan item is deleted. Done when the story's criteria 1 (for links), 2 and 6 (for plan items; vendors arrive with epic 6) are covered by tests at the API and openapi.json is regenerated.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": ["DEVELOPER"],
+   "requiredSkills": ["java", "spring-boot", "postgresql"]
+  },
+  {
+   "key": "EP5-S1-T2",
+   "story": "EP5-S1",
+   "title": "Backend: pictures of an inspiration, stored on the server and served to the owners only",
+   "description": "Upload one or more pictures to an inspiration, also later. The kind of a picture is recognised from its content, not from its name; there is a limit on size and on number. Pictures are stored under APP_MEDIA_DIR with a smaller version for the board, served only to a signed-in member of the wedding, and removed from the disk singly or with their inspiration. Nothing from a request ever becomes part of a file path. docs/deployment.md says what is now kept in the media directory and how to put it back. Done when the story's criteria 1 (for pictures), 3 (a picture attached later) and 4 are covered by tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": ["DEVELOPER"],
+   "requiredSkills": ["java", "spring-boot", "postgresql"],
+   "dependsOn": ["EP5-S1-T1"]
+  },
+  {
+   "key": "EP5-S1-T3",
+   "story": "EP5-S1",
+   "title": "Backend: link previews that cannot be turned against the server's own network",
+   "description": "For a saved link, fetch the page's title and its preview picture in the background and store the picture like an uploaded one; a link that gives nothing is marked so, and the card falls back to the source and the note. Only http and https on their usual ports, only public addresses, checked at the moment of connecting and again at every redirect, with limits on time, size and number of redirects, and nothing of the owners sent along. Tests use a stand-in server on the test machine and never the internet. The rules are recorded as a decision. Done when the story's criteria 3 and 5 are covered by tests, every refused range of addresses included.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": ["DEVELOPER"],
+   "requiredSkills": ["java", "spring-boot", "security"],
+   "dependsOn": ["EP5-S1-T2"]
+  },
+  {
+   "key": "EP5-S1-T4",
+   "story": "EP5-S1",
+   "title": "Web: the inspirations board",
+   "description": "A page Inspirations: cards in a grid with the picture, or the source and the note where there is none; filters by board and tag kept in the address; add by pasting a link or by choosing or dropping pictures; change the board, note, tags and plan item; attach a picture later; delete with confirmation; add, rename and remove boards. A card opens the original. Pictures are loaded with the access token, never by a bare address. Usable by keyboard and at phone width, in light and dark. Done when the story's criteria pass in tests.",
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": ["DEVELOPER"],
+   "requiredSkills": ["typescript", "react"],
+   "dependsOn": ["EP5-S1-T1", "EP5-S1-T2", "EP5-S1-T3"]
+  }
+ ]
+}
