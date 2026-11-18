@@ -79,6 +79,11 @@ class PlannerViewModel(
      * Signing out lets go of this model as soon as the session is over, which is in the middle of
      * it: the rest, telling the server, is not to be cut short by that.
      */
+    /** Gives up something shared to the planner that waits or that the server did not take. */
+    fun letGoOfShare(shareId: String) {
+        viewModelScope.launch { repository.letGoOfShare(shareId) }
+    }
+
     fun signOut() {
         viewModelScope.launch { withContext(NonCancellable) { session.signOut() } }
     }

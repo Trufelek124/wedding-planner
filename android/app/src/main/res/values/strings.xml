@@ -122,6 +122,36 @@
     <string name="sign_out_anyway">Sign out</string>
     <string name="sign_out_stay">Stay signed in</string>
 
+    <!-- Sharing to the planner from another app -->
+    <string name="share_title">Save to the planner</string>
+    <string name="share_sign_in_first">Sign in to save this to the planner. What you shared waits here.</string>
+    <string name="share_nothing">There is nothing here the planner can save. It takes a link, or pictures.</string>
+    <string name="share_close">Close</string>
+    <plurals name="share_pictures">
+        <item quantity="one">%d picture</item>
+        <item quantity="other">%d pictures</item>
+    </plurals>
+    <string name="share_a_note">A note</string>
+    <string name="share_board">Board</string>
+    <string name="share_no_board">No board</string>
+    <string name="share_note">Note</string>
+    <string name="share_saving">Saving…</string>
+    <string name="share_saved">Saved to the planner</string>
+    <string name="share_too_many">An inspiration holds at most 10 pictures. Share fewer at a time.</string>
+    <string name="share_too_large">One of the pictures is larger than 15 MB and cannot be saved.</string>
+    <string name="share_unreadable">A picture could not be read. Share it again.</string>
+    <plurals name="shares_waiting">
+        <item quantity="one">%d thing you shared is waiting to be sent.</item>
+        <item quantity="other">%d things you shared are waiting to be sent.</item>
+    </plurals>
+    <string name="share_refused_link">What you shared (%1$s) was not saved: %2$s</string>
+    <plurals name="share_refused_pictures">
+        <item quantity="one">The %1$d picture you shared was not saved: %2$s</item>
+        <item quantity="other">The %1$d pictures you shared were not saved: %2$s</item>
+    </plurals>
+    <string name="share_refused_note">The note you shared was not saved: %1$s</string>
+    <string name="share_discard">Discard</string>
+
     <!-- The plan as a timeline -->
     <string name="view_list">List</string>
     <string name="view_timeline">Timeline</string>

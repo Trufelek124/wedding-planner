@@ -40,6 +40,7 @@ import io.github.trufelek124.weddingplanner.ui.QuietButton
  * login when the server offers it. What went wrong is said in words, and read out when it appears.
  *
  * @param ended true when the server ended a session that was running
+ * @param lead what signing in is for, where that is not seeing the plan
  */
 @Composable
 fun SignInScreen(
@@ -50,6 +51,7 @@ fun SignInScreen(
     onDevelopmentSignIn: (String) -> Unit,
     onTryAgain: () -> Unit,
     modifier: Modifier = Modifier,
+    lead: String = stringResource(R.string.sign_in_lead),
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -61,7 +63,7 @@ fun SignInScreen(
                 style = MaterialTheme.typography.headlineLarge,
                 modifier = Modifier.semantics { heading() },
             )
-            Text(text = stringResource(R.string.sign_in_lead), style = MaterialTheme.typography.bodyLarge)
+            Text(text = lead, style = MaterialTheme.typography.bodyLarge)
 
             val said = when {
                 ui.message != null -> stringResource(textOf(ui.message))

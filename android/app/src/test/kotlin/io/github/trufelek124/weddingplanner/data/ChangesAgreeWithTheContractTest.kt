@@ -3,6 +3,7 @@ package io.github.trufelek124.weddingplanner.data
 import io.github.trufelek124.weddingplanner.api.model.EntryChange
 import io.github.trufelek124.weddingplanner.api.model.EntryStatusChange
 import io.github.trufelek124.weddingplanner.api.model.NewEntry
+import io.github.trufelek124.weddingplanner.api.model.NewInspiration
 import java.time.LocalDate
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -106,6 +107,25 @@ class ChangesAgreeWithTheContractTest {
         val notPaidYet = fieldsOf(requestOf(change(ChangeKind.ADD, full.copy(status = Status.IN_PROGRESS))))
         assertEquals("FINAL", notPaidYet.paymentKind)
         assertNull(notPaidYet.paidOn)
+    }
+
+    @Test
+    fun `a share is a NewInspiration of the contract, with the id the phone gave it`() {
+        val link = ShareRow(inspirationId = id, url = "https://www.instagram.com/p/Cabc123/", boardId = "b1", note = "Lace sleeves", pictures = 0)
+        val read = strict.decodeFromJsonElement<NewInspiration>(requestOf(link))
+
+        assertEquals(id, read.id)
+        assertEquals("https://www.instagram.com/p/Cabc123/", read.url)
+        assertEquals("b1", read.boardId)
+        assertEquals("Lace sleeves", read.note)
+        assertEquals("", read.title)
+        assertEquals(emptyList<String>(), read.tags)
+        assertNull(read.planItemId)
+        assertNull(read.vendorId)
+
+        val pictures = strict.decodeFromJsonElement<NewInspiration>(requestOf(link.copy(url = null, boardId = null, pictures = 3)))
+        assertNull(pictures.url)
+        assertNull(pictures.boardId)
     }
 
     @Test

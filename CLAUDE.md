@@ -126,6 +126,13 @@ first uses it, at the version D-005 names.
   was made on and is never sent over a newer one: the task then shows the latest version and says that it has to
   be looked at. What the phone sends is JSON written by hand in `data/Changes.kt`, held against the generated
   request models by `ChangesAgreeWithTheContractTest`.
+- The planner is in other apps' share sheet for a link (apps hand one over as plain text) and for pictures:
+  `share/ShareActivity`, declared in the manifest, reads what was handed over with `sharedOf(intent)`. Saving
+  keeps the share in the table `waiting_share`, with its pictures copied into the app's own folder (the other app
+  only lends them), and closes the screen; `sync()` saves it as an inspiration, the inspiration first under an id
+  chosen on the phone, then its pictures unless the server already holds them. What goes on after a screen has
+  closed runs in `AppContainer.background`. Someone who is signed out signs in on the same screen and finds the
+  share still there.
 - The screens follow `PlannerRepository.planner`, which reads again after every write the repository itself
   makes. Write to the database only through the repository, or the screens do not hear of it.
 - Signing out removes the waiting changes too, and asks first when there are any. It must always end signed out:

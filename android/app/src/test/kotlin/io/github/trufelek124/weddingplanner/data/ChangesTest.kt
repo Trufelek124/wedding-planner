@@ -76,7 +76,7 @@ class ChangesTest {
     @Before
     fun aPhoneThatLoaded() = runBlocking {
         database = open()
-        planner = PlannerRepository({ api }, database, clock)
+        planner = PlannerRepository({ api }, database, clock, folder.root.resolve("shares"))
         theServerHas(deposit(), rings(), venue)
         assertEquals(Load.LOADED, planner.sync())
         server.calls.clear()
@@ -152,7 +152,7 @@ class ChangesTest {
 
         database.close()
         database = open()
-        planner = PlannerRepository({ api }, database, clock)
+        planner = PlannerRepository({ api }, database, clock, folder.root.resolve("shares"))
         assertEquals(Status.DONE, held().entry("t1")!!.status)
         assertEquals(Waiting.TO_BE_SENT, held().entry("t1")!!.waiting)
 

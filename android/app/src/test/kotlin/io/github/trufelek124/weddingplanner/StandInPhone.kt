@@ -82,11 +82,12 @@ class StandInPhone(
         googleAccounts = google,
         database = database,
         sendLater = { askedToSendLater += 1 },
+        shareFolder = File(folder, "shares"),
         clock = clock,
     )
 
     /** Everything the phone keeps in its files, read as text: to look for what must not be there. */
-    fun everythingKept(): String = folder.listFiles().orEmpty().filter { it.isFile }.joinToString("") { it.readBytes().toString(Charsets.ISO_8859_1) }
+    fun everythingKept(): String = folder.walkTopDown().filter { it.isFile }.joinToString("") { it.readBytes().toString(Charsets.ISO_8859_1) }
 
     /**
      * Switches the phone off once the app has come to rest: with the screen gone, whatever it was

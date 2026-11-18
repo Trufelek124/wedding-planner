@@ -4,6 +4,8 @@ import android.database.SQLException
 import io.github.trufelek124.weddingplanner.api.Api
 import io.github.trufelek124.weddingplanner.api.ApiFailure
 import io.ktor.http.HttpMethod
+import java.io.File
+import java.io.InputStream
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -46,9 +48,16 @@ enum class Load {
  * database, and hands out what is kept. A change made on the phone is kept as well, shown at once,
  * and sent when the server can be reached.
  */
-class PlannerRepository(private val api: () -> Api, private val database: PlannerDatabase, private val clock: Clock) {
+class PlannerRepository(
+    private val api: () -> Api,
+    private val database: PlannerDatabase,
+    private val clock: Clock,
+    /** The app's own folder for the pictures of shares that wait to be sent. */
+    shareFolder: File,
+) {
 
     private val dao = database.planner()
+    private val shareFiles = ShareFiles(shareFolder)
 
     /** Held for every piece of writing to the database, never while waiting for the server. */
     private val writing = Mutex()
@@ -149,11 +158,97 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
         }
     }
 
+    // ---------------------------------------------------------------- sharing to the planner
+
+    /**
+     * Keeps something that was shared to the planner from another app, to be saved as an
+     * inspiration with the next [sync]. Pictures are copied into the app's own folder now: the
+     * other app only lends them for a moment.
+     *
+     * @param pictures one for each picture: opens it for reading, or gives null when it cannot be
+     */
+    suspend fun keepShare(share: Share, pictures: List<() -> InputStream?>): Kept {
+        if (pictures.size > ShareLimits.MOST_PICTURES) {
+            return Kept.TooMany
+        }
+        val id = UUID.randomUUID().toString()
+        val kept = withContext(Dispatchers.IO) { shareFiles.keep(id, pictures) }
+        if (kept is Kept.Yes) {
+            written {
+                dao.putShare(ShareRow(inspirationId = id, url = share.link, boardId = share.boardId, note = share.note, pictures = pictures.size))
+            }
+        }
+        return kept
+    }
+
+    /** Gives up a share that waits or that the server did not take. */
+    suspend fun letGoOfShare(inspirationId: String) {
+        written { dao.shareOf(inspirationId)?.let { dao.deleteShare(it.seq) } }
+        withContext(Dispatchers.IO) { shareFiles.delete(inspirationId) }
+    }
+
+    /**
+     * Saves the waiting shares as inspirations, the oldest first: the inspiration itself, then its
+     * pictures unless the server already holds them from an earlier try whose answer was lost.
+     */
+    private suspend fun sendShares(since: Int): Sending {
+        for (queued in dao.shares()) {
+            val share = dao.share(queued.seq) ?: continue
+            if (share.trouble != null) {
+                continue
+            }
+            val files = shareFiles.of(share)
+            try {
+                val saved: InspirationWire = api().send(HttpMethod.Post, "/api/inspirations", requestOf(share))
+                if (files.isNotEmpty() && saved.pictures.count { !it.preview } < files.size) {
+                    try {
+                        api().sendFiles<InspirationWire>("/api/inspirations/${share.inspirationId}/pictures", "files", files)
+                    } catch (refused: ApiFailure.Problem) {
+                        if (refused.isOf(ApiFailure.BAD_REQUEST) || refused.status == 413) {
+                            // Without its pictures it would be an empty card on the board: it is taken back.
+                            try {
+                                api().send<Unit>(HttpMethod.Delete, "/api/inspirations/${share.inspirationId}", null)
+                            } catch (notTakenBack: ApiFailure) {
+                                // It stays, empty; the person is told below that the pictures were not saved.
+                            }
+                        }
+                        throw refused
+                    }
+                }
+                shareSent(since, share)
+            } catch (failure: ApiFailure) {
+                when {
+                    failure is ApiFailure.Unreachable -> return Sending.UNREACHABLE
+                    failure is ApiFailure.SignedOut -> return Sending.SIGNED_OUT
+                    // Someone deleted the inspiration before its pictures arrived: there is nothing left to add them to.
+                    failure is ApiFailure.Problem && failure.status == 404 -> shareSent(since, share)
+                    failure is ApiFailure.Problem && (failure.isOf(ApiFailure.BAD_REQUEST) || failure.status == 413) -> written {
+                        if (forgotten == since) {
+                            val why = failure.fieldMessages.values.joinToString(" ").ifBlank { failure.detail.orEmpty() }
+                            dao.share(share.seq)?.let { dao.putShare(it.copy(trouble = why)) }
+                        }
+                    }
+                    else -> return Sending.FAILED
+                }
+            }
+        }
+        return Sending.ALL_SENT
+    }
+
+    private suspend fun shareSent(since: Int, share: ShareRow) {
+        written {
+            if (forgotten == since) {
+                dao.deleteShare(share.seq)
+            }
+        }
+        withContext(Dispatchers.IO) { shareFiles.delete(share.inspirationId) }
+    }
+
     /** True while the phone is neither talking to the server nor writing: only then may its database be closed. */
     val quiet: Boolean get() = !talking.isLocked && !writing.isLocked
 
     /** How many changes are waiting to be sent, not counting those the person has to look at first. */
-    suspend fun stillToSend(): Int = dao.changes().count { it.trouble == null }
+    suspend fun stillToSend(): Int = dao.changes().count { it.trouble == null } + dao.shares().count { it.trouble == null }
 
     /** Gives up the change that waits for this task: what the server has stands. */
     suspend fun letGo(entryId: String) = written {
@@ -217,7 +312,7 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
                 }
             }
         }
-        return Sending.ALL_SENT
+        return sendShares(since)
     }
 
     /** The server took the change as it was read before sending; what was changed again meanwhile goes on waiting. */
@@ -263,7 +358,8 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
                 val entries = async { api().get<List<EntryWire>>("/api/entries") }
                 val categories = async { api().get<List<NameWire>>("/api/categories") }
                 val vendors = async { api().get<List<NameWire>>("/api/vendors") }
-                storedOf(clock.instant(), wedding.await(), home.await(), entries.await(), categories.await(), vendors.await())
+                val boards = async { api().get<List<NameWire>>("/api/boards") }
+                storedOf(clock.instant(), wedding.await(), home.await(), entries.await(), categories.await(), vendors.await(), boards.await())
             }
         } catch (failure: ApiFailure) {
             return when {
@@ -295,6 +391,7 @@ class PlannerRepository(private val api: () -> Api, private val database: Planne
             forgotten += 1
             dao.forget()
             withContext(Dispatchers.IO) {
+                shareFiles.deleteAll()
                 try {
                     val files = database.openHelper.writableDatabase
                     files.execSQL("VACUUM")
@@ -326,6 +423,7 @@ internal fun storedOf(
     entries: List<EntryWire>,
     categories: List<NameWire>,
     vendors: List<NameWire>,
+    boards: List<NameWire> = emptyList(),
 ): Stored = Stored(
     planner = PlannerRow(
         loadedAt = at.toEpochMilli(),
@@ -347,6 +445,7 @@ internal fun storedOf(
     categories = categories.mapIndexed { position, category -> CategoryRow(category.id, position, category.name) },
     vendors = vendors.map { VendorRow(it.id, it.name) },
     members = wedding.members.mapIndexed { position, member -> MemberRow(member.id, position, member.displayName, member.you) },
+    boards = boards.mapIndexed { position, board -> BoardRow(board.id, position, board.name) },
 )
 
 /** An entry as the server sent it, for the phone's table. */
@@ -413,6 +512,8 @@ internal fun plannerOf(stored: Stored): Planner {
         nextPayments = listed(planner.nextPaymentIds),
         budget = Budget(planner.budgetTotal, planner.budgetPlanned, planner.budgetCommitted, planner.budgetPaid),
         gone = gone,
+        boards = stored.boards.map { Board(it.id, it.name) },
+        shares = stored.shares.map { WaitingShare(it.inspirationId, it.url, it.pictures, it.trouble) },
     )
 }
 

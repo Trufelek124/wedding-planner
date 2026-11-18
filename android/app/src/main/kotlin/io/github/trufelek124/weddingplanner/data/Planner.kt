@@ -56,6 +56,18 @@ data class TaskFields(
 /** A task that was let go of on the server while a change to it was waiting on the phone. */
 data class Gone(val entryId: String, val title: String)
 
+/** A board inspirations are collected on. */
+data class Board(val id: String, val name: String)
+
+/**
+ * Something shared to the planner that the server does not have yet.
+ *
+ * @param link the link that was shared; null when pictures were
+ * @param pictures how many pictures were shared
+ * @param trouble in words, why the server did not take it; null while it waits to be sent
+ */
+data class WaitingShare(val id: String, val link: String?, val pictures: Int, val trouble: String?)
+
 /** A plan item or a task, as the screens show it. */
 data class Entry(
     val id: String,
@@ -141,6 +153,10 @@ class Planner(
     val budget: Budget,
     /** Changes whose task is no longer on the server: they can only be let go of. */
     val gone: List<Gone> = emptyList(),
+    /** The boards, in the server's order. */
+    val boards: List<Board> = emptyList(),
+    /** What was shared to the planner on this phone and is not on the server yet. */
+    val shares: List<WaitingShare> = emptyList(),
 ) {
     private val byId = entries.associateBy { it.id }
 
@@ -156,7 +172,7 @@ class Planner(
     val waiting: Int get() = entries.count { it.waiting == Waiting.TO_BE_SENT }
 
     /** How many changes exist only on this phone, those that could not be sent included: what a sign-out would lose. */
-    val unsent: Int get() = entries.count { it.waiting != null } + gone.size
+    val unsent: Int get() = entries.count { it.waiting != null } + gone.size + shares.size
 
     /** "Anna & Marek": the members who do it, in the wedding's order; null when nobody is named. */
     fun peopleOf(entry: Entry): String? =

@@ -1,8 +1,11 @@
 package io.github.trufelek124.weddingplanner.data
 
+import io.github.trufelek124.weddingplanner.api.model.Board
 import io.github.trufelek124.weddingplanner.api.model.BudgetGlance
 import io.github.trufelek124.weddingplanner.api.model.Category
 import io.github.trufelek124.weddingplanner.api.model.Home
+import io.github.trufelek124.weddingplanner.api.model.Inspiration
+import io.github.trufelek124.weddingplanner.api.model.Picture
 import io.github.trufelek124.weddingplanner.api.model.Vendor
 import io.github.trufelek124.weddingplanner.api.model.Wedding
 import io.github.trufelek124.weddingplanner.api.model.WeddingMember
@@ -45,6 +48,13 @@ class WireAgreesWithTheContractTest {
     }
 
     @Test
+    fun `a board by name, and an inspiration with what pictures it holds`() {
+        agree(serializer<NameWire>().descriptor, serializer<Board>().descriptor)
+        agree(serializer<InspirationWire>().descriptor, serializer<Inspiration>().descriptor)
+        agree(serializer<PictureWire>().descriptor, serializer<Picture>().descriptor)
+    }
+
+    @Test
     fun `the wedding and its two people`() {
         agree(serializer<WeddingWire>().descriptor, serializer<Wedding>().descriptor)
         agree(serializer<MemberWire>().descriptor, serializer<WeddingMember>().descriptor)
@@ -76,6 +86,9 @@ class WireAgreesWithTheContractTest {
         assertEquals(2, strict.decodeFromString<Wedding>(StandIn.wedding()).members.size)
         assertEquals("Venue", strict.decodeFromString<Category>(StandIn.category("c1", "Venue")).name)
         assertEquals("Palace", strict.decodeFromString<Vendor>(StandIn.vendor("v1", "Palace")).name)
+        assertEquals("Dress", strict.decodeFromString<Board>(StandIn.board("b1", "Dress")).name)
+        assertEquals(3, strict.decodeFromString<Inspiration>(StandIn.inspiration("i1", url = "https://example.com/x", boardId = "b1", pictures = 2, previews = 1)).pictures.size)
+        assertEquals(0, strict.decodeFromString<Inspiration>(StandIn.inspiration("i2")).pictures.size)
     }
 
     private fun agree(phone: SerialDescriptor, contract: SerialDescriptor) {

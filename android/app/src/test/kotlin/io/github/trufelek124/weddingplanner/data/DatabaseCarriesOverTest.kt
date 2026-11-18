@@ -38,6 +38,10 @@ class DatabaseCarriesOverTest {
             for (entity in layout.getValue("entities").jsonArray) {
                 val table = entity.jsonObject.getValue("tableName").jsonPrimitive.content
                 old.execSQL(entity.jsonObject.getValue("createSql").jsonPrimitive.content.replace("\${TABLE_NAME}", table))
+                // What makes a column's values unique belongs to the table as the app made it.
+                for (index in entity.jsonObject["indices"]?.jsonArray.orEmpty()) {
+                    old.execSQL(index.jsonObject.getValue("createSql").jsonPrimitive.content.replace("\${TABLE_NAME}", table))
+                }
             }
             for (setup in layout.getValue("setupQueries").jsonArray) {
                 old.execSQL(setup.jsonPrimitive.content)
@@ -79,6 +83,43 @@ class DatabaseCarriesOverTest {
             val shown = plannerOf(database.planner().stored()!!)
             assertEquals(Status.DONE, shown.entry("t1")!!.status)
             assertEquals(Waiting.TO_BE_SENT, shown.entry("t1")!!.waiting)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun `a change that was waiting in version 2 is still waiting, and shares can wait beside it`() = runBlocking {
+        val file = folder.root.resolve("planner.db")
+        aDatabaseOfVersion(2, file) { old ->
+            old.execSQL(
+                """INSERT INTO planner (id, loadedAt, weddingDate, currency, timeZone, daysLeft, today, budgetTotal, budgetPlanned, budgetCommitted,
+                   budgetPaid, overdueIds, nextIds, nextPaymentIds)
+                   VALUES (1, 1795093500000, '2027-06-19', 'PLN', 'Europe/Warsaw', 213, '2026-11-18', NULL, 0, 0, 0, '', 't1', '')""",
+            )
+            old.execSQL(
+                """INSERT INTO entry (id, position, kind, title, notes, categoryId, startDate, dueDate, status, priorityMode, priority, priorityReason,
+                   parentId, vendorId, amount, paymentKind, paidOn, assigneeIds, taskCount, version)
+                   VALUES ('t1', 0, 'TASK', 'Choose the rings', '', NULL, NULL, NULL, 'NOT_STARTED', 'AUTO', 'NORMAL', 'NO_DATE',
+                   NULL, NULL, NULL, NULL, NULL, '', 0, 0)""",
+            )
+            old.execSQL(
+                """INSERT INTO waiting_change (entryId, kind, baseVersion, body, title, revision, trouble, refusals)
+                   VALUES ('t1', 'STATUS', 0, '{"status":"DONE"}', 'Choose the rings', 0, NULL, NULL)""",
+            )
+        }
+
+        val database = Room.databaseBuilder(context, PlannerDatabase::class.java, file.path).build()
+        try {
+            val shown = plannerOf(database.planner().stored()!!)
+
+            assertEquals(Status.DONE, shown.entry("t1")!!.status)
+            assertEquals(Waiting.TO_BE_SENT, shown.entry("t1")!!.waiting)
+            assertTrue(shown.boards.isEmpty())
+            assertTrue(shown.shares.isEmpty())
+
+            database.planner().putShare(ShareRow(inspirationId = "i1", url = "https://www.instagram.com/p/Cabc123/", boardId = null, note = "", pictures = 0))
+            assertEquals(1, plannerOf(database.planner().stored()!!).shares.size)
         } finally {
             database.close()
         }

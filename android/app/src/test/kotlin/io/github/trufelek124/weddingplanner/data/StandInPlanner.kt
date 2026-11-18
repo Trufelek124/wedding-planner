@@ -69,6 +69,18 @@ object StandIn {
 
     fun category(id: String, name: String): String = """{"id":"$id","name":"$name"}"""
 
+    fun board(id: String, name: String, inspirations: Int = 0): String = """{"id":"$id","name":"$name","inspirationCount":$inspirations}"""
+
+    /** An inspiration as the server answers with one. @param pictures how many pictures a person sent with it */
+    fun inspiration(id: String, url: String? = null, boardId: String? = null, note: String = "", pictures: Int = 0, previews: Int = 0): String {
+        val held = (List(previews) { true } + List(pictures) { false }).mapIndexed { number, preview ->
+            """{"id":"pic-$number","contentType":"image/jpeg","width":800,"height":600,"preview":$preview}"""
+        }
+        return """{"id":"$id","url":${text(url)},"source":"${if (url == null) "PHOTO" else "INSTAGRAM"}","title":"","note":"$note","tags":[],""" +
+            """"boardId":${text(boardId)},"planItemId":null,"vendorId":null,"addedById":"$ANNA","previewStatus":"${if (url == null) "NONE" else "PENDING"}",""" +
+            """"previewTitle":"","pictures":[${held.joinToString(",")}],"version":0,"createdAt":"2026-11-18T13:05:00Z","updatedAt":"2026-11-18T13:05:00Z"}"""
+    }
+
     fun vendor(id: String, name: String): String =
         """{"id":"$id","name":"$name","categoryId":null,"status":"BOOKED","contactPerson":"","phone":"","email":"","website":"",""" +
             """"address":"","notes":"","agreedPrice":null,"planItems":0,"tasks":0,"payments":0,"committed":0,"paid":0,""" +
@@ -82,7 +94,9 @@ fun StandInServer.planner(
     wedding: String = StandIn.wedding(),
     categories: List<String> = emptyList(),
     vendors: List<String> = emptyList(),
+    boards: List<String> = emptyList(),
 ) {
+    json("GET /api/boards", boards.joinToString(",", "[", "]"))
     json("GET /api/wedding", wedding)
     json("GET /api/home", home)
     json("GET /api/entries", entries.joinToString(",", "[", "]"))
@@ -92,5 +106,5 @@ fun StandInServer.planner(
 
 /** The server goes away: nothing of the planner can be asked for. */
 fun StandInServer.plannerUnreachable() {
-    listOf("wedding", "home", "entries", "categories", "vendors").forEach { unreachable("GET /api/$it") }
+    listOf("wedding", "home", "entries", "categories", "vendors", "boards").forEach { unreachable("GET /api/$it") }
 }

@@ -18,7 +18,7 @@ abstract class PlannerDao {
     @Transaction
     open suspend fun stored(): Stored? {
         val planner = planner() ?: return null
-        return Stored(planner, entries(), categories(), vendors(), members(), changes())
+        return Stored(planner, entries(), categories(), vendors(), members(), changes(), boards(), shares())
     }
 
     /** Puts a new load in the place of the last one, all of it or nothing. The changes waiting to be sent stay. */
@@ -30,6 +30,7 @@ abstract class PlannerDao {
         putCategories(stored.categories)
         putVendors(stored.vendors)
         putMembers(stored.members)
+        putBoards(stored.boards)
     }
 
     /** Removes everything, the waiting changes included: for a sign-out. */
@@ -37,6 +38,7 @@ abstract class PlannerDao {
     open suspend fun forget() {
         forgetTheCopy()
         deleteChanges()
+        deleteShares()
     }
 
     @Transaction
@@ -46,6 +48,7 @@ abstract class PlannerDao {
         deleteCategories()
         deleteVendors()
         deleteMembers()
+        deleteBoards()
     }
 
     /** The server took a change: its answer replaces the phone's copy of the entry, and the change is no longer waiting. */
@@ -126,19 +129,49 @@ abstract class PlannerDao {
 
     @Query("DELETE FROM waiting_change")
     abstract suspend fun deleteChanges()
+
+    @Query("SELECT * FROM board ORDER BY position")
+    abstract suspend fun boards(): List<BoardRow>
+
+    @Insert
+    abstract suspend fun putBoards(boards: List<BoardRow>)
+
+    @Query("DELETE FROM board")
+    abstract suspend fun deleteBoards()
+
+    @Query("SELECT * FROM waiting_share ORDER BY seq")
+    abstract suspend fun shares(): List<ShareRow>
+
+    @Query("SELECT * FROM waiting_share WHERE seq = :seq")
+    abstract suspend fun share(seq: Long): ShareRow?
+
+    @Query("SELECT * FROM waiting_share WHERE inspirationId = :inspirationId")
+    abstract suspend fun shareOf(inspirationId: String): ShareRow?
+
+    @Upsert
+    abstract suspend fun putShare(share: ShareRow)
+
+    @Query("DELETE FROM waiting_share WHERE seq = :seq")
+    abstract suspend fun deleteShare(seq: Long)
+
+    @Query("DELETE FROM waiting_share")
+    abstract suspend fun deleteShares()
 }
 
 /**
  * The phone's database: a copy of what the server said last, and the changes made on the phone
- * that wait to be sent. Since version 2 it holds those changes, which exist nowhere else: every
+ * and shares that wait to be sent. Since version 2 it holds those, which exist nowhere else: every
  * change of the tables from here on carries over what is stored (a migration), and its layout is
  * committed under app/schemas so that this can be checked.
  */
 @Database(
-    entities = [PlannerRow::class, EntryRow::class, CategoryRow::class, VendorRow::class, MemberRow::class, ChangeRow::class],
-    version = 2,
+    entities = [
+        PlannerRow::class, EntryRow::class, CategoryRow::class, VendorRow::class, MemberRow::class, ChangeRow::class, BoardRow::class,
+        ShareRow::class,
+    ],
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class PlannerDatabase : RoomDatabase() {
 

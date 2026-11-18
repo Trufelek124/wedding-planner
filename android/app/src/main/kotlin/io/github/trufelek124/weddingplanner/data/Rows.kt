@@ -103,7 +103,31 @@ data class ChangeRow(
     val refusals: String? = null,
 )
 
-/** Everything the phone holds, read as it was at one moment: the last load, and the changes waiting to be sent. */
+/** A board inspirations are collected on, for choosing one when something is shared to the planner. */
+@Entity(tableName = "board")
+data class BoardRow(@PrimaryKey val id: String, val position: Int, val name: String)
+
+/**
+ * Something shared to the planner from another app that the server does not have yet: a link, or
+ * pictures. Like a waiting change it exists nowhere else until it is sent. Its pictures are copied
+ * into the app's own folder when it is shared, under [inspirationId]: the other app only lends them.
+ */
+@Entity(tableName = "waiting_share", indices = [Index(value = ["inspirationId"], unique = true)])
+data class ShareRow(
+    @PrimaryKey(autoGenerate = true) val seq: Long = 0,
+    /** The id the inspiration gets on the server, chosen here, so that sending it twice saves it once. */
+    val inspirationId: String,
+    /** The link that was shared; null when pictures were. */
+    val url: String?,
+    val boardId: String?,
+    val note: String,
+    /** How many pictures belong to it; their files are numbered from 0. */
+    val pictures: Int,
+    /** In words for the person, why the server did not take it; null while it waits to be sent. */
+    val trouble: String? = null,
+)
+
+/** Everything the phone holds, read as it was at one moment: the last load, and what waits to be sent. */
 class Stored(
     val planner: PlannerRow,
     val entries: List<EntryRow>,
@@ -111,4 +135,6 @@ class Stored(
     val vendors: List<VendorRow>,
     val members: List<MemberRow>,
     val changes: List<ChangeRow> = emptyList(),
+    val boards: List<BoardRow> = emptyList(),
+    val shares: List<ShareRow> = emptyList(),
 )

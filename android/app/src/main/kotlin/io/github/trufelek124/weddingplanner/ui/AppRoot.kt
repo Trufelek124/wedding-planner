@@ -81,7 +81,9 @@ fun AppRoot(container: AppContainer, debugBuild: Boolean = BuildConfig.DEBUG) {
                 ui = ui,
                 userName = session.user.displayName,
                 clock = container.clock,
-                changes = Changes(setStatus = model::setStatus, add = model::add, edit = model::edit, letGo = model::letGo),
+                changes = Changes(
+                    setStatus = model::setStatus, add = model::add, edit = model::edit, letGo = model::letGo, letGoOfShare = model::letGoOfShare,
+                ),
                 onLoad = model::load,
                 onSignOut = model::signOut,
             )

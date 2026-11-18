@@ -244,6 +244,7 @@ abstract class CheckReleaseApk : DefaultTask() {
         val FOUND_BY_NAME = listOf(
             // Named in the manifest.
             "$APP.MainActivity",
+            "$APP.share.ShareActivity",
             "$APP.WeddingPlannerApp",
             // WorkManager stores the worker's name and makes it from that when its time comes.
             "$APP.data.SendWorker",
@@ -253,6 +254,7 @@ abstract class CheckReleaseApk : DefaultTask() {
             "$APP.data.EntryWire\$\$serializer",
             "$APP.data.HomeWire\$\$serializer",
             "$APP.data.WeddingWire\$\$serializer",
+            "$APP.data.InspirationWire\$\$serializer",
             "$APP.api.model.Session\$\$serializer",
             "$APP.api.model.AuthConfig\$\$serializer",
             "$APP.api.model.RefreshRequest\$\$serializer",

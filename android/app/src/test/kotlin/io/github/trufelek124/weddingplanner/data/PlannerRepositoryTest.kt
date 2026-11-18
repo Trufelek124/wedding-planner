@@ -58,7 +58,7 @@ class PlannerRepositoryTest {
     @Before
     fun aPhone() {
         database = open()
-        planner = PlannerRepository({ api }, database, clock)
+        planner = PlannerRepository({ api }, database, clock, folder.root.resolve("shares"))
     }
 
     @After
@@ -132,7 +132,8 @@ class PlannerRepositoryTest {
         assertEquals(listOf("Pay the deposit", "Go to the tasting"), held.tasksOf(held.entry("p1")!!).map { it.title })
         // Every call carried the access token.
         assertTrue(server.calls.all { it.authorization == "Bearer access-1" })
-        assertEquals(5, server.calls.size)
+        // The wedding, Home, the entries, the categories, the vendors and the boards: one request each.
+        assertEquals(6, server.calls.size)
     }
 
     @Test
@@ -157,7 +158,7 @@ class PlannerRepositoryTest {
         database.close()
 
         database = open()
-        planner = PlannerRepository({ api }, database, clock)
+        planner = PlannerRepository({ api }, database, clock, folder.root.resolve("shares"))
         server.plannerUnreachable()
 
         val held = planner.planner.first()!!

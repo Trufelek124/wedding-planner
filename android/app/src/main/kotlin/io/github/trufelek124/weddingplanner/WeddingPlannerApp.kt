@@ -20,7 +20,11 @@ import io.github.trufelek124.weddingplanner.signin.CredentialManagerGoogleAccoun
 import io.github.trufelek124.weddingplanner.signin.GoogleAccounts
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
+import java.io.File
 import java.time.Clock
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * Everything the screens share, made once and handed out by hand (D-005: no dependency-injection
@@ -37,6 +41,8 @@ class AppContainer(
     val googleAccounts: GoogleAccounts,
     database: PlannerDatabase,
     val sendLater: SendLater,
+    /** The app's own folder for the pictures of what was shared to the planner and waits to be sent. */
+    shareFolder: File,
     val clock: Clock = Clock.systemDefaultZone(),
 ) {
 
@@ -52,7 +58,13 @@ class AppContainer(
 
     val api: Api = Api(engine, server, session.accessTokens)
 
-    val planner: PlannerRepository = PlannerRepository({ api }, database, clock)
+    val planner: PlannerRepository = PlannerRepository({ api }, database, clock, shareFolder)
+
+    /**
+     * For what has to go on after the screen that started it is gone: a share is sent while the
+     * person is already back in the app they shared from.
+     */
+    val background: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     companion object {
 
@@ -64,6 +76,7 @@ class AppContainer(
             googleAccounts = CredentialManagerGoogleAccounts(context),
             database = PlannerDatabase.onThePhone(context),
             sendLater = SendWithWorkManager(context.applicationContext),
+            shareFolder = File(context.filesDir, "shares"),
         )
     }
 }

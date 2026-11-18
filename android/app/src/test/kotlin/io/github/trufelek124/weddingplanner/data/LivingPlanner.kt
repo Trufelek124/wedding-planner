@@ -25,6 +25,7 @@ class LivingPlanner(
     entries: List<String>,
     private val categories: List<String> = emptyList(),
     private val vendors: List<String> = emptyList(),
+    private val boards: List<String> = emptyList(),
     private val today: String = "2026-11-18",
 ) {
 
@@ -35,7 +36,7 @@ class LivingPlanner(
         entries.forEach(::put)
         server.json("GET /api/wedding", StandIn.wedding())
         // Whatever fixed answers were named before give way: from here on the planner answers for itself.
-        listOf("home", "entries", "categories", "vendors").forEach { server.unreachable("GET /api/$it") }
+        listOf("home", "entries", "categories", "vendors", "boards").forEach { server.unreachable("GET /api/$it") }
         server.otherwise = { request -> answer(request) }
     }
 
@@ -61,6 +62,7 @@ class LivingPlanner(
             method == "GET" && path == "/api/entries" -> respondJson(list(entries.values))
             method == "GET" && path == "/api/categories" -> respondJson(categories.joinToString(",", "[", "]"))
             method == "GET" && path == "/api/vendors" -> respondJson(vendors.joinToString(",", "[", "]"))
+            method == "GET" && path == "/api/boards" -> respondJson(boards.joinToString(",", "[", "]"))
             method == "GET" && path == "/api/home" -> {
                 val toDo = entries.values.filter(::open)
                 val payments = toDo.filter { it.getValue("amount") != JsonNull }

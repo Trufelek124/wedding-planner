@@ -57,3 +57,11 @@ class MemberWire(val id: String, val displayName: String, val you: Boolean)
 
 @Serializable
 class WeddingWire(val date: String?, val currency: String, val timeZone: String, val members: List<MemberWire>)
+
+/** An inspiration as far as the phone needs it after saving one: which it is, and what pictures it already holds. */
+@Serializable
+class InspirationWire(val id: String, val pictures: List<PictureWire>)
+
+/** @param preview true when the server fetched it from the link; false when a person sent it */
+@Serializable
+class PictureWire(val preview: Boolean)

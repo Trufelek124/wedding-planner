@@ -8,12 +8,16 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.forms.InputProvider
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.header
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.content.TextContent
@@ -21,6 +25,8 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.ContentConvertException
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.streams.asInput
+import java.io.File
 import java.io.IOException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -72,6 +78,14 @@ class Api(engine: HttpClientEngine, private val server: ServerAddress, private v
     suspend inline fun <reified T> postOpen(path: String, body: Any?): T =
         read { answer(HttpMethod.Post, path, body, signedIn = false).body() }
 
+    /**
+     * Sends files as the parts of a form, all under one name. They are read from the disk while
+     * they are sent, never all into memory, and read again when the request has to be repeated.
+     */
+    suspend inline fun <reified T> sendFiles(path: String, part: String, files: List<File>): T = read {
+        answer(HttpMethod.Post, path, FilesToSend(part, files), signedIn = true).body()
+    }
+
     /** An answer that is not what the contract says is a failure like any other, not a crash. */
     @PublishedApi
     internal inline fun <T> read(answer: () -> T): T =
@@ -113,7 +127,25 @@ class Api(engine: HttpClientEngine, private val server: ServerAddress, private v
                 if (token != null) {
                     header(HttpHeaders.Authorization, "Bearer $token")
                 }
-                if (body is JsonElement) {
+                if (body is FilesToSend) {
+                    setBody(
+                        MultiPartFormDataContent(
+                            formData {
+                                for (file in body.files) {
+                                    append(
+                                        key = body.part,
+                                        value = InputProvider(file.length()) { file.inputStream().asInput() },
+                                        // What kind of picture it is the server works out from the file itself.
+                                        headers = Headers.build {
+                                            append(HttpHeaders.ContentType, ContentType.Application.OctetStream.toString())
+                                            append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                                        },
+                                    )
+                                }
+                            },
+                        ),
+                    )
+                } else if (body is JsonElement) {
                     // JSON put together by hand is sent as it is written; left to the converter it is taken for a map and refused.
                     setBody(TextContent(body.toString(), ContentType.Application.Json))
                 } else if (body != null) {
@@ -155,6 +187,10 @@ class Api(engine: HttpClientEngine, private val server: ServerAddress, private v
             fieldMessages = fields.orEmpty(),
         )
     }
+
+    /** Files to go out as the parts of one form. */
+    @PublishedApi
+    internal class FilesToSend(val part: String, val files: List<File>)
 
     companion object {
         /** A newer server may send fields this app does not know yet; every field it knows is always sent. */

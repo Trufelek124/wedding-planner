@@ -1,6 +1,6 @@
 package io.github.trufelek124.weddingplanner.ui
 
-import androidx.compose.ui.test.junit4.ComposeContentTestRule
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 
@@ -17,6 +17,6 @@ const val PHONE_AT_NIGHT = "w360dp-h780dp-night-xhdpi"
  *
  * The test class needs `@GraphicsMode(GraphicsMode.Mode.NATIVE)`, or the picture is empty.
  */
-fun ComposeContentTestRule.picture(name: String) {
+fun ComposeTestRule.picture(name: String) {
     onRoot().captureRoboImage("build/outputs/roborazzi/$name.png")
 }

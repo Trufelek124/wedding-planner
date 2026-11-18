@@ -55,6 +55,7 @@ import io.github.trufelek124.weddingplanner.data.Kind
 import io.github.trufelek124.weddingplanner.data.Load
 import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.data.TaskFields
+import io.github.trufelek124.weddingplanner.data.WaitingShare
 import io.github.trufelek124.weddingplanner.ui.QuietButton
 import java.time.Clock
 
@@ -75,6 +76,7 @@ class Changes(
     val add: (TaskFields) -> Unit,
     val edit: (taskId: String, TaskFields) -> Unit,
     val letGo: (taskId: String) -> Unit,
+    val letGoOfShare: (shareId: String) -> Unit = {},
 )
 
 /**
@@ -254,10 +256,14 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                 if (trouble != null && !ui.loading) {
                     val why = stringResource(if (trouble == Load.UNREACHABLE) R.string.notice_no_connection else R.string.notice_not_loaded, loadedOn)
                     val waiting = planner.waiting.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.changes_waiting, it, it) }
-                    Notice(listOfNotNull(why, waiting).joinToString(" "))
+                    val shared = planner.shares.count { it.trouble == null }.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.shares_waiting, it, it) }
+                    Notice(listOfNotNull(why, waiting, shared).joinToString(" "))
                 }
                 for (gone in planner.gone) {
                     NoLongerThere(gone, onOk = { changes.letGo(gone.entryId) })
+                }
+                for (share in planner.shares.filter { it.trouble != null }) {
+                    NotSaved(share, onDiscard = { changes.letGoOfShare(share.id) })
                 }
             }
             PullToRefreshBox(isRefreshing = ui.loading && !onTheForm, onRefresh = onLoad, modifier = Modifier.weight(1f)) {
@@ -351,6 +357,20 @@ private fun Notice(text: String, action: @Composable () -> Unit = {}) {
 private fun NoLongerThere(gone: Gone, onOk: () -> Unit) {
     Notice(stringResource(R.string.change_gone, gone.title)) {
         QuietButton(stringResource(R.string.change_gone_ok), onClick = onOk)
+    }
+}
+
+/** Something shared to the planner that the server did not take: it says what and why, and can be discarded. */
+@Composable
+private fun NotSaved(share: WaitingShare, onDiscard: () -> Unit) {
+    val why = share.trouble.orEmpty()
+    val text = when {
+        share.link != null -> stringResource(R.string.share_refused_link, share.link, why)
+        share.pictures > 0 -> pluralStringResource(R.plurals.share_refused_pictures, share.pictures, share.pictures, why)
+        else -> stringResource(R.string.share_refused_note, why)
+    }
+    Notice(text) {
+        QuietButton(stringResource(R.string.share_discard), onClick = onDiscard)
     }
 }
 
