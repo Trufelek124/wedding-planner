@@ -63,4 +63,21 @@
     <string name="tasks_hide">hide its tasks</string>
     <string name="tasks_shown">tasks shown</string>
     <string name="tasks_hidden">tasks hidden</string>
+
+    <!-- The plan as a timeline -->
+    <string name="view_list">List</string>
+    <string name="view_timeline">Timeline</string>
+    <string name="timeline_showing">Showing %1$s – %2$s</string>
+    <string name="timeline_earlier">Earlier</string>
+    <string name="timeline_later">Later</string>
+    <string name="timeline_to_today">To today</string>
+    <string name="timeline_today">Today</string>
+    <string name="timeline_wedding">Wedding day</string>
+    <string name="timeline_marks">Today is %1$s. The wedding day is %2$s.</string>
+    <string name="timeline_marks_today">Today is %1$s.</string>
+    <string name="timeline_empty">Nothing with dates to show here. A step gets its dates in the web app.</string>
+    <plurals name="timeline_without_dates">
+        <item quantity="one">%d step without dates is only in the list.</item>
+        <item quantity="other">%d steps without dates are only in the list.</item>
+    </plurals>
 </resources>

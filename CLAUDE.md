@@ -123,6 +123,10 @@ first uses it, at the version D-005 names.
   (`StandIn`) against the contract. The generated models are for what the phone sends.
 - How a fact reads is in `planner/Words.kt`, the same words as the web's `labels.ts`; money is `money()` in
   `money/Money.kt`, on whole numbers of the smallest unit as on the web. Screen texts are in `strings.xml`.
+- The plan's timeline (`planner/timeline/`) is drawn by us, like the web's chart (D-001): where a bar lies is
+  arithmetic on its dates (`TimelineLayout.kt`), tested without a screen. It only shows: nothing on it can be
+  moved. Time scrolls sideways on a node of its own, around the list that scrolls up and down; putting both on
+  one node takes the list's own scrolling away from a screen reader. What a drag does, buttons do as well.
 - The app runs on Android 9 and later (minSdk 28): lint is part of the gate and stops what only a newer Android has.
 - Nothing personal in the log: no address, name or token. What holds one overrides `toString()`.
 - Everything is tested on the JVM (Robolectric); there is no emulator in a cloud session. `StandInPhone` is the

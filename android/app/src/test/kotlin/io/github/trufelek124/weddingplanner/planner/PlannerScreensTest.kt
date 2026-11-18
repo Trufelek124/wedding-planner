@@ -53,16 +53,7 @@ import org.robolectric.shadows.ShadowLog
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = PHONE)
-class PlannerScreensTest {
-
-    @get:Rule(order = 0)
-    val folder = TemporaryFolder()
-
-    @get:Rule(order = 1)
-    val compose = createAndroidComposeRule<ComponentActivity>()
-
-    private lateinit var phone: StandInPhone
-    private val server get() = phone.server
+class PlannerScreensTest : SignedInPhoneTest() {
 
     private val venue = StandIn.entry(
         "p1", "Book the venue", kind = "PLAN_ITEM", startDate = "2026-11-01", dueDate = "2026-12-15", status = "IN_PROGRESS",
@@ -102,55 +93,8 @@ class PlannerScreensTest {
     }
 
     @Before
-    fun aSignedInPhone() {
-        phone = StandInPhone(folder.root)
-        server.json("POST /api/auth/dev", StandInServer.session())
-        server.json("POST /api/auth/refresh", StandInServer.session(accessToken = "access-2", refreshToken = "refresh-2"))
-        server.nothing("POST /api/auth/sign-out")
-        server.json("GET /api/auth/config", """{"googleClientId":"client-1.apps.example","devLoginEnabled":false}""")
+    fun theirWedding() {
         aWedding()
-        runBlocking { phone.container.session.signInForDevelopment("anna@example.com") }
-    }
-
-    @After
-    fun off() {
-        phone.off()
-    }
-
-    private fun open(fontScale: Float = 1f) {
-        compose.setContent {
-            val density = LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
-                PlannerTheme { AppRoot(phone.container, debugBuild = false) }
-            }
-        }
-        waitFor("Anna & Marek")
-    }
-
-    /** The planner was loaded, and the app was closed since: the same phone, nothing in memory. */
-    private fun aPhoneThatLoadedEarlier() {
-        runBlocking { phone.container.planner.load() }
-        phone = phone.restarted()
-    }
-
-    private fun waitFor(text: String) {
-        compose.waitUntil(WAIT) { compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty() }
-    }
-
-    private fun waitUntilGone(text: String) {
-        compose.waitUntil(WAIT) { compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isEmpty() }
-    }
-
-    /** One line of a list, told by what it says: a screen reader gets all of it in one go. */
-    private fun line(vararg says: String): SemanticsMatcher = says.map { hasText(it) }.reduce { all, one -> all and one }
-
-    private fun goTo(place: String) {
-        compose.onNode(hasText(place) and isSelectable()).performClick()
-        compose.waitUntil(WAIT) { compose.onAllNodes(hasText(place) and isHeading()).fetchSemanticsNodes().isNotEmpty() }
-    }
-
-    private fun scrollTo(matcher: SemanticsMatcher) {
-        compose.onNode(hasScrollToNodeAction()).performScrollToNode(matcher)
     }
 
     // ---------------------------------------------------------------- Home
@@ -510,9 +454,5 @@ class PlannerScreensTest {
         for (theirs in listOf("Anna", "Marek", "Palace", "Studio Light", "deposit", "venue", "access-1", "example.com")) {
             assertFalse("the log holds \"$theirs\"", written.contains(theirs, ignoreCase = true))
         }
-    }
-
-    private companion object {
-        const val WAIT = 10_000L
     }
 }

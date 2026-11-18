@@ -165,16 +165,17 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
             }
             PullToRefreshBox(isRefreshing = ui.loading, onRefresh = onLoad, modifier = Modifier.weight(1f)) {
                 val loaded: @Composable () -> Unit = { LoadedOn(loadedOn) }
+                val today = todayAt(planner, clock.instant())
                 NavHost(navController = navigation, startDestination = Place.HOME.route) {
                     composable(Place.HOME.route) {
-                        HomeContent(planner, today = todayAt(planner, clock.instant())) {
+                        HomeContent(planner, today = today) {
                             Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 loaded()
                                 SignedInAs(userName, onSignOut)
                             }
                         }
                     }
-                    composable(Place.PLAN.route) { PlanContent(planner, foot = loaded) }
+                    composable(Place.PLAN.route) { PlanContent(planner, today = today, foot = loaded) }
                     composable(Place.TASKS.route) { TasksContent(planner, foot = loaded) }
                 }
             }

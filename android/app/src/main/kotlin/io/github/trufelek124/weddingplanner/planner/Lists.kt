@@ -16,6 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import io.github.trufelek124.weddingplanner.R
 import io.github.trufelek124.weddingplanner.data.Entry
 import io.github.trufelek124.weddingplanner.data.Planner
+import io.github.trufelek124.weddingplanner.planner.timeline.TimelineContent
+import java.time.LocalDate
 
 /** The two ways to narrow a list down: what is still to do, or everything. */
 @Composable
@@ -48,20 +53,54 @@ private fun WhichOnes(
     }
 }
 
+/** The two ways to look at the plan. Switching keeps what the list was narrowed down to. */
+@Composable
+private fun WaysToLook(asTimeline: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    SingleChoiceSegmentedButtonRow(modifier = modifier) {
+        SegmentedButton(
+            selected = !asTimeline,
+            onClick = { onChange(false) },
+            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+            label = { Text(stringResource(R.string.view_list)) },
+        )
+        SegmentedButton(
+            selected = asTimeline,
+            onClick = { onChange(true) },
+            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+            label = { Text(stringResource(R.string.view_timeline)) },
+        )
+    }
+}
+
 /**
- * Everything that has to happen, step by step: the steps with dates first, then those not yet
- * scheduled. A step says how many tasks belong to it and shows them when asked.
+ * Everything that has to happen, step by step, as a list or on a timeline. The list has the steps
+ * with dates first, then those not yet scheduled; a step says how many tasks belong to it and
+ * shows them when asked.
+ *
+ * @param today the date where the wedding takes place, by the phone's clock
  */
 @Composable
-fun PlanContent(planner: Planner, modifier: Modifier = Modifier, foot: @Composable () -> Unit = {}) {
+fun PlanContent(planner: Planner, today: LocalDate, modifier: Modifier = Modifier, foot: @Composable () -> Unit = {}) {
     var everything by rememberSaveable { mutableStateOf(false) }
+    var asTimeline by rememberSaveable { mutableStateOf(false) }
     val all = planner.planItems
     val shown = if (everything) all else all.filter { it.status.open }
+    val controls: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            WaysToLook(asTimeline, { asTimeline = it })
+            WhichOnes(everything, { everything = it })
+        }
+    }
+
+    if (asTimeline) {
+        TimelineContent(items = shown, today = today, weddingDate = planner.weddingDate, modifier = modifier, controls = controls, foot = foot)
+        return
+    }
+
     val scheduled = shown.filter { it.dueDate != null }
     val notScheduled = shown.filter { it.dueDate == null }
-
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
-        item(key = "which") { WhichOnes(everything, { everything = it }) }
+        item(key = "controls") { controls() }
         if (shown.isEmpty()) {
             item(key = "nothing") {
                 NothingHere(stringResource(if (all.isEmpty()) R.string.plan_empty else R.string.plan_nothing_to_do))
