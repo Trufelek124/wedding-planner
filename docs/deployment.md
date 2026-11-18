@@ -66,7 +66,8 @@ The planner is at `http://localhost:8080` once `docker ps` shows the app as `hea
 | Port | `8080`, plain HTTP. TLS ends at the proxy in front. |
 | User | uid and gid `10001`, never root. |
 | File system | Can be read-only. The process writes to `/tmp` (give it a tmpfs) and to the volume below. |
-| Volume | `/data/media` (`APP_MEDIA_DIR`): files that must outlive the container. Nothing is stored there yet; pictures of inspirations arrive with epic 5. Back it up together with the database from then on. |
+| Volume | `/data/media` (`APP_MEDIA_DIR`): the pictures of inspirations, in `inspirations/`, one file per picture plus a smaller version of it, each named after an id. `incoming/` holds uploads only while they arrive. Back it up together with the database. |
+| Uploads | One picture up to 15 MB, one request up to 100 MB. The proxy in front has to let requests of that size through. |
 | Database | PostgreSQL 18. The schema is brought up to date at every start (Flyway), so there is no separate migration step. A change that removes something is shipped in two releases: first stop using it, then drop it. |
 | Health | `GET /actuator/health` answers 200 only while the database can be reached, and 503 within five seconds when it cannot. The image carries a health check that asks exactly that. |
 | Logs | Standard output. People appear by id only, never by name or address. |
@@ -88,7 +89,7 @@ installation has to fill in, without values.
 | `DEV_LOGIN_ENABLED` | no, default `false` | Signing in as an allowed address without Google. **Never `true` on a server others can reach.** |
 | `API_DOCS_ENABLED` | no, default `false` | Serves the API description at `/v3/api-docs`. For building clients, not for production. |
 | `APP_WEB_DIR` | set in the image | Where the web app's files are (`/app/web`). |
-| `APP_MEDIA_DIR` | set in the image | Where kept files go (`/data/media`). |
+| `APP_MEDIA_DIR` | set in the image | Where kept files go (`/data/media`). The server does not start without it, nor when it cannot write there. |
 | `JAVA_TOOL_OPTIONS` | set in the image | Java's own options; replace it to change the heap share. |
 
 No time zone setting is needed: every date is read in the wedding's own time zone, and logs are in UTC.
@@ -207,9 +208,9 @@ docker inspect --format '{{json .State.Health}}' "$(docker compose ps -q app)"
 
 ### Backup
 
-Two things hold data: the database, and from epic 5 on the files under `/data/media`. Both, every night, kept
-somewhere that is not this server. The settings in `.env` are not in any backup: keep a copy of that file in a
-password manager.
+Two things hold data: the database, and the pictures under `/data/media`. Both, every night, taken one right
+after the other and kept somewhere that is not this server. The settings in `.env` are not in any backup: keep a
+copy of that file in a password manager.
 
 The database, as one file:
 
@@ -217,10 +218,10 @@ The database, as one file:
 docker compose exec -T postgres pg_dump --username "$DATABASE_USER" --format=custom weddingplanner > planner-$(date +%F).dump
 ```
 
-The files:
+The pictures, as one file:
 
 ```bash
-docker compose cp app:/data/media ./media-$(date +%F)
+docker compose exec -T app tar -C /data/media -cf - inspirations > media-$(date +%F).tar
 ```
 
 ### Proving that a backup can be restored
@@ -269,7 +270,15 @@ docker compose exec -T postgres pg_restore --username "$DATABASE_USER" --dbname 
 docker compose start app
 ```
 
-Putting the files back is written down when there are files to keep (epic 5); until then the directory is empty.
+The pictures go back while the app runs. They are unpacked by the app's own user, so they stay its files:
+
+```bash
+docker compose exec -T app tar -C /data/media -xf - < media-<date>.tar
+```
+
+Restore the pictures from the same night as the database. The database says which pictures exist and the files
+are the pictures: a picture that is recorded but not on the disk shows as missing, and a file nobody records
+only takes space.
 
 ### Small things
 
@@ -295,6 +304,11 @@ On 2026-11-17, in the session that wrote it:
   an update, a rollback by commit id, the logs, a backup, a restore into a scratch database with the counts
   compared, a deliberate loss put right by a full restore, an older image started in front of a database marked
   as changed by a newer one, and a restart of both containers.
+
+On 2026-11-18 the image with the pictures of inspirations was run the same way: two pictures uploaded through
+the API ended up on the volume, owned by 10001, with the root file system read-only; they came back byte for byte
+and were refused without sign-in. The pictures were then packed with the backup command above, deleted, unpacked
+again with the restore command, served again, and a new one could still be added.
 
 Not done yet: a run of the publishing script on the owner's Mac that pushes to the real registry; the server
 pulling from it; the nightly backup on the server and a restore from one of its files; and the owner rolling

@@ -3,6 +3,8 @@ package io.github.trufelek124.weddingplanner;
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -36,6 +38,17 @@ public abstract class PostgresIntegrationTest {
 
     private static final EmbeddedPostgres POSTGRES = start();
 
+    /** Where the application under test keeps its pictures: a directory of this test run's own. */
+    public static final Path MEDIA = mediaDirectory();
+
+    private static Path mediaDirectory() {
+        try {
+            return Files.createTempDirectory("wedding-planner-test-media");
+        } catch (IOException e) {
+            throw new UncheckedIOException("could not create a directory for the test's pictures", e);
+        }
+    }
+
     private static EmbeddedPostgres start() {
         try {
             return EmbeddedPostgres.builder().start();
@@ -55,5 +68,6 @@ public abstract class PostgresIntegrationTest {
         registry.add("DATABASE_USER", () -> "postgres");
         registry.add("DATABASE_PASSWORD", () -> "");
         registry.add("app.identity.google-jwks-uri", TestGoogle::jwksUri);
+        registry.add("APP_MEDIA_DIR", MEDIA::toString);
     }
 }

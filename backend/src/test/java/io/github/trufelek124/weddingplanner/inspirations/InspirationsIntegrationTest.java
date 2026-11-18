@@ -160,7 +160,9 @@ class InspirationsIntegrationTest extends PostgresIntegrationTest {
         assertThat(saved.get("boardId")).isNull();
         // Every field is there, also the empty ones.
         assertThat(saved).containsOnlyKeys(
-                "id", "url", "source", "title", "note", "tags", "boardId", "planItemId", "addedById", "version", "createdAt", "updatedAt");
+                "id", "url", "source", "title", "note", "tags", "boardId", "planItemId", "addedById", "pictures", "version",
+                "createdAt", "updatedAt");
+        assertThat(saved.get("pictures")).isEqualTo(List.of());
     }
 
     @Test

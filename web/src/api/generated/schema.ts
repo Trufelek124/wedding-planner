@@ -109,7 +109,7 @@ export interface paths {
         };
         get: operations["list_3"];
         put?: never;
-        post: operations["add_2"];
+        post: operations["add_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -141,7 +141,7 @@ export interface paths {
         };
         get: operations["list_2"];
         put?: never;
-        post: operations["add_1"];
+        post: operations["add_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -303,6 +303,38 @@ export interface paths {
         put: operations["change"];
         post?: never;
         delete: operations["delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inspirations/{inspirationId}/pictures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inspirations/{inspirationId}/pictures/{pictureId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["picture"];
+        put?: never;
+        post?: never;
+        delete: operations["remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -539,6 +571,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             note: string;
+            /** @description Its pictures, in their order; the first is the one a card shows. */
+            pictures: components["schemas"]["Picture"][];
             /**
              * Format: uuid
              * @description The plan item the idea belongs to.
@@ -646,6 +680,20 @@ export interface components {
             /** @description The page the idea comes from, starting with http:// or https://; null for pictures of one's own. */
             url: string | null;
         };
+        /** @description A picture of an inspiration. Its bytes are at /api/inspirations/{inspirationId}/pictures/{id}. */
+        Picture: {
+            /** @description image/jpeg, image/png, image/gif or image/webp, worked out from the file itself. */
+            contentType: string;
+            /** Format: int32 */
+            height: number | null;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int32
+             * @description In pixels, the right way up; null for a kind the server cannot read.
+             */
+            width: number | null;
+        };
         /** @description An error, as RFC 9457 problem details. */
         Problem: {
             /** @description What went wrong this time, if there is more to say. */
@@ -670,7 +718,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -973,7 +1021,7 @@ export interface operations {
             };
         };
     };
-    add_2: {
+    add_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1102,7 +1150,7 @@ export interface operations {
             };
         };
     };
-    add_1: {
+    add_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1719,6 +1767,111 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    add_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inspirationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** @description JPEG, PNG, GIF or WebP pictures, at most 15 MB each. */
+                    files: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Inspiration"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    picture: {
+        parameters: {
+            query?: {
+                /** @description THUMBNAIL: the smaller version for a board; the picture itself where there is none. */
+                size?: "THUMBNAIL" | "FULL";
+            };
+            header?: never;
+            path: {
+                inspirationId: string;
+                pictureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The picture, or its smaller version as a JPEG. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/*": string;
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inspirationId: string;
+                pictureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Inspiration"];
+                };
             };
             /** @description Any error. */
             default: {

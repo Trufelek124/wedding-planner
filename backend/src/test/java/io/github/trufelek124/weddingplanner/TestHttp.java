@@ -1,10 +1,12 @@
 package io.github.trufelek124.weddingplanner;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import tools.jackson.databind.json.JsonMapper;
@@ -68,6 +70,37 @@ public final class TestHttp {
     /** A POST without a body, as a browser makes when its cookie says everything. */
     public HttpResponse<String> post(String path, Map<String, String> headers) throws IOException, InterruptedException {
         return send(HttpRequest.newBuilder(URI.create(base + path)).POST(HttpRequest.BodyPublishers.noBody()), headers);
+    }
+
+    /** One file of an upload, as a browser's form would send it. */
+    public record Part(String filename, String contentType, byte[] bytes) {}
+
+    /** Sends files as a form's "files" field. */
+    public HttpResponse<String> postFilesAs(String accessToken, String path, List<Part> files)
+            throws IOException, InterruptedException {
+        String boundary = "----test-boundary-7MA4YWxkTrZu0gW";
+        ByteArrayOutputStream body = new ByteArrayOutputStream();
+        for (Part file : files) {
+            body.write(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"files\"; filename=\"" + file.filename()
+                            + "\"\r\nContent-Type: " + file.contentType() + "\r\n\r\n")
+                    .getBytes(StandardCharsets.UTF_8));
+            body.write(file.bytes());
+            body.write("\r\n".getBytes(StandardCharsets.UTF_8));
+        }
+        body.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(base + path))
+                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body.toByteArray()));
+        return send(request, Map.of("Authorization", "Bearer " + accessToken));
+    }
+
+    /** Fetches something that is not text; without a token when accessToken is null. */
+    public HttpResponse<byte[]> getBytesAs(String accessToken, String path) throws IOException, InterruptedException {
+        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(base + path)).GET();
+        if (accessToken != null) {
+            request.header("Authorization", "Bearer " + accessToken);
+        }
+        return CLIENT.send(request.build(), HttpResponse.BodyHandlers.ofByteArray());
     }
 
     public HttpResponse<String> send(String method, String path) throws IOException, InterruptedException {

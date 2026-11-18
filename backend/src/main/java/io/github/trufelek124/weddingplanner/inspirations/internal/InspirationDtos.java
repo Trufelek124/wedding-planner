@@ -4,6 +4,7 @@ import io.github.trufelek124.weddingplanner.inspirations.internal.BoardRepositor
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRepository.InspirationRow;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRepository.TagCount;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationTypes.Source;
+import io.github.trufelek124.weddingplanner.inspirations.internal.PictureRepository.PictureRow;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -80,14 +81,31 @@ final class InspirationDtos {
             @Schema(nullable = true) UUID boardId,
             @Schema(description = "The plan item the idea belongs to.", nullable = true) UUID planItemId,
             @Schema(description = "The member who saved it.", nullable = true) UUID addedById,
+            @Schema(description = "Its pictures, in their order; the first is the one a card shows.") List<PictureResponse> pictures,
             @Schema(description = "Send this back with a change; it tells whether someone else saved in between.") int version,
             Instant createdAt,
             Instant updatedAt) {
 
-        static InspirationResponse of(InspirationRow row) {
+        static InspirationResponse of(InspirationView view) {
+            InspirationRow row = view.inspiration();
             return new InspirationResponse(
                     row.id(), row.url(), row.source(), row.title(), row.note(), row.tags(), row.boardId(), row.planItemId(),
-                    row.addedBy(), row.version(), row.createdAt(), row.updatedAt());
+                    row.addedBy(), view.pictures().stream().map(PictureResponse::of).toList(), row.version(),
+                    row.createdAt(), row.updatedAt());
+        }
+    }
+
+    @Schema(
+            name = "Picture",
+            description = "A picture of an inspiration. Its bytes are at /api/inspirations/{inspirationId}/pictures/{id}.")
+    record PictureResponse(
+            UUID id,
+            @Schema(description = "image/jpeg, image/png, image/gif or image/webp, worked out from the file itself.") String contentType,
+            @Schema(description = "In pixels, the right way up; null for a kind the server cannot read.", nullable = true) Integer width,
+            @Schema(nullable = true) Integer height) {
+
+        static PictureResponse of(PictureRow row) {
+            return new PictureResponse(row.id(), row.format().contentType(), row.width(), row.height());
         }
     }
 

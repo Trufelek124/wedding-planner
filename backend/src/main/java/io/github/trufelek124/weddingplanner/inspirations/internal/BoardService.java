@@ -23,12 +23,22 @@ class BoardService {
 
     private final BoardRepository boards;
     private final InspirationRepository inspirations;
+    private final PictureRepository pictures;
+    private final PictureService pictureFiles;
     private final Weddings weddings;
     private final Clock clock;
 
-    BoardService(BoardRepository boards, InspirationRepository inspirations, Weddings weddings, Clock clock) {
+    BoardService(
+            BoardRepository boards,
+            InspirationRepository inspirations,
+            PictureRepository pictures,
+            PictureService pictureFiles,
+            Weddings weddings,
+            Clock clock) {
         this.boards = boards;
         this.inspirations = inspirations;
+        this.pictures = pictures;
+        this.pictureFiles = pictureFiles;
         this.weddings = weddings;
         this.clock = clock;
     }
@@ -80,7 +90,9 @@ class BoardService {
                         "This board has inspirations. Say whether to keep them without a board or delete them too.");
             }
             if (onDelete == InspirationsOnDelete.DELETE) {
+                List<UUID> theirPictures = pictures.idsOfBoard(weddingId, id);
                 inspirations.deleteOfBoard(weddingId, id);
+                pictureFiles.forgetOnceDeleted(theirPictures);
             }
         }
         boards.delete(weddingId, id);

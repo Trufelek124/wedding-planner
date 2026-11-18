@@ -12,6 +12,13 @@ spring:
       # endpoint answers "down" before a container health check times out.
       connection-timeout: 5000
       validation-timeout: 2000
+  servlet:
+    multipart:
+      # One picture, and one request with several of them. The web app checks the same before it sends.
+      max-file-size: 15MB
+      max-request-size: 100MB
+      # Uploads wait on the media volume while they arrive, not in /tmp, which is memory in the container.
+      location: ${APP_MEDIA_DIR}/incoming
   mvc:
     problemdetails:
       # Errors are answered as RFC 9457 problem details (see the api module).
@@ -20,6 +27,8 @@ spring:
 app:
   # Directory with the built web app; empty means the backend serves the API only.
   web-dir: ${APP_WEB_DIR:}
+  # Directory for the files that are kept: the pictures of inspirations. The server does not start without it.
+  media-dir: ${APP_MEDIA_DIR}
   identity:
     # Signs the access tokens. At least 32 characters; changing it signs everyone out.
     jwt-secret: ${APP_JWT_SECRET}

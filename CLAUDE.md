@@ -36,7 +36,7 @@ A missing tool or a refused download host is an environment matter — ask the o
 
 | Part | Check | Run it locally |
 |---|---|---|
-| `backend/` | `cd backend && ./gradlew test` | `./gradlew devDatabase` (PostgreSQL 18 on port 5433, prints the database variables), then `./gradlew bootRun` with those and `APP_JWT_SECRET` (32+ characters), `ALLOWED_EMAILS` (made-up addresses) and `DEV_LOGIN_ENABLED=true` set |
+| `backend/` | `cd backend && ./gradlew test` | `./gradlew devDatabase` (PostgreSQL 18 on port 5433, prints the database variables), then `./gradlew bootRun` with those and `APP_JWT_SECRET` (32+ characters), `ALLOWED_EMAILS` (made-up addresses), `APP_MEDIA_DIR` (any directory; pictures go there) and `DEV_LOGIN_ENABLED=true` set |
 | `web/` | `cd web && npm ci && npm run lint && npm test && npm run build` | `npm run dev` (port 5173; forwards `/api` and `/actuator` to the backend on 8080) |
 | `android/` | `cd android && ./gradlew lintDebug testDebugUnitTest assembleDebug` | No emulator in a cloud session: install `app/build/outputs/apk/debug/app-debug.apk` on a phone. The server address is a build setting: `-PserverUrl=https://…` |
 | `scripts/ops/` | the script's `--dry-run` against the tracker | — |

@@ -32,6 +32,8 @@ public enum ProblemCode {
     DEPENDENCY_CYCLE(HttpStatus.CONFLICT, "dependency-cycle", "These plan items would wait for each other"),
     /** A board that still has inspirations: say what happens to them (keep or delete). */
     BOARD_HAS_INSPIRATIONS(HttpStatus.CONFLICT, "board-has-inspirations", "This board still has inspirations"),
+    /** What was sent is larger than the server takes; a picture, for instance. */
+    UPLOAD_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "upload-too-large", "That is too large to upload"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "method-not-allowed", "Method not allowed"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "internal-error", "Something went wrong on the server");
 
@@ -71,6 +73,7 @@ public enum ProblemCode {
             case 403 -> FORBIDDEN;
             case 404 -> NOT_FOUND;
             case 405 -> METHOD_NOT_ALLOWED;
+            case 413 -> UPLOAD_TOO_LARGE;
             default -> BAD_REQUEST;
         };
     }

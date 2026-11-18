@@ -11,6 +11,7 @@ import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRep
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRepository.InspirationRow;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRepository.TagCount;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationTypes.Source;
+import io.github.trufelek124.weddingplanner.inspirations.internal.PictureRepository.PictureRow;
 import io.github.trufelek124.weddingplanner.planning.PlanItems;
 import io.github.trufelek124.weddingplanner.wedding.Membership;
 import io.github.trufelek124.weddingplanner.wedding.Weddings;
@@ -19,6 +20,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -32,14 +35,24 @@ import org.springframework.transaction.annotation.Transactional;
 class InspirationService {
 
     private final InspirationRepository inspirations;
+    private final PictureRepository pictures;
+    private final PictureService pictureFiles;
     private final BoardRepository boards;
     private final PlanItems planItems;
     private final Weddings weddings;
     private final Clock clock;
 
     InspirationService(
-            InspirationRepository inspirations, BoardRepository boards, PlanItems planItems, Weddings weddings, Clock clock) {
+            InspirationRepository inspirations,
+            PictureRepository pictures,
+            PictureService pictureFiles,
+            BoardRepository boards,
+            PlanItems planItems,
+            Weddings weddings,
+            Clock clock) {
         this.inspirations = inspirations;
+        this.pictures = pictures;
+        this.pictureFiles = pictureFiles;
         this.boards = boards;
         this.planItems = planItems;
         this.weddings = weddings;
@@ -47,15 +60,18 @@ class InspirationService {
     }
 
     @Transactional(readOnly = true)
-    List<InspirationRow> list(UserId user, UUID boardId, Boolean withoutBoard, String tag, UUID planItemId) {
+    List<InspirationView> list(UserId user, UUID boardId, Boolean withoutBoard, String tag, UUID planItemId) {
         Membership membership = weddings.membershipOf(user);
         String asked = tag == null || tag.isBlank() ? null : tagAsKept(tag);
-        return inspirations.list(membership.weddingId(), new Filter(boardId, withoutBoard, asked, planItemId));
+        List<InspirationRow> found = inspirations.list(membership.weddingId(), new Filter(boardId, withoutBoard, asked, planItemId));
+        Map<UUID, List<PictureRow>> theirPictures = pictures.of(found.stream().map(InspirationRow::id).toList()).stream()
+                .collect(Collectors.groupingBy(PictureRow::inspirationId));
+        return found.stream().map(row -> new InspirationView(row, theirPictures.getOrDefault(row.id(), List.of()))).toList();
     }
 
     @Transactional(readOnly = true)
-    InspirationRow get(UserId user, UUID id) {
-        return existing(weddings.membershipOf(user), id);
+    InspirationView get(UserId user, UUID id) {
+        return shown(existing(weddings.membershipOf(user), id));
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +80,7 @@ class InspirationService {
     }
 
     @Transactional
-    InspirationRow add(UserId user, NewInspiration request) {
+    InspirationView add(UserId user, NewInspiration request) {
         Membership membership = weddings.membershipOf(user);
         Optional<URI> link = checked(membership, request);
         Instant now = clock.instant();
@@ -73,11 +89,11 @@ class InspirationService {
                 request.title().strip(), request.note().strip(), tagsAsKept(request.tags()), request.boardId(),
                 request.planItemId(), membership.memberId(), 0, now, now);
         inspirations.insert(membership.weddingId(), inspiration);
-        return existing(membership, inspiration.id());
+        return shown(existing(membership, inspiration.id()));
     }
 
     @Transactional
-    InspirationRow change(UserId user, UUID id, InspirationChange request) {
+    InspirationView change(UserId user, UUID id, InspirationChange request) {
         Membership membership = weddings.membershipOf(user);
         InspirationRow before = existing(membership, id);
         Optional<URI> link = checked(membership, request);
@@ -90,14 +106,17 @@ class InspirationService {
             throw new ApiException(
                     ProblemCode.CHANGED_MEANWHILE, "Someone else changed this in the meantime. Load it again, then make your change.");
         }
-        return existing(membership, id);
+        return shown(existing(membership, id));
     }
 
+    /** Its pictures go with it, from the disk too. */
     @Transactional
     void delete(UserId user, UUID id) {
-        if (!inspirations.delete(weddings.membershipOf(user).weddingId(), id)) {
-            throw noSuchInspiration();
-        }
+        Membership membership = weddings.membershipOf(user);
+        existing(membership, id);
+        List<UUID> itsPictures = pictures.idsOfInspiration(id);
+        inspirations.delete(membership.weddingId(), id);
+        pictureFiles.forgetOnceDeleted(itsPictures);
     }
 
     /**
@@ -124,6 +143,10 @@ class InspirationService {
             throw new ApiException(ProblemCode.BAD_REQUEST, "The request is not valid.", problems);
         }
         return link;
+    }
+
+    private InspirationView shown(InspirationRow inspiration) {
+        return new InspirationView(inspiration, pictures.of(List.of(inspiration.id())));
     }
 
     private InspirationRow existing(Membership membership, UUID id) {

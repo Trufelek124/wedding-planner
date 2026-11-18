@@ -351,6 +351,13 @@
           "note" : {
             "type" : "string"
           },
+          "pictures" : {
+            "description" : "Its pictures, in their order; the first is the one a card shows.",
+            "items" : {
+              "$ref" : "#/components/schemas/Picture"
+            },
+            "type" : "array"
+          },
           "planItemId" : {
             "description" : "The plan item the idea belongs to.",
             "format" : "uuid",
@@ -386,7 +393,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "addedById", "boardId", "createdAt", "id", "note", "planItemId", "source", "tags", "title", "updatedAt", "url", "version" ],
+        "required" : [ "addedById", "boardId", "createdAt", "id", "note", "pictures", "planItemId", "source", "tags", "title", "updatedAt", "url", "version" ],
         "type" : "object"
       },
       "InspirationChange" : {
@@ -572,6 +579,30 @@
         "required" : [ "boardId", "note", "planItemId", "tags", "title", "url" ],
         "type" : "object"
       },
+      "Picture" : {
+        "description" : "A picture of an inspiration. Its bytes are at /api/inspirations/{inspirationId}/pictures/{id}.",
+        "properties" : {
+          "contentType" : {
+            "description" : "image/jpeg, image/png, image/gif or image/webp, worked out from the file itself.",
+            "type" : "string"
+          },
+          "height" : {
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "width" : {
+            "description" : "In pixels, the right way up; null for a kind the server cannot read.",
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          }
+        },
+        "required" : [ "contentType", "height", "id", "width" ],
+        "type" : "object"
+      },
       "Problem" : {
         "description" : "An error, as RFC 9457 problem details.",
         "properties" : {
@@ -612,9 +643,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -1026,7 +1057,7 @@
         "tags" : [ "board-controller" ]
       },
       "post" : {
-        "operationId" : "add_2",
+        "operationId" : "add_3",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1177,7 +1208,7 @@
         "tags" : [ "category-controller" ]
       },
       "post" : {
-        "operationId" : "add_1",
+        "operationId" : "add_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2001,6 +2032,162 @@
           }
         },
         "tags" : [ "inspiration-controller" ]
+      }
+    },
+    "/api/inspirations/{inspirationId}/pictures" : {
+      "post" : {
+        "operationId" : "add_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "inspirationId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "files" : {
+                    "description" : "JPEG, PNG, GIF or WebP pictures, at most 15 MB each.",
+                    "items" : {
+                      "format" : "binary",
+                      "type" : "string"
+                    },
+                    "type" : "array"
+                  }
+                },
+                "required" : [ "files" ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Inspiration"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "picture-controller" ]
+      }
+    },
+    "/api/inspirations/{inspirationId}/pictures/{pictureId}" : {
+      "delete" : {
+        "operationId" : "remove",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "inspirationId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "pictureId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Inspiration"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "picture-controller" ]
+      },
+      "get" : {
+        "operationId" : "picture",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "inspirationId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "pictureId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "THUMBNAIL: the smaller version for a board; the picture itself where there is none.",
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : "FULL",
+            "enum" : [ "THUMBNAIL", "FULL" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "image/*" : {
+                "schema" : {
+                  "format" : "binary",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The picture, or its smaller version as a JPEG."
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "picture-controller" ]
       }
     },
     "/api/me" : {
