@@ -63,6 +63,12 @@
    "id": "e3403e80-a126-40ea-9867-d035cef644c3",
    "sha256": "8a1157a7a1f39fc1e382b8428a7c6e921199d49b03ed21b51fc69c7b0e4b5510",
    "commit": "d90f98a"
+  },
+  "docs/android-release.md": {
+   "publicId": "WP-DOC-8",
+   "id": "9b11e409-1566-479e-b42c-37091704cb6e",
+   "sha256": "53b4401e5528c07a8b953d41a6623ae009022656b78458f4ea9b01862a7302f0",
+   "commit": "da96205"
   }
  }
 }
