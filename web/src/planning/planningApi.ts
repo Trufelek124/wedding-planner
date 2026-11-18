@@ -62,6 +62,9 @@ export function changeOf(entry: Entry, replaced: Partial<Pick<EntryChange, 'star
     // A level the planner worked out is not sent back as if a person had chosen it.
     priority: entry.priorityMode === 'MANUAL' ? entry.priority : null,
     parentId: entry.parentId,
+    amount: entry.amount,
+    paymentKind: entry.paymentKind,
+    paidOn: entry.paidOn,
     version: entry.version,
     ...replaced,
   }

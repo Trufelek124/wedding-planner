@@ -45,6 +45,8 @@ class EntryController {
             @RequestParam(required = false) Kind kind,
             @Parameter(description = "Only entries in one of these states.") @RequestParam(required = false) List<Status> status,
             @RequestParam(required = false) UUID categoryId,
+            @Parameter(description = "true: only entries filed under no category.") @RequestParam(defaultValue = "false")
+                    boolean withoutCategory,
             @Parameter(description = "Only entries this member does (alone or with the other).") @RequestParam(required = false)
                     UUID assigneeId,
             @Parameter(description = "Only the tasks of this plan item.") @RequestParam(required = false) UUID parentId,
@@ -54,8 +56,11 @@ class EntryController {
             @Parameter(description = "Only entries at one of these levels, as shown today: worked out or set by hand.")
                     @RequestParam(required = false)
                     List<Priority> priority,
+            @Parameter(description = "true: only payments, which are the tasks that carry an amount; false: everything else.")
+                    @RequestParam(required = false)
+                    Boolean payment,
             @RequestParam(defaultValue = "DUE_DATE") Sort sort) {
-        Filter filter = new Filter(kind, status, categoryId, assigneeId, parentId, scheduled);
+        Filter filter = new Filter(kind, status, categoryId, withoutCategory, assigneeId, parentId, scheduled, payment);
         return entries.list(user, filter, priority, sort).stream().map(EntryResponse::of).toList();
     }
 

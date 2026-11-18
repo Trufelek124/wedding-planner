@@ -40,6 +40,13 @@ final class PlanningTypes {
         DELETE
     }
 
+    /** Which part of a price a payment is. */
+    enum PaymentKind {
+        DEPOSIT,
+        INSTALMENT,
+        FINAL
+    }
+
     enum Sort {
         DUE_DATE,
         PRIORITY,

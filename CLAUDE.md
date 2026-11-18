@@ -102,7 +102,8 @@ Rules of the contract:
 - Every error is a `Problem` (RFC 9457). Clients decide from its `type`, never from the wording. The kinds are the
   constants of `ProblemCode`; a module raises one with `ApiException`. A code is never renamed or reused.
 - An old phone app meets a newer server: clients ignore unknown fields, and treat an unknown `type` as "some error".
-- Money is whole numbers of the smallest unit (grosze), never a decimal fraction.
+- Money is whole numbers of the smallest unit (grosze), never a decimal fraction. The server refuses `12.5` where a
+  whole number belongs instead of cutting it down. A payment is a task with an amount (D-004).
 - The API description itself is served (`/v3/api-docs`) only when `API_DOCS_ENABLED=true`.
 
 ## The tracker: infokuznia, project `WP`

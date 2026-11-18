@@ -107,7 +107,9 @@ class EntryService {
         EntryRow after = new EntryRow(
                 before.id(), before.kind(), before.title(), before.notes(), before.categoryId(), before.startDate(),
                 before.dueDate(), status, completedAt(status, before, now), before.priorityMode(), before.priority(),
-                before.parentId(), before.assigneeIds(), before.taskCount(), before.version(), before.createdAt(), now);
+                before.parentId(), before.amount(), before.paymentKind(),
+                paidOn(before.amount(), status, null, before, today(membership)), before.assigneeIds(), before.taskCount(),
+                before.version(), before.createdAt(), now);
         save(membership, after, before.version(), now);
         return shown(membership, id);
     }
@@ -115,7 +117,8 @@ class EntryService {
     /**
      * Turns a task into a plan item or back. Title, notes, people, priority, category and the due
      * date stay. A plan item has no parent. A task has no start date, cannot have tasks of its own
-     * and waits for nothing, so an entry that becomes a task loses its dependency links.
+     * and waits for nothing, so an entry that becomes a task loses its dependency links. A payment
+     * stays a task: a plan item carries no money.
      */
     @Transactional
     EntryView convert(UserId user, UUID id, Kind to) {
@@ -126,12 +129,18 @@ class EntryService {
                 throw new ApiException(
                         ProblemCode.ENTRY_HAS_TASKS, "This plan item has tasks. Move or delete them before making it a task.");
             }
+            if (to == Kind.PLAN_ITEM && before.isPayment()) {
+                // Nothing a person entered is dropped without a word, an amount least of all.
+                throw new ApiException(
+                        ProblemCode.BAD_REQUEST, "This task is a payment, and a plan item carries no money. Remove the amount first.");
+            }
             Instant now = clock.instant();
             EntryRow after = new EntryRow(
                     before.id(), to, before.title(), before.notes(), before.categoryId(),
                     to == Kind.TASK ? null : before.startDate(), before.dueDate(), before.status(), before.completedAt(),
                     before.priorityMode(), before.priority(), to == Kind.PLAN_ITEM ? null : before.parentId(),
-                    before.assigneeIds(), before.taskCount(), before.version(), before.createdAt(), now);
+                    before.amount(), before.paymentKind(), before.paidOn(), before.assigneeIds(), before.taskCount(),
+                    before.version(), before.createdAt(), now);
             save(membership, after, before.version(), now);
             if (to == Kind.TASK) {
                 dependencies.removeAllOf(id);
@@ -200,8 +209,11 @@ class EntryService {
     /** How many entries the home screen names as the ones to turn to next. */
     static final int NEXT_ENTRIES = 5;
 
+    /** How many payments the home screen names as the next to be made. */
+    static final int NEXT_PAYMENTS = 5;
+
     private static final Filter STILL_TO_DO =
-            new Filter(null, List.of(Status.NOT_STARTED, Status.IN_PROGRESS), null, null, null, null);
+            new Filter(null, List.of(Status.NOT_STARTED, Status.IN_PROGRESS), null, false, null, null, null, null);
 
     /**
      * What the home screen shows of the plan.
@@ -210,13 +222,15 @@ class EntryService {
      * @param weddingDate null until the couple has fixed the day
      * @param overdue everything unfinished whose date has passed, the longest overdue first
      * @param next the entries to turn to after those: by priority, then by date
+     * @param nextPayments the payments still to be made, the soonest due first, overdue ones included
      */
-    record Attention(LocalDate today, LocalDate weddingDate, List<EntryView> overdue, List<EntryView> next) {}
+    record Attention(
+            LocalDate today, LocalDate weddingDate, List<EntryView> overdue, List<EntryView> next, List<EntryView> nextPayments) {}
 
     @Transactional
     Attention attention(UserId user) {
         Membership membership = weddings.membershipOf(user);
-        LocalDate today = LocalDate.now(clock.withZone(membership.timeZone()));
+        LocalDate today = today(membership);
         Schedule schedule = schedule(membership);
         List<EntryView> stillToDo = entries.list(membership.weddingId(), STILL_TO_DO).stream()
                 .map(row -> view(row, membership, schedule))
@@ -231,7 +245,18 @@ class EntryService {
                 .sorted(order(Sort.PRIORITY))
                 .limit(NEXT_ENTRIES)
                 .toList();
-        return new Attention(today, membership.weddingDate(), overdue, next);
+        // Money goes by the date alone as well: what has to be paid first is first, whatever its level.
+        List<EntryView> nextPayments = stillToDo.stream()
+                .filter(view -> view.entry().isPayment())
+                .sorted(order(Sort.DUE_DATE))
+                .limit(NEXT_PAYMENTS)
+                .toList();
+        return new Attention(today, membership.weddingDate(), overdue, next, nextPayments);
+    }
+
+    /** The current date where the wedding takes place. */
+    private LocalDate today(Membership membership) {
+        return LocalDate.now(clock.withZone(membership.timeZone()));
     }
 
     private static boolean isOverdue(EntryView view, LocalDate today) {
@@ -261,10 +286,9 @@ class EntryService {
         if (row.priorityMode() == PriorityMode.MANUAL) {
             return new EntryView(row, row.priority(), Reason.SET_BY_HAND, dependsOn, conflicts);
         }
-        LocalDate today = LocalDate.now(clock.withZone(membership.timeZone()));
-        // Payments arrive with epic 6; until then no entry is one.
         Facts facts = new Facts(
-                row.kind(), row.status(), row.startDate(), row.dueDate(), false, schedule.earliestDependentDue(row.id()));
+                row.kind(), row.status(), row.startDate(), row.dueDate(), row.isPayment(), schedule.earliestDependentDue(row.id()));
+        LocalDate today = today(membership);
         Assessment assessment = PriorityRule.assess(facts, today);
         return new EntryView(row, assessment.priority(), assessment.reason(), dependsOn, conflicts);
     }
@@ -329,6 +353,22 @@ class EntryService {
                 problems.add(new FieldProblem("parentId", "Choose one of the plan items."));
             }
         }
+        LocalDate today = today(membership);
+        if (request.amount() != null && kind == Kind.PLAN_ITEM) {
+            problems.add(new FieldProblem("amount", "Only a task can carry an amount. Leave it empty here."));
+        }
+        if (request.amount() == null && request.paymentKind() != null) {
+            problems.add(new FieldProblem("paymentKind", "The kind of payment needs an amount. Enter one, or leave the kind empty."));
+        }
+        if (request.paidOn() != null) {
+            if (request.amount() == null) {
+                problems.add(new FieldProblem("paidOn", "Only a payment has a paid date. Enter an amount, or leave the date empty."));
+            } else if (request.status() != Status.DONE) {
+                problems.add(new FieldProblem("paidOn", "A payment has a paid date once it is done. Mark it done, or leave the date empty."));
+            } else if (request.paidOn().isAfter(today)) {
+                problems.add(new FieldProblem("paidOn", "The paid date cannot be in the future."));
+            }
+        }
         if (!problems.isEmpty()) {
             throw new ApiException(ProblemCode.BAD_REQUEST, "The request is not valid.", problems);
         }
@@ -338,8 +378,24 @@ class EntryService {
         return new EntryRow(
                 id, kind, request.title().strip(), request.notes().strip(), request.categoryId(), request.startDate(),
                 request.dueDate(), request.status(), completedAt(request.status(), before, now), request.priorityMode(),
-                chosen, request.parentId(), assignees, before == null ? 0 : before.taskCount(),
-                before == null ? 0 : before.version(), before == null ? now : before.createdAt(), now);
+                chosen, request.parentId(), request.amount(), request.paymentKind(),
+                paidOn(request.amount(), request.status(), request.paidOn(), before, today), assignees,
+                before == null ? 0 : before.taskCount(), before == null ? 0 : before.version(),
+                before == null ? now : before.createdAt(), now);
+    }
+
+    /**
+     * A payment is paid when it is done. The day is the one the person gives; otherwise the one
+     * already recorded, and for a payment that is only now done, today.
+     */
+    private static LocalDate paidOn(Long amount, Status status, LocalDate given, EntryRow before, LocalDate today) {
+        if (amount == null || status != Status.DONE) {
+            return null;
+        }
+        if (given != null) {
+            return given;
+        }
+        return before != null && before.paidOn() != null ? before.paidOn() : today;
     }
 
     /** "Done" remembers when it was done; a change that leaves it done keeps that moment. */

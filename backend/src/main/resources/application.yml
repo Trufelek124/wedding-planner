@@ -19,6 +19,11 @@ spring:
       max-request-size: 100MB
       # Uploads wait on the media volume while they arrive, not in /tmp, which is memory in the container.
       location: ${APP_MEDIA_DIR}/incoming
+  jackson:
+    deserialization:
+      # 1250.5 where a whole number belongs is refused, not cut down to 1250: money is whole numbers of
+      # the currency's smallest unit, and a client that sends a fraction has a mistake to hear about.
+      accept-float-as-int: false
   mvc:
     problemdetails:
       # Errors are answered as RFC 9457 problem details (see the api module).

@@ -119,6 +119,9 @@ export function entry(overrides: Partial<Entry> = {}): Entry {
     priorityReason: 'NO_DATE',
     assigneeIds: [],
     parentId: null,
+    amount: null,
+    paymentKind: null,
+    paidOn: null,
     taskCount: 0,
     dependsOnIds: [],
     conflictsWithIds: [],
@@ -135,7 +138,16 @@ export function entry(overrides: Partial<Entry> = {}): Entry {
  */
 /** What the home page is told: the days left, and what is overdue and next. */
 export function home(overrides: Partial<Home> = {}): Response {
-  return Response.json({ today: '2026-11-17', weddingDate: '2027-06-19', daysLeft: 214, overdue: [], next: [], ...overrides })
+  return Response.json({
+    today: '2026-11-17',
+    weddingDate: '2027-06-19',
+    daysLeft: 214,
+    overdue: [],
+    next: [],
+    budget: { total: null, planned: 0, committed: 0, paid: 0 },
+    nextPayments: [],
+    ...overrides,
+  })
 }
 
 export function planningServer(entries: Entry[], extra: Record<string, Handler> = {}): FakeServer {

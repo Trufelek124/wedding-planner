@@ -1,6 +1,7 @@
 package io.github.trufelek124.weddingplanner.planning.internal;
 
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Kind;
+import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.PaymentKind;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Priority;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.PriorityMode;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningTypes.Status;
@@ -27,6 +28,8 @@ class EntryRepository {
      * An entry as stored, with who does it and how many tasks hang on it.
      *
      * @param priority the level a person chose; null while the planner works the level out
+     * @param amount for a payment: what it costs, in the smallest unit of the wedding's currency; null for any other entry
+     * @param paidOn the day a payment was paid; null until it is done
      */
     record EntryRow(
             UUID id,
@@ -41,21 +44,43 @@ class EntryRepository {
             PriorityMode priorityMode,
             Priority priority,
             UUID parentId,
+            Long amount,
+            PaymentKind paymentKind,
+            LocalDate paidOn,
             List<UUID> assigneeIds,
             int taskCount,
             int version,
             Instant createdAt,
-            Instant updatedAt) {}
+            Instant updatedAt) {
+
+        boolean isPayment() {
+            return amount != null;
+        }
+    }
 
     /** No narrowing down: every entry of the wedding. */
-    static final Filter EVERYTHING = new Filter(null, null, null, null, null, null);
+    static final Filter EVERYTHING = new Filter(null, null, null, false, null, null, null, null);
 
-    /** What a list may be narrowed down by; null means "any". */
-    record Filter(Kind kind, List<Status> statuses, UUID categoryId, UUID assigneeId, UUID parentId, Boolean scheduled) {}
+    /**
+     * What a list may be narrowed down by; null means "any".
+     *
+     * @param withoutCategory only entries filed under no category
+     * @param payment true: only payments; false: only what carries no money
+     */
+    record Filter(
+            Kind kind,
+            List<Status> statuses,
+            UUID categoryId,
+            boolean withoutCategory,
+            UUID assigneeId,
+            UUID parentId,
+            Boolean scheduled,
+            Boolean payment) {}
 
     private static final String SELECT = """
             SELECT e.id, e.kind, e.title, e.notes, e.category_id, e.start_date, e.due_date, e.status, e.completed_at,
-                   e.priority_mode, e.priority, e.parent_id, e.version, e.created_at, e.updated_at,
+                   e.priority_mode, e.priority, e.parent_id, e.amount, e.payment_kind, e.paid_on,
+                   e.version, e.created_at, e.updated_at,
                    (SELECT count(*) FROM entry task WHERE task.parent_id = e.id) AS task_count,
                    ARRAY(SELECT a.member_id FROM entry_assignee a WHERE a.entry_id = e.id) AS assignee_ids
             FROM entry e
@@ -91,6 +116,9 @@ class EntryRepository {
             where.append(" AND e.category_id = :category");
             params.put("category", filter.categoryId());
         }
+        if (filter.withoutCategory()) {
+            where.append(" AND e.category_id IS NULL");
+        }
         if (filter.assigneeId() != null) {
             where.append(" AND EXISTS (SELECT 1 FROM entry_assignee a WHERE a.entry_id = e.id AND a.member_id = :assignee)");
             params.put("assignee", filter.assigneeId());
@@ -102,15 +130,20 @@ class EntryRepository {
         if (filter.scheduled() != null) {
             where.append(filter.scheduled() ? " AND e.due_date IS NOT NULL" : " AND e.due_date IS NULL");
         }
+        if (filter.payment() != null) {
+            where.append(filter.payment() ? " AND e.amount IS NOT NULL" : " AND e.amount IS NULL");
+        }
         return jdbc.sql(SELECT + where + " ORDER BY e.created_at, e.id").params(params).query(EntryRepository::row).list();
     }
 
     void insert(UUID weddingId, UUID createdBy, EntryRow entry) {
         jdbc.sql("""
                 INSERT INTO entry (id, wedding_id, kind, title, notes, category_id, start_date, due_date, status,
-                                   completed_at, priority_mode, priority, parent_id, version, created_by, created_at, updated_at)
+                                   completed_at, priority_mode, priority, parent_id, amount, payment_kind, paid_on,
+                                   version, created_by, created_at, updated_at)
                 VALUES (:id, :wedding, :kind, :title, :notes, :category, :start, :due, :status,
-                        :completed, :mode, :priority, :parent, 0, :createdBy, :now, :now)
+                        :completed, :mode, :priority, :parent, :amount, :paymentKind, :paidOn,
+                        0, :createdBy, :now, :now)
                 """)
                 .params(fields(entry))
                 .param("id", entry.id())
@@ -127,7 +160,8 @@ class EntryRepository {
                 UPDATE entry
                 SET kind = :kind, title = :title, notes = :notes, category_id = :category, start_date = :start,
                     due_date = :due, status = :status, completed_at = :completed, priority_mode = :mode,
-                    priority = :priority, parent_id = :parent, version = version + 1, updated_at = :now
+                    priority = :priority, parent_id = :parent, amount = :amount, payment_kind = :paymentKind,
+                    paid_on = :paidOn, version = version + 1, updated_at = :now
                 WHERE wedding_id = :wedding AND id = :id AND version = :version
                 """)
                         .params(fields(entry))
@@ -182,6 +216,9 @@ class EntryRepository {
         // Only a level a person chose is stored; the automatic one is worked out when asked for.
         fields.put("priority", entry.priority() == null ? null : entry.priority().name());
         fields.put("parent", entry.parentId());
+        fields.put("amount", entry.amount());
+        fields.put("paymentKind", entry.paymentKind() == null ? null : entry.paymentKind().name());
+        fields.put("paidOn", entry.paidOn());
         return fields;
     }
 
@@ -200,6 +237,9 @@ class EntryRepository {
                 PriorityMode.valueOf(row.getString("priority_mode")),
                 row.getString("priority") == null ? null : Priority.valueOf(row.getString("priority")),
                 row.getObject("parent_id", UUID.class),
+                row.getObject("amount", Long.class),
+                row.getString("payment_kind") == null ? null : PaymentKind.valueOf(row.getString("payment_kind")),
+                row.getObject("paid_on", LocalDate.class),
                 new ArrayList<>(Arrays.asList(assignees)),
                 row.getInt("task_count"),
                 row.getInt("version"),

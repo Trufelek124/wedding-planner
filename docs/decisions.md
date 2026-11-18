@@ -204,3 +204,69 @@ tried three times in all.
   the internet is the second barrier to add.
 - If outgoing requests have to pass through a proxy, rule 3 no longer holds, because the proxy does the lookup.
   Then the proxy must enforce rule 2, or previews are switched off.
+
+## D-004 — A payment is a task with an amount, filed under the task's category and paid when it is done
+
+**Date:** 2026-11-18 · **Task:** WP-TS-38 · **Applies to:** the budget on the web and the phone, vendors, the e-mail import
+
+### Context
+
+The owner's own example of a task is "pay for something" (S01 section 3), and the budget has to add such tasks up:
+planned, committed and paid, in total and per category (story WP-US-17). Three things had to be settled before any
+screen was built: where the money lives, what "budget category" means next to the categories the plan already has,
+and what "paid" is next to "done".
+
+### What was compared
+
+| | On the task itself | A register of payments beside the tasks |
+|---|---|---|
+| "Pay the deposit" is entered | once | twice, or the two have to be linked |
+| The task list and the budget can disagree | no: they read the same entry | yes |
+| Due date, who does it, priority, the plan item | the task's own | repeated, or looked up through the link |
+
+| | The entry's category is the budget category | A list of budget categories of its own |
+|---|---|---|
+| Lists the couple keeps | one | two that mostly say the same |
+| A payment filed differently from its task | not possible | possible, and then two places to keep right |
+
+| | Paid when the task is done | A "paid" mark of its own |
+|---|---|---|
+| Ticking a payment off in any list | pays it | leaves a done task that still counts as unpaid, or the reverse |
+| A second state to explain | none | "done but not paid" |
+
+### Decision
+
+1. **A task can carry an amount; then it is a payment.** Only a task: a plan item carries no money, and a payment is
+   not turned into a plan item until the amount is taken away.
+2. **Its budget category is its category.** The budget's lines are the categories the plan already has; a payment
+   without a category is counted apart.
+3. **It is paid when it is done.** Marking it done records the paid date: today where the wedding takes place, or
+   the day the person gives, never a future one. Reopening it forgets the date.
+4. **Committed** is every payment that is not dropped; **paid** is every payment that is done; **planned** is what
+   the couple set per category, beside a total for everything. The two are not forced to agree: the numbers show it
+   when the categories add up to more than the total.
+5. **Amounts are whole numbers of the currency's smallest unit**, in the database (`bigint`), in the sums (done by
+   the database, on whole numbers) and in the API. A number with a fraction where a whole number belongs is refused,
+   not rounded. One amount is at most 10,000,000,000 of the main unit.
+6. **A kind** (deposit, instalment, final) may be said and may be left open.
+
+### What speaks for it
+
+- It is what the scope says ("one entry — it is in the task list and in the budget at once") with nothing added.
+- The automatic priority already asks whether an entry is a payment (S01 section 5); now it can be answered.
+- The e-mail import will propose "pay 2,500 by Friday" as one suggestion that becomes one entry.
+
+### What it costs, and what would change the decision
+
+- A payment made in parts is several tasks, one per part; there is no "partly paid".
+- Planned amounts follow the plan's categories. If the couple wants budget lines the plan has no use for, they add
+  a category; if that grows into a second list in disguise, budget categories of their own are the alternative,
+  recorded as a new decision.
+- Refunds and money coming in are not covered: an amount is above zero.
+- Every amount is in the wedding's one currency. A payment in another currency is entered converted.
+
+### What follows for the clients
+
+- A change to an entry says the money again (`amount`, `paymentKind`, `paidOn`): a save replaces the whole entry,
+  and leaving them out would take the money away. The generated types make them required for that reason.
+- Amounts are shown by dividing by the currency's own number of decimals and never calculated with as fractions.

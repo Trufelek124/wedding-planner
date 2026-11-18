@@ -125,6 +125,11 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
       priorityMode: byHand ? ('MANUAL' as const) : ('AUTO' as const),
       priority: byHand ? priority : null,
       parentId: kind === 'PLAN_ITEM' || parentId === '' ? null : parentId,
+      // The money of a payment is said again as it is: a save replaces the whole entry. A paid date belongs
+      // to a payment that is done; for one that is done only now, the server takes today.
+      amount: existing?.amount ?? null,
+      paymentKind: existing?.paymentKind ?? null,
+      paidOn: existing?.amount != null && status === 'DONE' ? existing.paidOn : null,
     }
   }
 

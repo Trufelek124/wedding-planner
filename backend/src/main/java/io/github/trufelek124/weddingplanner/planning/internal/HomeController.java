@@ -16,14 +16,16 @@ import org.springframework.web.bind.annotation.RestController;
 class HomeController {
 
     private final EntryService entries;
+    private final BudgetService budget;
 
-    HomeController(EntryService entries) {
+    HomeController(EntryService entries, BudgetService budget) {
         this.entries = entries;
+        this.budget = budget;
     }
 
     /** Answers the wedding-not-set-up problem until someone has set the wedding up. */
     @GetMapping
     HomeResponse home(UserId user) {
-        return HomeResponse.of(entries.attention(user));
+        return HomeResponse.of(entries.attention(user), budget.summary(user));
     }
 }

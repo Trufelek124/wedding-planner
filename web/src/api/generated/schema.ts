@@ -132,6 +132,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_3"];
+        put: operations["change_2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/categories": {
         parameters: {
             query?: never;
@@ -417,6 +433,110 @@ export interface components {
         BoardName: {
             name: string;
         };
+        /** @description Planned, committed and paid, in total and per category. Every amount is a whole number of the smallest unit of the wedding's currency (grosze). */
+        Budget: {
+            /** @description Every category, in the couple's order, with or without money. */
+            categories: components["schemas"]["BudgetLine"][];
+            /**
+             * Format: int64
+             * @description Every payment that is not dropped, paid or not.
+             */
+            committed: number;
+            /**
+             * Format: int64
+             * @description The payments that are done.
+             */
+            paid: number;
+            /**
+             * Format: int64
+             * @description The planned amounts of all categories together.
+             */
+            planned: number;
+            /**
+             * Format: int64
+             * @description What the couple means to spend on everything; null while they have not said.
+             */
+            total: number | null;
+            uncategorised: components["schemas"]["BudgetRest"];
+            /**
+             * Format: int32
+             * @description Send this back with a change; it tells whether someone else saved in between.
+             */
+            version: number;
+        };
+        /** @description The budget as it should be from now on. */
+        BudgetChange: {
+            /** @description The planned amount of every category that has one. A category left out has none. */
+            planned: components["schemas"]["PlannedAmount"][];
+            /**
+             * Format: int64
+             * @description What the couple means to spend on everything; null for not said.
+             */
+            total: number | null;
+            /**
+             * Format: int32
+             * @description The version of the budget this change is based on.
+             */
+            version: number;
+        };
+        /** @description The budget's four sums, in the smallest unit of the wedding's currency. */
+        BudgetGlance: {
+            /**
+             * Format: int64
+             * @description Every payment that is not dropped, paid or not.
+             */
+            committed: number;
+            /**
+             * Format: int64
+             * @description The payments that are done.
+             */
+            paid: number;
+            /**
+             * Format: int64
+             * @description The planned amounts of all categories together.
+             */
+            planned: number;
+            /**
+             * Format: int64
+             * @description What the couple means to spend on everything; null while they have not said.
+             */
+            total: number | null;
+        };
+        /** @description One category of the budget. */
+        BudgetLine: {
+            /** Format: uuid */
+            categoryId: string;
+            /**
+             * Format: int64
+             * @description Its payments that are not dropped, paid or not.
+             */
+            committed: number;
+            name: string;
+            /**
+             * Format: int64
+             * @description Its payments that are done.
+             */
+            paid: number;
+            /**
+             * Format: int32
+             * @description How many payments that are not dropped it has.
+             */
+            payments: number;
+            /**
+             * Format: int64
+             * @description What the couple means to spend on it; null while they have not said.
+             */
+            planned: number | null;
+        };
+        /** @description The payments that are filed under no category. */
+        BudgetRest: {
+            /** Format: int64 */
+            committed: number;
+            /** Format: int64 */
+            paid: number;
+            /** Format: int32 */
+            payments: number;
+        };
         /** @description A heading entries can be filed under, for example Venue. */
         Category: {
             /** Format: uuid */
@@ -432,6 +552,11 @@ export interface components {
         };
         /** @description A plan item or a task. */
         Entry: {
+            /**
+             * Format: int64
+             * @description For a payment: what it costs, in the smallest unit of the wedding's currency (grosze). null for an entry that carries no money.
+             */
+            amount: number | null;
             /** @description The members who do it: none, one or both. */
             assigneeIds: string[];
             /** Format: uuid */
@@ -458,10 +583,20 @@ export interface components {
             kind: "PLAN_ITEM" | "TASK";
             notes: string;
             /**
+             * Format: date
+             * @description The day a payment was paid; null until it is done.
+             */
+            paidOn: string | null;
+            /**
              * Format: uuid
              * @description Tasks only: the plan item it belongs to.
              */
             parentId: string | null;
+            /**
+             * @description For a payment: which part of the price it is, if that was said.
+             * @enum {string|null}
+             */
+            paymentKind: "DEPOSIT" | "INSTALMENT" | "FINAL" | null;
             /**
              * @description The level chosen by a person (MANUAL) or worked out for today (AUTO).
              * @enum {string}
@@ -497,14 +632,26 @@ export interface components {
         };
         /** @description All fields of an entry as they should be from now on. */
         EntryChange: {
+            /**
+             * Format: int64
+             * @description Tasks only. With an amount the task is a payment: what it costs, in the smallest unit of the wedding's currency.
+             */
+            amount: number | null;
             assigneeIds: string[];
             /** Format: uuid */
             categoryId: string | null;
             /** Format: date */
             dueDate: string | null;
             notes: string;
+            /**
+             * Format: date
+             * @description For a payment that is done: the day it was paid. Left out, it is the day already recorded, or today.
+             */
+            paidOn: string | null;
             /** Format: uuid */
             parentId: string | null;
+            /** @enum {string|null} */
+            paymentKind: "DEPOSIT" | "INSTALMENT" | "FINAL" | null;
             /** @enum {string|null} */
             priority: "CRITICAL" | "HIGH" | "NORMAL" | "LOW" | null;
             /** @enum {string} */
@@ -537,6 +684,8 @@ export interface components {
         };
         /** @description What the first page shows: how long until the wedding, and what to do next. */
         Home: {
+            /** @description The money at a glance. */
+            budget: components["schemas"]["BudgetGlance"];
             /**
              * Format: int64
              * @description Whole days from today to the wedding day: 0 on the day, negative after it; null while the day is not fixed.
@@ -544,6 +693,8 @@ export interface components {
             daysLeft: number | null;
             /** @description The five unfinished entries to turn to next, by priority and then by date. Overdue entries are not repeated here. */
             next: components["schemas"]["Entry"][];
+            /** @description The five payments still to be made that are due soonest; those without a date come last. */
+            nextPayments: components["schemas"]["Entry"][];
             /** @description Every unfinished entry whose date has passed, the longest overdue first. */
             overdue: components["schemas"]["Entry"][];
             /**
@@ -632,6 +783,11 @@ export interface components {
         };
         /** @description A plan item or a task to add. */
         NewEntry: {
+            /**
+             * Format: int64
+             * @description Tasks only. With an amount the task is a payment: what it costs, in the smallest unit of the wedding's currency.
+             */
+            amount: number | null;
             /** @description Who does it: none, one or both of the wedding's members. */
             assigneeIds: string[];
             /** Format: uuid */
@@ -646,10 +802,20 @@ export interface components {
             /** @description Free text; may be empty. */
             notes: string;
             /**
+             * Format: date
+             * @description For a payment that is done: the day it was paid. Left out, it is the day already recorded, or today.
+             */
+            paidOn: string | null;
+            /**
              * Format: uuid
              * @description Tasks only: the plan item this task belongs to.
              */
             parentId: string | null;
+            /**
+             * @description For a payment: which part of the price it is.
+             * @enum {string|null}
+             */
+            paymentKind: "DEPOSIT" | "INSTALMENT" | "FINAL" | null;
             /**
              * @description With priorityMode MANUAL: the chosen priority. With AUTO: null.
              * @enum {string|null}
@@ -702,6 +868,13 @@ export interface components {
              * @description In pixels, the right way up; null for a kind the server cannot read.
              */
             width: number | null;
+        };
+        /** @description What the couple means to spend on one category. */
+        PlannedAmount: {
+            /** Format: int64 */
+            amount: number;
+            /** Format: uuid */
+            categoryId: string;
         };
         /** @description An error, as RFC 9457 problem details. */
         Problem: {
@@ -1130,6 +1303,68 @@ export interface operations {
             };
         };
     };
+    get_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Budget"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    change_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BudgetChange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Budget"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_2: {
         parameters: {
             query?: never;
@@ -1263,6 +1498,8 @@ export interface operations {
                 /** @description Only entries in one of these states. */
                 status?: ("NOT_STARTED" | "IN_PROGRESS" | "DONE" | "DROPPED")[];
                 categoryId?: string;
+                /** @description true: only entries filed under no category. */
+                withoutCategory?: boolean;
                 /** @description Only entries this member does (alone or with the other). */
                 assigneeId?: string;
                 /** @description Only the tasks of this plan item. */
@@ -1271,6 +1508,8 @@ export interface operations {
                 scheduled?: boolean;
                 /** @description Only entries at one of these levels, as shown today: worked out or set by hand. */
                 priority?: ("CRITICAL" | "HIGH" | "NORMAL" | "LOW")[];
+                /** @description true: only payments, which are the tasks that carry an amount; false: everything else. */
+                payment?: boolean;
                 sort?: "DUE_DATE" | "PRIORITY" | "TITLE" | "CREATED";
             };
             header?: never;

@@ -143,9 +143,63 @@ class HomeIntegrationTest extends PostgresIntegrationTest {
     void isEmptyButCompleteForAPlanWithNothingInIt() throws Exception {
         Map<String, Object> home = home();
 
-        assertThat(home).containsOnlyKeys("today", "weddingDate", "daysLeft", "overdue", "next");
+        assertThat(home).containsOnlyKeys("today", "weddingDate", "daysLeft", "overdue", "next", "budget", "nextPayments");
         assertThat(titles(home, "overdue")).isEmpty();
         assertThat(titles(home, "next")).isEmpty();
+        assertThat(titles(home, "nextPayments")).isEmpty();
+        assertThat(budget(home)).containsEntry("total", null).containsEntry("planned", 0).containsEntry("committed", 0).containsEntry("paid", 0);
+    }
+
+    @Test
+    void showsTheBudgetAtAGlance() throws Exception {
+        String venue = categoryId("Venue");
+        String music = categoryId("Music");
+        putBudget(0, 6_000_000L, Map.of(venue, 2_000_000L, music, 500_000L));
+        created(payment("Venue deposit", 500_000, venue, today.plusDays(10), "DONE"));
+        created(payment("Venue, the rest", 1_500_000, venue, today.plusDays(100), "NOT_STARTED"));
+        created(payment("The band", 450_000, music, null, "IN_PROGRESS"));
+        created(payment("A second band, given up", 300_000, music, null, "DROPPED"));
+        created(payment("Rings", 250_000, null, today.plusDays(40), "NOT_STARTED"));
+        created(entry("TASK", "no money in this one", null, today.plusDays(5), "NOT_STARTED", "AUTO", null));
+
+        Map<String, Object> glance = budget(home());
+
+        assertThat(glance).containsOnlyKeys("total", "planned", "committed", "paid");
+        assertThat(glance)
+                .containsEntry("total", 6_000_000)
+                .containsEntry("planned", 2_500_000)
+                .containsEntry("committed", 2_700_000)
+                .containsEntry("paid", 500_000);
+        // The same four sums as the budget's own page.
+        Map<String, Object> page = TestHttp.json(http.getAs(anna, "/api/budget"));
+        assertThat(glance).isEqualTo(Map.of(
+                "total", page.get("total"), "planned", page.get("planned"), "committed", page.get("committed"), "paid", page.get("paid")));
+    }
+
+    @Test
+    void namesTheNextPaymentsStillToBeMadeTheSoonestDueFirst() throws Exception {
+        created(payment("in a month", 10_000, null, today.plusDays(30), "NOT_STARTED"));
+        created(payment("some day", 10_000, null, null, "NOT_STARTED"));
+        created(payment("late", 10_000, null, today.minusDays(4), "IN_PROGRESS"));
+        created(payment("tomorrow", 10_000, null, today.plusDays(1), "NOT_STARTED"));
+        created(payment("paid already", 10_000, null, today.plusDays(2), "DONE"));
+        created(payment("given up", 10_000, null, today.plusDays(2), "DROPPED"));
+        created(payment("in a week", 10_000, null, today.plusDays(7), "NOT_STARTED"));
+        created(payment("next year", 10_000, null, today.plusDays(300), "NOT_STARTED"));
+        created(entry("TASK", "due today, but no payment", null, today, "NOT_STARTED", "AUTO", null));
+
+        Map<String, Object> home = home();
+
+        // Five at most; one that is late leads the list, one without a date would come last and does not fit here.
+        assertThat(titles(home, "nextPayments")).containsExactly("late", "tomorrow", "in a week", "in a month", "next year");
+        // A payment that is late is overdue like any other entry.
+        assertThat(titles(home, "overdue")).containsExactly("late");
+        Map<String, Object> first = entries(home, "nextPayments").get(0);
+        assertThat(first).containsEntry("amount", 10_000).containsEntry("paidOn", null).containsKey("version");
+
+        String id = (String) first.get("id");
+        assertThat(http.putJsonAs(anna, "/api/entries/" + id + "/status", "{\"status\":\"DONE\"}").statusCode()).isEqualTo(200);
+        assertThat(titles(home(), "nextPayments")).containsExactly("tomorrow", "in a week", "in a month", "next year", "some day");
     }
 
     @Test
@@ -170,6 +224,37 @@ class HomeIntegrationTest extends PostgresIntegrationTest {
 
     private static List<String> titles(Map<String, Object> home, String list) {
         return entries(home, list).stream().map(entry -> (String) entry.get("title")).toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> budget(Map<String, Object> home) {
+        return (Map<String, Object>) home.get("budget");
+    }
+
+    private static Map<String, Object> payment(String title, long amount, String categoryId, LocalDate dueDate, String status) {
+        Map<String, Object> entry = entry("TASK", title, null, dueDate, status, "AUTO", null);
+        entry.put("amount", amount);
+        entry.put("categoryId", categoryId);
+        return entry;
+    }
+
+    private void putBudget(int version, Long total, Map<String, Long> plannedByCategory) throws Exception {
+        Map<String, Object> request = new HashMap<>();
+        request.put("version", version);
+        request.put("total", total);
+        request.put("planned", plannedByCategory.entrySet().stream()
+                .map(one -> Map.of("categoryId", one.getKey(), "amount", one.getValue()))
+                .toList());
+        HttpResponse<String> response = http.putJsonAs(anna, "/api/budget", TestHttp.jsonOf(request));
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+    }
+
+    private String categoryId(String name) throws Exception {
+        return TestHttp.jsonList(http.getAs(anna, "/api/categories")).stream()
+                .filter(category -> name.equals(category.get("name")))
+                .map(category -> (String) category.get("id"))
+                .findFirst()
+                .orElseThrow();
     }
 
     private void setWedding(String date, String zone) throws Exception {

@@ -58,6 +58,156 @@
         "required" : [ "name" ],
         "type" : "object"
       },
+      "Budget" : {
+        "description" : "Planned, committed and paid, in total and per category. Every amount is a whole number of the smallest unit of the wedding's currency (grosze).",
+        "properties" : {
+          "categories" : {
+            "description" : "Every category, in the couple's order, with or without money.",
+            "items" : {
+              "$ref" : "#/components/schemas/BudgetLine"
+            },
+            "type" : "array"
+          },
+          "committed" : {
+            "description" : "Every payment that is not dropped, paid or not.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "paid" : {
+            "description" : "The payments that are done.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "planned" : {
+            "description" : "The planned amounts of all categories together.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "What the couple means to spend on everything; null while they have not said.",
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "uncategorised" : {
+            "$ref" : "#/components/schemas/BudgetRest"
+          },
+          "version" : {
+            "description" : "Send this back with a change; it tells whether someone else saved in between.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "categories", "committed", "paid", "planned", "total", "uncategorised", "version" ],
+        "type" : "object"
+      },
+      "BudgetChange" : {
+        "description" : "The budget as it should be from now on.",
+        "properties" : {
+          "planned" : {
+            "description" : "The planned amount of every category that has one. A category left out has none.",
+            "items" : {
+              "$ref" : "#/components/schemas/PlannedAmount"
+            },
+            "maxItems" : 500,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "total" : {
+            "description" : "What the couple means to spend on everything; null for not said.",
+            "format" : "int64",
+            "maximum" : 1000000000000,
+            "minimum" : 0,
+            "type" : [ "integer", "null" ]
+          },
+          "version" : {
+            "description" : "The version of the budget this change is based on.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "planned", "total", "version" ],
+        "type" : "object"
+      },
+      "BudgetGlance" : {
+        "description" : "The budget's four sums, in the smallest unit of the wedding's currency.",
+        "properties" : {
+          "committed" : {
+            "description" : "Every payment that is not dropped, paid or not.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "paid" : {
+            "description" : "The payments that are done.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "planned" : {
+            "description" : "The planned amounts of all categories together.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "What the couple means to spend on everything; null while they have not said.",
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          }
+        },
+        "required" : [ "committed", "paid", "planned", "total" ],
+        "type" : "object"
+      },
+      "BudgetLine" : {
+        "description" : "One category of the budget.",
+        "properties" : {
+          "categoryId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "committed" : {
+            "description" : "Its payments that are not dropped, paid or not.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "paid" : {
+            "description" : "Its payments that are done.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "payments" : {
+            "description" : "How many payments that are not dropped it has.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "planned" : {
+            "description" : "What the couple means to spend on it; null while they have not said.",
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          }
+        },
+        "required" : [ "categoryId", "committed", "name", "paid", "payments", "planned" ],
+        "type" : "object"
+      },
+      "BudgetRest" : {
+        "description" : "The payments that are filed under no category.",
+        "properties" : {
+          "committed" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "paid" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "payments" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "committed", "paid", "payments" ],
+        "type" : "object"
+      },
       "Category" : {
         "description" : "A heading entries can be filed under, for example Venue.",
         "properties" : {
@@ -98,6 +248,11 @@
       "Entry" : {
         "description" : "A plan item or a task.",
         "properties" : {
+          "amount" : {
+            "description" : "For a payment: what it costs, in the smallest unit of the wedding's currency (grosze). null for an entry that carries no money.",
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
           "assigneeIds" : {
             "description" : "The members who do it: none, one or both.",
             "items" : {
@@ -151,9 +306,19 @@
           "notes" : {
             "type" : "string"
           },
+          "paidOn" : {
+            "description" : "The day a payment was paid; null until it is done.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
           "parentId" : {
             "description" : "Tasks only: the plan item it belongs to.",
             "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "paymentKind" : {
+            "description" : "For a payment: which part of the price it is, if that was said.",
+            "enum" : [ "DEPOSIT", "INSTALMENT", "FINAL" ],
             "type" : [ "string", "null" ]
           },
           "priority" : {
@@ -197,12 +362,19 @@
             "type" : "integer"
           }
         },
-        "required" : [ "assigneeIds", "categoryId", "completedAt", "conflictsWithIds", "createdAt", "dependsOnIds", "dueDate", "id", "kind", "notes", "parentId", "priority", "priorityMode", "priorityReason", "startDate", "status", "taskCount", "title", "updatedAt", "version" ],
+        "required" : [ "amount", "assigneeIds", "categoryId", "completedAt", "conflictsWithIds", "createdAt", "dependsOnIds", "dueDate", "id", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "priorityReason", "startDate", "status", "taskCount", "title", "updatedAt", "version" ],
         "type" : "object"
       },
       "EntryChange" : {
         "description" : "All fields of an entry as they should be from now on.",
         "properties" : {
+          "amount" : {
+            "description" : "Tasks only. With an amount the task is a payment: what it costs, in the smallest unit of the wedding's currency.",
+            "exclusiveMinimum" : 0,
+            "format" : "int64",
+            "maximum" : 1000000000000,
+            "type" : [ "integer", "null" ]
+          },
           "assigneeIds" : {
             "items" : {
               "format" : "uuid",
@@ -225,8 +397,17 @@
             "minLength" : 0,
             "type" : "string"
           },
+          "paidOn" : {
+            "description" : "For a payment that is done: the day it was paid. Left out, it is the day already recorded, or today.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
           "parentId" : {
             "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "paymentKind" : {
+            "enum" : [ "DEPOSIT", "INSTALMENT", "FINAL" ],
             "type" : [ "string", "null" ]
           },
           "priority" : {
@@ -256,7 +437,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "assigneeIds", "categoryId", "dueDate", "notes", "parentId", "priority", "priorityMode", "startDate", "status", "title", "version" ],
+        "required" : [ "amount", "assigneeIds", "categoryId", "dueDate", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "startDate", "status", "title", "version" ],
         "type" : "object"
       },
       "EntryConversion" : {
@@ -295,6 +476,10 @@
       "Home" : {
         "description" : "What the first page shows: how long until the wedding, and what to do next.",
         "properties" : {
+          "budget" : {
+            "$ref" : "#/components/schemas/BudgetGlance",
+            "description" : "The money at a glance."
+          },
           "daysLeft" : {
             "description" : "Whole days from today to the wedding day: 0 on the day, negative after it; null while the day is not fixed.",
             "format" : "int64",
@@ -302,6 +487,13 @@
           },
           "next" : {
             "description" : "The five unfinished entries to turn to next, by priority and then by date. Overdue entries are not repeated here.",
+            "items" : {
+              "$ref" : "#/components/schemas/Entry"
+            },
+            "type" : "array"
+          },
+          "nextPayments" : {
+            "description" : "The five payments still to be made that are due soonest; those without a date come last.",
             "items" : {
               "$ref" : "#/components/schemas/Entry"
             },
@@ -325,7 +517,7 @@
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "daysLeft", "next", "overdue", "today", "weddingDate" ],
+        "required" : [ "budget", "daysLeft", "next", "nextPayments", "overdue", "today", "weddingDate" ],
         "type" : "object"
       },
       "Inspiration" : {
@@ -481,6 +673,13 @@
       "NewEntry" : {
         "description" : "A plan item or a task to add.",
         "properties" : {
+          "amount" : {
+            "description" : "Tasks only. With an amount the task is a payment: what it costs, in the smallest unit of the wedding's currency.",
+            "exclusiveMinimum" : 0,
+            "format" : "int64",
+            "maximum" : 1000000000000,
+            "type" : [ "integer", "null" ]
+          },
           "assigneeIds" : {
             "description" : "Who does it: none, one or both of the wedding's members.",
             "items" : {
@@ -510,9 +709,19 @@
             "minLength" : 0,
             "type" : "string"
           },
+          "paidOn" : {
+            "description" : "For a payment that is done: the day it was paid. Left out, it is the day already recorded, or today.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
           "parentId" : {
             "description" : "Tasks only: the plan item this task belongs to.",
             "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "paymentKind" : {
+            "description" : "For a payment: which part of the price it is.",
+            "enum" : [ "DEPOSIT", "INSTALMENT", "FINAL" ],
             "type" : [ "string", "null" ]
           },
           "priority" : {
@@ -539,7 +748,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "assigneeIds", "categoryId", "dueDate", "kind", "notes", "parentId", "priority", "priorityMode", "startDate", "status", "title" ],
+        "required" : [ "amount", "assigneeIds", "categoryId", "dueDate", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "startDate", "status", "title" ],
         "type" : "object"
       },
       "NewInspiration" : {
@@ -614,6 +823,23 @@
           }
         },
         "required" : [ "contentType", "height", "id", "preview", "width" ],
+        "type" : "object"
+      },
+      "PlannedAmount" : {
+        "description" : "What the couple means to spend on one category.",
+        "properties" : {
+          "amount" : {
+            "format" : "int64",
+            "maximum" : 1000000000000,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "categoryId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "amount", "categoryId" ],
         "type" : "object"
       },
       "Problem" : {
@@ -1190,6 +1416,70 @@
         "tags" : [ "board-controller" ]
       }
     },
+    "/api/budget" : {
+      "get" : {
+        "operationId" : "get_3",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Budget"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "budget-controller" ]
+      },
+      "put" : {
+        "operationId" : "change_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BudgetChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Budget"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "budget-controller" ]
+      }
+    },
     "/api/categories" : {
       "get" : {
         "operationId" : "list_2",
@@ -1364,6 +1654,15 @@
             "type" : "string"
           }
         }, {
+          "description" : "true: only entries filed under no category.",
+          "in" : "query",
+          "name" : "withoutCategory",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        }, {
           "description" : "Only entries this member does (alone or with the other).",
           "in" : "query",
           "name" : "assigneeId",
@@ -1400,6 +1699,14 @@
               "type" : "string"
             },
             "type" : "array"
+          }
+        }, {
+          "description" : "true: only payments, which are the tasks that carry an amount; false: everything else.",
+          "in" : "query",
+          "name" : "payment",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
           }
         }, {
           "in" : "query",

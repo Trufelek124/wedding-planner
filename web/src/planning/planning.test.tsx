@@ -170,6 +170,9 @@ describe('adding and changing an entry', () => {
       priorityMode: 'AUTO',
       priority: null,
       parentId: null,
+      amount: null,
+      paymentKind: null,
+      paidOn: null,
     })
   })
 
@@ -229,7 +232,44 @@ describe('adding and changing an entry', () => {
     await expect(server.requests(`PUT ${path}`)[0]?.json()).resolves.toEqual({
       version: 4, title: 'Call the florist on Monday', notes: 'Peonies?', categoryId: null, startDate: null,
       dueDate: '2027-03-01', status: 'NOT_STARTED', assigneeIds: [PIOTR_MEMBER], priorityMode: 'AUTO', priority: null, parentId: null,
+      amount: null, paymentKind: null, paidOn: null,
     })
+  })
+
+  it('says a payment\'s money again as it is when the task is saved', async () => {
+    const deposit = entry({ title: 'Pay the venue deposit', amount: 250_000, paymentKind: 'DEPOSIT', status: 'DONE',
+      completedAt: '2026-11-10T09:00:00Z', paidOn: '2026-11-10', version: 2 })
+    const path = `/api/entries/${deposit.id}`
+    const server = planningServer([deposit], {
+      [`GET ${path}`]: Response.json(deposit),
+      [`PUT ${path}`]: Response.json({ ...deposit, version: 3 }),
+    })
+    open(`/entries/${deposit.id}`)
+
+    await userEvent.type(await screen.findByLabelText('Title'), ' (first half)')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(server.requests(`PUT ${path}`)).toHaveLength(1))
+    await expect(server.requests(`PUT ${path}`)[0]?.json()).resolves.toMatchObject({
+      title: 'Pay the venue deposit (first half)', amount: 250_000, paymentKind: 'DEPOSIT', paidOn: '2026-11-10', status: 'DONE',
+    })
+  })
+
+  it('sends no paid date for a payment that is no longer done', async () => {
+    const deposit = entry({ title: 'Pay the venue deposit', amount: 250_000, status: 'DONE',
+      completedAt: '2026-11-10T09:00:00Z', paidOn: '2026-11-10' })
+    const path = `/api/entries/${deposit.id}`
+    const server = planningServer([deposit], {
+      [`GET ${path}`]: Response.json(deposit),
+      [`PUT ${path}`]: Response.json({ ...deposit, status: 'IN_PROGRESS', paidOn: null, version: 1 }),
+    })
+    open(`/entries/${deposit.id}`)
+
+    await userEvent.selectOptions(await screen.findByLabelText('Status'), 'In progress')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(server.requests(`PUT ${path}`)).toHaveLength(1))
+    await expect(server.requests(`PUT ${path}`)[0]?.json()).resolves.toMatchObject({ amount: 250_000, status: 'IN_PROGRESS', paidOn: null })
   })
 
   it('says next to the field what the server found wrong', async () => {

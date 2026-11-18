@@ -109,7 +109,7 @@ class ScheduleTest {
         Instant now = Instant.parse("2027-01-01T00:00:00Z");
         return new EntryRow(
                 id, Kind.PLAN_ITEM, "item", "", null, start, due, status, status == Status.DONE ? now : null,
-                PriorityMode.AUTO, null, null, new ArrayList<>(), 0, 0, now, now);
+                PriorityMode.AUTO, null, null, null, null, null, new ArrayList<>(), 0, 0, now, now);
     }
 
     private static UUID id(int n) {
