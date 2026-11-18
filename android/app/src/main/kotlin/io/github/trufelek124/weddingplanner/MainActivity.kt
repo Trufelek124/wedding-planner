@@ -4,18 +4,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.material3.MaterialTheme
-import io.github.trufelek124.weddingplanner.ui.HomeScreen
+import io.github.trufelek124.weddingplanner.ui.AppRoot
+import io.github.trufelek124.weddingplanner.ui.PlannerTheme
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val server = ServerAddress.parse(BuildConfig.SERVER_URL)
+        val container = (application as WeddingPlannerApp).container
         setContent {
-            MaterialTheme {
-                HomeScreen(server)
+            PlannerTheme {
+                AppRoot(container)
             }
         }
     }

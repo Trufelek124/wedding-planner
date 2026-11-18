@@ -102,7 +102,20 @@ How it is put together is D-005: one module, Ktor on OkHttp, Room, WorkManager, 
 Credential Manager, a container written by hand, no dependency-injection framework. A task adds a library when it
 first uses it, at the version D-005 names.
 
-- Everything is tested on the JVM (Robolectric); there is no emulator in a cloud session.
+- `AppRoot` (`ui/AppRoot.kt`) decides the screen from the session (`session/Session.kt`), as the web's `App.tsx`
+  does. A screen is a stateless composable fed by a view model; the view models of a signed-in person's screens are
+  asked for inside the signed-in part of `AppRoot`, where `SignedInModels` holds them and lets go of them at
+  sign-out.
+- What the screens share is made once in `AppContainer` (`WeddingPlannerApp.kt`). What only a phone has — the
+  network, the Keystore, Google's account picker — comes into it from outside. Whatever a task keeps on the phone
+  is removed in the container's `forgetEverything`: signing out leaves nothing of the account behind.
+- `Api` (`api/Api.kt`) sends the access token and renews it once on a 401; `getOpen`/`postOpen` are for the sign-in
+  endpoints. What goes wrong is an `ApiFailure`; a screen decides from its kind what to say, in words from
+  `strings.xml`. The refresh token is on the phone only encrypted; the access token only in memory.
+- Nothing personal in the log: no address, name or token. What holds one overrides `toString()`.
+- Everything is tested on the JVM (Robolectric); there is no emulator in a cloud session. `StandInPhone` is the
+  container with a `StandInServer`, a key outside the Keystore and a `StandInGoogle`; `AppRootTest` drives the
+  screens with it as a person would, and checks the log.
 - A screen has a test that writes its picture: `compose.picture("name")` (`ui/Pictures.kt`), in a test class with
   `@GraphicsMode(GraphicsMode.Mode.NATIVE)` and `@Config(qualifiers = PHONE)`. The pictures land in
   `android/app/build/outputs/roborazzi/`; whoever changes a screen opens its picture. None is committed.
