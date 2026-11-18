@@ -62,6 +62,10 @@ class StandInPhone(
 
     private val running = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    /** How often the app asked for what waits to be sent once there is a connection. */
+    var askedToSendLater = 0
+        private set
+
     val stored: File = File(folder, "session.preferences_pb")
 
     private val database: PlannerDatabase =
@@ -74,6 +78,7 @@ class StandInPhone(
         cipher = AesGcmCipher { key },
         googleAccounts = google,
         database = database,
+        sendLater = { askedToSendLater += 1 },
         clock = clock,
     )
 

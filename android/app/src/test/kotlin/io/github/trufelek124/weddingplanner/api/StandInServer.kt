@@ -18,14 +18,17 @@ import java.io.IOException
 class StandInServer {
 
     /** What the app sent, in order. */
-    data class Call(val route: String, val authorization: String?, val origin: String?, val body: String)
+    data class Call(val route: String, val authorization: String?, val origin: String?, val body: String, val contentType: String? = null)
 
     val calls = mutableListOf<Call>()
     private val answers = mutableMapOf<String, suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData>()
 
     val engine = MockEngine { request ->
         val route = "${request.method.value} ${request.url.encodedPath}"
-        calls += Call(route, request.headers[HttpHeaders.Authorization], request.headers[HttpHeaders.Origin], String(request.body.toByteArray()))
+        calls += Call(
+            route, request.headers[HttpHeaders.Authorization], request.headers[HttpHeaders.Origin], String(request.body.toByteArray()),
+            request.body.contentType?.withoutParameters()?.toString(),
+        )
         val answer = answers[route] ?: throw IOException("Failed to connect")
         answer(request)
     }

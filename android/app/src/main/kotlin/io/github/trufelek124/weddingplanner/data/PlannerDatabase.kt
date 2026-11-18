@@ -1,6 +1,7 @@
 package io.github.trufelek124.weddingplanner.data
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Insert
@@ -8,6 +9,7 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
+import androidx.room.Upsert
 
 @Dao
 abstract class PlannerDao {
@@ -16,13 +18,13 @@ abstract class PlannerDao {
     @Transaction
     open suspend fun stored(): Stored? {
         val planner = planner() ?: return null
-        return Stored(planner, entries(), categories(), vendors(), members())
+        return Stored(planner, entries(), categories(), vendors(), members(), changes())
     }
 
-    /** Puts a new load in the place of the last one, all of it or nothing. */
+    /** Puts a new load in the place of the last one, all of it or nothing. The changes waiting to be sent stay. */
     @Transaction
     open suspend fun replace(stored: Stored) {
-        forget()
+        forgetTheCopy()
         put(stored.planner)
         putEntries(stored.entries)
         putCategories(stored.categories)
@@ -30,14 +32,27 @@ abstract class PlannerDao {
         putMembers(stored.members)
     }
 
-    /** Removes everything: for a sign-out. */
+    /** Removes everything, the waiting changes included: for a sign-out. */
     @Transaction
     open suspend fun forget() {
+        forgetTheCopy()
+        deleteChanges()
+    }
+
+    @Transaction
+    open suspend fun forgetTheCopy() {
         deletePlanner()
         deleteEntries()
         deleteCategories()
         deleteVendors()
         deleteMembers()
+    }
+
+    /** The server took a change: its answer replaces the phone's copy of the entry, and the change is no longer waiting. */
+    @Transaction
+    open suspend fun sent(change: ChangeRow, answer: EntryRow) {
+        putEntry(answer)
+        deleteChange(change.seq)
     }
 
     @Query("SELECT * FROM planner WHERE id = 1")
@@ -84,17 +99,46 @@ abstract class PlannerDao {
 
     @Query("DELETE FROM member")
     abstract suspend fun deleteMembers()
+
+    @Query("SELECT * FROM entry WHERE id = :id")
+    abstract suspend fun entry(id: String): EntryRow?
+
+    @Query("SELECT MAX(position) FROM entry")
+    abstract suspend fun lastPosition(): Int?
+
+    @Upsert
+    abstract suspend fun putEntry(entry: EntryRow)
+
+    @Query("SELECT * FROM waiting_change ORDER BY seq")
+    abstract suspend fun changes(): List<ChangeRow>
+
+    @Query("SELECT * FROM waiting_change WHERE entryId = :entryId")
+    abstract suspend fun changeOf(entryId: String): ChangeRow?
+
+    @Query("SELECT * FROM waiting_change WHERE seq = :seq")
+    abstract suspend fun change(seq: Long): ChangeRow?
+
+    @Upsert
+    abstract suspend fun putChange(change: ChangeRow)
+
+    @Query("DELETE FROM waiting_change WHERE seq = :seq")
+    abstract suspend fun deleteChange(seq: Long)
+
+    @Query("DELETE FROM waiting_change")
+    abstract suspend fun deleteChanges()
 }
 
 /**
- * The phone's copy of the planner. Until the phone keeps something the server does not have
- * (changes waiting to be sent), a copy made by an older version of the app is simply dropped and
- * loaded again; from then on each change of the tables needs a migration.
+ * The phone's database: a copy of what the server said last, and the changes made on the phone
+ * that wait to be sent. Since version 2 it holds those changes, which exist nowhere else: every
+ * change of the tables from here on carries over what is stored (a migration), and its layout is
+ * committed under app/schemas so that this can be checked.
  */
 @Database(
-    entities = [PlannerRow::class, EntryRow::class, CategoryRow::class, VendorRow::class, MemberRow::class],
-    version = 1,
+    entities = [PlannerRow::class, EntryRow::class, CategoryRow::class, VendorRow::class, MemberRow::class, ChangeRow::class],
+    version = 2,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class PlannerDatabase : RoomDatabase() {
 
@@ -103,11 +147,8 @@ abstract class PlannerDatabase : RoomDatabase() {
     companion object {
 
         /** The tables a screen has to hear about when they change. */
-        val TABLES = arrayOf("planner", "entry", "category", "vendor", "member")
+        val TABLES = arrayOf("planner", "entry", "category", "vendor", "member", "waiting_change")
 
-        fun onThePhone(context: Context): PlannerDatabase =
-            Room.databaseBuilder(context, PlannerDatabase::class.java, "planner.db")
-                .fallbackToDestructiveMigration(dropAllTables = true)
-                .build()
+        fun onThePhone(context: Context): PlannerDatabase = Room.databaseBuilder(context, PlannerDatabase::class.java, "planner.db").build()
     }
 }

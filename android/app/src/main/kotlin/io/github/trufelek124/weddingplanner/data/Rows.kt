@@ -1,6 +1,7 @@
 package io.github.trufelek124.weddingplanner.data
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /*
@@ -76,11 +77,38 @@ data class PlannerRow(
     }
 }
 
-/** Everything one load brought, to be stored and read as a whole. */
+/**
+ * A change made on the phone that the server does not have yet. This is the one thing the phone
+ * holds that exists nowhere else: it stays until the server took it or the person let go of it.
+ * There is at most one per entry; a further change to the same entry is folded into it.
+ */
+@Entity(tableName = "waiting_change", indices = [Index(value = ["entryId"], unique = true)])
+data class ChangeRow(
+    /** The order the changes were made in, which is the order they are sent in. */
+    @PrimaryKey(autoGenerate = true) val seq: Long = 0,
+    val entryId: String,
+    /** ADD, EDIT or STATUS. */
+    val kind: String,
+    /** The version of the server's copy the change was made on; an edit is refused unless it is still the latest. */
+    val baseVersion: Int,
+    /** What is sent, as JSON: every field of the task for ADD and EDIT, only the status for STATUS. */
+    val body: String,
+    /** The task's title when the change was made, to name it should it be gone from the server. */
+    val title: String,
+    /** Counts the times a further change was folded in, to notice one that arrives while this is being sent. */
+    val revision: Int = 0,
+    /** Why the server did not take it: CHANGED_MEANWHILE, GONE or REFUSED. Null while it waits to be sent. */
+    val trouble: String? = null,
+    /** For REFUSED: what is wrong with which field, as JSON. */
+    val refusals: String? = null,
+)
+
+/** Everything the phone holds, read as it was at one moment: the last load, and the changes waiting to be sent. */
 class Stored(
     val planner: PlannerRow,
     val entries: List<EntryRow>,
     val categories: List<CategoryRow>,
     val vendors: List<VendorRow>,
     val members: List<MemberRow>,
+    val changes: List<ChangeRow> = emptyList(),
 )

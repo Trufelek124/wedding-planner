@@ -1,5 +1,10 @@
 package io.github.trufelek124.weddingplanner.api
 
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonArray
 import io.github.trufelek124.weddingplanner.ServerAddress
 import io.github.trufelek124.weddingplanner.api.model.AppInfo
 import io.ktor.http.HttpMethod
@@ -50,6 +55,22 @@ class ApiTest {
         assertEquals("Bearer access-1", server.calls.single().authorization)
         // A request that says where it comes from is taken for a browser's: the app never does.
         assertNull(server.calls.single().origin)
+    }
+
+    @Test
+    fun `sends JSON that was put together by hand as it is written`() = runTest {
+        server.json("PUT /api/entries/e1/status", """{"name":"wedding-planner","version":"0.1.0"}""")
+        val body = buildJsonObject {
+            put("status", "DONE")
+            put("amount", 250000)
+            put("paidOn", JsonNull)
+            put("assigneeIds", JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"))))
+        }
+
+        api.send<AppInfo>(HttpMethod.Put, "/api/entries/e1/status", body)
+
+        assertEquals("""{"status":"DONE","amount":250000,"paidOn":null,"assigneeIds":["a","b"]}""", server.calls.single().body)
+        assertEquals("application/json", server.calls.single().contentType)
     }
 
     @Test

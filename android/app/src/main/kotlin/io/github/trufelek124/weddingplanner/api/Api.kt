@@ -16,6 +16,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
+import io.ktor.http.content.TextContent
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.ContentConvertException
@@ -23,6 +24,7 @@ import io.ktor.serialization.kotlinx.json.json
 import java.io.IOException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -111,7 +113,10 @@ class Api(engine: HttpClientEngine, private val server: ServerAddress, private v
                 if (token != null) {
                     header(HttpHeaders.Authorization, "Bearer $token")
                 }
-                if (body != null) {
+                if (body is JsonElement) {
+                    // JSON put together by hand is sent as it is written; left to the converter it is taken for a map and refused.
+                    setBody(TextContent(body.toString(), ContentType.Application.Json))
+                } else if (body != null) {
                     contentType(ContentType.Application.Json)
                     setBody(body)
                 }

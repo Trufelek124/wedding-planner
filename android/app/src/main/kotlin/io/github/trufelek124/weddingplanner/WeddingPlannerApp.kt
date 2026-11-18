@@ -9,6 +9,8 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import io.github.trufelek124.weddingplanner.api.Api
 import io.github.trufelek124.weddingplanner.data.PlannerDatabase
 import io.github.trufelek124.weddingplanner.data.PlannerRepository
+import io.github.trufelek124.weddingplanner.data.SendLater
+import io.github.trufelek124.weddingplanner.data.SendWithWorkManager
 import io.github.trufelek124.weddingplanner.session.AesGcmCipher
 import io.github.trufelek124.weddingplanner.session.KeystoreKey
 import io.github.trufelek124.weddingplanner.session.Session
@@ -34,6 +36,7 @@ class AppContainer(
     cipher: TokenCipher,
     val googleAccounts: GoogleAccounts,
     database: PlannerDatabase,
+    val sendLater: SendLater,
     val clock: Clock = Clock.systemDefaultZone(),
 ) {
 
@@ -60,12 +63,22 @@ class AppContainer(
             cipher = AesGcmCipher(KeystoreKey::get),
             googleAccounts = CredentialManagerGoogleAccounts(context),
             database = PlannerDatabase.onThePhone(context),
+            sendLater = SendWithWorkManager(context.applicationContext),
         )
     }
 }
 
 class WeddingPlannerApp : Application() {
 
-    /** Made when first asked for, which is when the first screen opens. */
-    val container: AppContainer by lazy { AppContainer.onThePhone(this) }
+    private var made: AppContainer? = null
+
+    /**
+     * Made when first asked for, which is when the first screen opens or work in the background
+     * starts. A test puts its own in before anything asks.
+     */
+    var container: AppContainer
+        get() = made ?: AppContainer.onThePhone(this).also { made = it }
+        set(value) {
+            made = value
+        }
 }

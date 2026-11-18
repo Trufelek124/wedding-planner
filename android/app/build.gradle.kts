@@ -102,6 +102,8 @@ dependencies {
     implementation("androidx.room:room-runtime:2.8.5")
     ksp("androidx.room:room-compiler:2.8.5")
     implementation("androidx.navigation:navigation-compose:2.10.2")
+    // Sending what was changed without a connection once there is one, also when the app is closed by then.
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
@@ -111,6 +113,7 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.18")
     testImplementation("io.ktor:ktor-client-mock:3.6.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation("androidx.work:work-testing:2.12.0")
     testImplementation("io.github.takahirom.roborazzi:roborazzi:1.79.0")
     testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.79.0")
 }
