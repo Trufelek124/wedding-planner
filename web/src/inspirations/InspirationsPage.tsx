@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { ApiError } from '../api/client.ts'
+import { newId } from '../api/ids.ts'
 import { listEntries } from '../planning/planningApi.ts'
 import { useLoaded } from '../planning/useLoaded.ts'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
@@ -52,6 +53,7 @@ export function InspirationsPage() {
   const [problem, setProblem] = useState<string | null>(null)
   const [said, setSaid] = useState('')
   const looked = useRef(0)
+  const savingLink = useRef<{ link: string; id: string } | null>(null)
 
   // A link's title and picture arrive a moment after it is saved: look again until they are there.
   const list = inspirations.state
@@ -101,8 +103,14 @@ export function InspirationsPage() {
     setLinkProblem(null)
     setProblem(null)
     setSaid('')
-    createInspiration({ url: link.trim(), boardId: ontoBoard, title: '', note: '', tags: [], planItemId: null, vendorId: null })
+    // The same link saved again, after no answer came, goes under the same id: the server then has it once.
+    const typed = link.trim()
+    if (savingLink.current?.link !== typed) {
+      savingLink.current = { link: typed, id: newId() }
+    }
+    createInspiration({ id: savingLink.current.id, url: typed, boardId: ontoBoard, title: '', note: '', tags: [], planItemId: null, vendorId: null })
       .then(() => {
+        savingLink.current = null
         setLink('')
         setSaid('The link was saved.')
         looked.current = 0
@@ -126,7 +134,7 @@ export function InspirationsPage() {
     setBusy(true)
     setProblem(null)
     setSaid('')
-    createInspiration({ url: null, boardId: ontoBoard, title: '', note: '', tags: [], planItemId: null, vendorId: null })
+    createInspiration({ id: newId(), url: null, boardId: ontoBoard, title: '', note: '', tags: [], planItemId: null, vendorId: null })
       .then((created) =>
         addPictures(created.id, files).catch(async (error: unknown) => {
           // Without its pictures the new idea would be an empty card: take it back.

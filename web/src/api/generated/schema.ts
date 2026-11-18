@@ -1151,6 +1151,11 @@ export interface components {
              * @description The board it goes on; null for none yet.
              */
             boardId: string | null;
+            /**
+             * Format: uuid
+             * @description Chosen by whoever sends the inspiration, so that sending it twice adds it once: a request with an id that an inspiration already has is answered with that inspiration and changes nothing. Left out, the server chooses the id.
+             */
+            id: string | null;
             /** @description Free text; may be empty. */
             note: string;
             /**

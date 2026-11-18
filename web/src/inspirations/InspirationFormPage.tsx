@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { ApiError } from '../api/client.ts'
+import { newId } from '../api/ids.ts'
 import { listEntries, type Entry } from '../planning/planningApi.ts'
 import { useLoaded } from '../planning/useLoaded.ts'
 import { Field } from '../ui/Field.tsx'
@@ -102,6 +103,8 @@ function InspirationForm({ loaded, boards, planItems, vendors, onReload }: Inspi
   const back = came.back ?? '/inspirations'
 
   // The inspiration as the server holds it. Its pictures change at once, apart from the fields below.
+  // A new inspiration's id is chosen when the form opens: saving twice, after no answer came, adds it once.
+  const [newInspirationId] = useState(newId)
   const [existing, setExisting] = useState(loaded)
   const [url, setUrl] = useState(loaded?.url ?? '')
   const [boardId, setBoardId] = useState(loaded?.boardId ?? (boards.some((board) => board.id === came.boardId) ? came.boardId : null) ?? '')
@@ -166,7 +169,7 @@ function InspirationForm({ loaded, boards, planItems, vendors, onReload }: Inspi
       if (existing !== null) {
         await changeInspiration(existing.id, { version: existing.version, ...fields() })
       } else {
-        const created = await createInspiration(fields())
+        const created = await createInspiration({ id: newInspirationId, ...fields() })
         if (chosen.length > 0) {
           try {
             await addPictures(created.id, chosen)

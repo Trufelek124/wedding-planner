@@ -122,6 +122,63 @@ class InspirationsIntegrationTest extends PostgresIntegrationTest {
 
     // ------------------------------------------------------------ inspirations
 
+    // ---------------------------------------------------------------- sent twice
+
+    @Test
+    void anInspirationCanBringItsOwnId() throws Exception {
+        String id = UUID.randomUUID().toString();
+        Map<String, Object> request = link("https://www.instagram.com/p/Cabc123/", boardId("Dress"));
+        request.put("id", id);
+
+        Map<String, Object> saved = added(request);
+
+        assertThat(saved).containsEntry("id", id).containsEntry("source", "INSTAGRAM");
+        assertThat(read(id)).containsEntry("url", "https://www.instagram.com/p/Cabc123/");
+    }
+
+    @Test
+    void anInspirationSentTwiceIsAddedOnceAndAnsweredAsItIsNow() throws Exception {
+        String id = UUID.randomUUID().toString();
+        Map<String, Object> request = link("https://www.instagram.com/p/Cabc123/", boardId("Dress"));
+        request.put("id", id);
+        request.put("note", "From the phone.");
+        Map<String, Object> first = added(request);
+
+        // The answer did not arrive, so the phone sends the same again. It may even say something else by now.
+        request.put("note", "Overwritten?");
+        request.put("url", "https://example.com/another");
+        Map<String, Object> second = added(request);
+
+        assertThat(second)
+                .containsEntry("id", id)
+                .containsEntry("note", "From the phone.")
+                .containsEntry("url", "https://www.instagram.com/p/Cabc123/")
+                .containsEntry("version", first.get("version"));
+        assertThat(second.get("createdAt")).isEqualTo(first.get("createdAt"));
+        List<?> all = TestHttp.jsonList(http.getAs(anna, "/api/inspirations"));
+        assertThat(all).hasSize(1);
+    }
+
+    @Test
+    void withoutAnIdTheServerChoosesOneEachTime() throws Exception {
+        Map<String, Object> request = link("https://www.instagram.com/p/Cabc123/", null);
+        request.put("id", null);
+
+        assertThat(id(added(request))).isNotEqualTo(id(added(link("https://www.instagram.com/p/Cabc123/", null))));
+        assertThat(TestHttp.jsonList(http.getAs(anna, "/api/inspirations"))).hasSize(2);
+    }
+
+    @Test
+    void anInspirationsIdThatIsNoIdIsRefused() throws Exception {
+        Map<String, Object> request = link("https://www.instagram.com/p/Cabc123/", null);
+        request.put("id", "not-an-id");
+
+        HttpResponse<String> response = http.postJsonAs(anna, "/api/inspirations", TestHttp.jsonOf(request));
+
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(TestHttp.jsonList(http.getAs(anna, "/api/inspirations"))).isEmpty();
+    }
+
     @Test
     void aLinkIsKeptWithItsBoardNoteAndTagsAndSaysWhereItComesFromAndWhoAddedIt() throws Exception {
         String dress = boardId("Dress");

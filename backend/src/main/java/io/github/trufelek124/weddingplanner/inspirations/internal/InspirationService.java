@@ -89,13 +89,24 @@ class InspirationService {
         return inspirations.tags(weddings.membershipOf(user).weddingId());
     }
 
+    /**
+     * Saves an idea. A sender that did not learn whether its request arrived sends it again with the
+     * same id: the inspiration is then there already, and is answered as it is now, not saved a second time.
+     */
     @Transactional
     InspirationView add(UserId user, NewInspiration request) {
         Membership membership = weddings.membershipOf(user);
+        if (request.id() != null) {
+            Optional<InspirationRow> there = inspirations.find(membership.weddingId(), request.id());
+            if (there.isPresent()) {
+                return shown(there.get());
+            }
+        }
         Optional<URI> link = checked(membership, request);
         Instant now = clock.instant();
         InspirationRow inspiration = new InspirationRow(
-                UUID.randomUUID(), link.map(URI::toString).orElse(null), link.map(Links::sourceOf).orElse(Source.PHOTO),
+                request.id() != null ? request.id() : UUID.randomUUID(), link.map(URI::toString).orElse(null),
+                link.map(Links::sourceOf).orElse(Source.PHOTO),
                 request.title().strip(), request.note().strip(), tagsAsKept(request.tags()), request.boardId(),
                 request.planItemId(), request.vendorId(), membership.memberId(),
                 link.isPresent() ? PreviewStatus.PENDING : PreviewStatus.NONE, "", 0, now, now);

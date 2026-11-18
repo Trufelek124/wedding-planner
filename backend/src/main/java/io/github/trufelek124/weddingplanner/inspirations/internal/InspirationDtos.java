@@ -50,6 +50,12 @@ final class InspirationDtos {
 
     @Schema(name = "NewInspiration", description = "An idea to keep: a link, or the start of one that pictures are added to.")
     record NewInspiration(
+            @Schema(
+                            description = "Chosen by whoever sends the inspiration, so that sending it twice adds it once: a request "
+                                    + "with an id that an inspiration already has is answered with that inspiration and changes "
+                                    + "nothing. Left out, the server chooses the id.",
+                            nullable = true)
+                    UUID id,
             @Schema(description = "The page the idea comes from, starting with http:// or https://; null for pictures of one's own.", nullable = true)
                     @Size(max = Links.MAX_LENGTH, message = LINK_TOO_LONG)
                     String url,

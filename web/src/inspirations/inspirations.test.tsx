@@ -164,6 +164,27 @@ describe('the board of inspirations', () => {
 })
 
 describe('adding from the board', () => {
+  it('saves the same link again under the same id after no answer came, and another link under another', async () => {
+    const server = inspirationsServer([], {})
+    open('/inspirations')
+    await userEvent.type(await screen.findByLabelText('Add a link'), 'https://www.tiktok.com/@x/video/1')
+
+    // The server may have taken it, but no answer came back: the link stays in the field.
+    await userEvent.click(screen.getByRole('button', { name: 'Save link' }))
+    expect(await screen.findByText('The link could not be saved. Try again.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Save link' }))
+    await waitFor(() => expect(server.requests('POST /api/inspirations')).toHaveLength(2))
+    await userEvent.clear(screen.getByLabelText('Add a link'))
+    await userEvent.type(screen.getByLabelText('Add a link'), 'https://www.tiktok.com/@x/video/2')
+    await userEvent.click(screen.getByRole('button', { name: 'Save link' }))
+    await waitFor(() => expect(server.requests('POST /api/inspirations')).toHaveLength(3))
+
+    const sent = await Promise.all(server.requests('POST /api/inspirations').map((request) => request.json() as Promise<{ id: string }>))
+    expect(sent[0]?.id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(sent[1]?.id).toBe(sent[0]?.id)
+    expect(sent[2]?.id).not.toBe(sent[0]?.id)
+  })
+
   it('saves a pasted link onto the board that is shown', async () => {
     const saved = inspiration({ url: 'https://www.tiktok.com/@x/video/1', source: 'TIKTOK', boardId: DRESS.id })
     const server = inspirationsServer([], { 'POST /api/inspirations': Response.json(saved, { status: 201 }) })
@@ -175,6 +196,7 @@ describe('adding from the board', () => {
 
     expect(await screen.findByRole('article', { name: 'From TikTok' })).toBeInTheDocument()
     await expect(server.requests('POST /api/inspirations')[0]?.json()).resolves.toEqual({
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/) as string,
       url: 'https://www.tiktok.com/@x/video/1', boardId: DRESS.id, title: '', note: '', tags: [], planItemId: null, vendorId: null,
     })
     expect(screen.getByRole('status')).toHaveTextContent('The link was saved.')
@@ -240,6 +262,7 @@ describe('adding from the board', () => {
 
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('2 pictures were saved as one idea.'))
     await expect(server.requests('POST /api/inspirations')[0]?.json()).resolves.toEqual({
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/) as string,
       url: null, boardId: null, title: '', note: '', tags: [], planItemId: null, vendorId: null,
     })
     const upload = server.requests(`POST /api/inspirations/${created.id}/pictures`)[0]
@@ -324,6 +347,7 @@ describe('the form of an inspiration', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Inspirations' })).toBeInTheDocument()
     await expect(server.requests('POST /api/inspirations')[0]?.json()).resolves.toEqual({
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/) as string,
       url: 'https://www.pinterest.com/pin/1/', boardId: CAKE.id, title: 'Three tiers', note: 'Ask the baker about figs',
       tags: ['naked cake', 'figs'], planItemId: flowers.id, vendorId: null,
     })
@@ -351,6 +375,7 @@ describe('the form of an inspiration', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Inspirations' })).toBeInTheDocument()
     await expect(server.requests('POST /api/inspirations')[0]?.json()).resolves.toEqual({
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/) as string,
       url: null, boardId: DRESS.id, title: '', note: 'From the fitting', tags: ['lace'], planItemId: null, vendorId: null,
     })
     await expect(sizesSent(server.requests(`POST /api/inspirations/${created.id}/pictures`)[0])).resolves.toEqual([4])

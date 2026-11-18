@@ -1108,6 +1108,11 @@
             "format" : "uuid",
             "type" : [ "string", "null" ]
           },
+          "id" : {
+            "description" : "Chosen by whoever sends the inspiration, so that sending it twice adds it once: a request with an id that an inspiration already has is answered with that inspiration and changes nothing. Left out, the server chooses the id.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
           "note" : {
             "description" : "Free text; may be empty.",
             "maxLength" : 10000,
@@ -1148,7 +1153,7 @@
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "boardId", "note", "planItemId", "tags", "title", "url", "vendorId" ],
+        "required" : [ "boardId", "id", "note", "planItemId", "tags", "title", "url", "vendorId" ],
         "type" : "object"
       },
       "NewVendor" : {
