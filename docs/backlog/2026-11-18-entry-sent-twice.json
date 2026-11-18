@@ -1,0 +1,21 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP4-S2-T2",
+   "story": "EP4-S2",
+   "title": "An entry sent twice is added once: the client may choose a new entry's id",
+   "description": "A phone that adds a task without a good connection may not learn that the server took it, and sends it again when the connection returns. So that this adds the task once, a new entry may carry an id chosen by the client: the server uses it, and answers a second request with the same id with the entry it already has, without adding or changing anything. Left out, the server chooses the id as before. The API description and the web's generated types follow. Done when the backend's tests cover both cases and the gate passes.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  }
+ ]
+}

@@ -480,6 +480,12 @@
    "publicId": "WP-TS-51",
    "id": "65c689a1-2eca-48ca-a511-20ba2718aec4",
    "title": "Android: share a link or pictures to the planner"
+  },
+  "EP4-S2-T2": {
+   "type": "task",
+   "publicId": "WP-TS-52",
+   "id": "aa8404a2-5473-44af-ab86-77cb583eb61c",
+   "title": "An entry sent twice is added once: the client may choose a new entry's id"
   }
  }
 }
