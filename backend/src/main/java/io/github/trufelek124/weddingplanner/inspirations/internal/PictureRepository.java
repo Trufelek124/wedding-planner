@@ -19,14 +19,15 @@ class PictureRepository {
      * A picture as it is recorded; the bytes are in the {@link PictureStore} under the same id.
      *
      * @param width as a person sees it; null for a kind the server cannot read
+     * @param preview whether it was fetched from the link rather than sent by a person
      */
     record PictureRow(
             UUID id, UUID inspirationId, int position, PictureFormat format, long sizeBytes, Integer width, Integer height,
-            boolean hasThumbnail, Instant createdAt) {}
+            boolean hasThumbnail, boolean preview, Instant createdAt) {}
 
     private static final String SELECT = """
             SELECT p.id, p.inspiration_id, p.position, p.content_type, p.size_bytes, p.width, p.height, p.has_thumbnail,
-                   p.created_at
+                   p.preview, p.created_at
             FROM inspiration_picture p
             """;
 
@@ -69,10 +70,10 @@ class PictureRepository {
     void insert(PictureRow picture) {
         jdbc.sql("""
                 INSERT INTO inspiration_picture (id, inspiration_id, position, content_type, size_bytes, width, height,
-                                                 has_thumbnail, created_at)
+                                                 has_thumbnail, preview, created_at)
                 VALUES (:id, :inspiration,
                         (SELECT COALESCE(max(position), 0) + 1 FROM inspiration_picture WHERE inspiration_id = :inspiration),
-                        :type, :size, :width, :height, :thumbnail, :now)
+                        :type, :size, :width, :height, :thumbnail, :preview, :now)
                 """)
                 .param("id", picture.id())
                 .param("inspiration", picture.inspirationId())
@@ -81,6 +82,7 @@ class PictureRepository {
                 .param("width", picture.width())
                 .param("height", picture.height())
                 .param("thumbnail", picture.hasThumbnail())
+                .param("preview", picture.preview())
                 .param("now", OffsetDateTime.ofInstant(picture.createdAt(), ZoneOffset.UTC))
                 .update();
     }
@@ -90,6 +92,14 @@ class PictureRepository {
                         .params(inspirationId, pictureId)
                         .update()
                 == 1;
+    }
+
+    /** Removes the pictures that were fetched from the inspiration's link. @return their ids */
+    List<UUID> deletePreviews(UUID inspirationId) {
+        return jdbc.sql("DELETE FROM inspiration_picture WHERE inspiration_id = ? AND preview RETURNING id")
+                .param(inspirationId)
+                .query(UUID.class)
+                .list();
     }
 
     /** The pictures that go when the inspiration goes. */
@@ -118,6 +128,7 @@ class PictureRepository {
                 row.getObject("width", Integer.class),
                 row.getObject("height", Integer.class),
                 row.getBoolean("has_thumbnail"),
+                row.getBoolean("preview"),
                 row.getObject("created_at", OffsetDateTime.class).toInstant());
     }
 }

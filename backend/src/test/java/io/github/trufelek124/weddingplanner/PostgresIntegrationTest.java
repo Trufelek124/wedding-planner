@@ -27,7 +27,9 @@ import org.springframework.test.context.TestPropertySource;
     "APP_JWT_SECRET=a-test-secret-that-is-long-enough-0123456789",
     // Written differently from what Google will say, as an owner might type it into the configuration.
     "ALLOWED_EMAILS=anna@example.com , Piotr@Example.com",
-    "GOOGLE_OAUTH_WEB_CLIENT_ID=" + TestGoogle.CLIENT_ID
+    "GOOGLE_OAUTH_WEB_CLIENT_ID=" + TestGoogle.CLIENT_ID,
+    // No test goes out to the internet: a saved link waits until a test fetches it on purpose, from a stand-in.
+    "PREVIEWS_ENABLED=false"
 })
 public abstract class PostgresIntegrationTest {
 

@@ -32,6 +32,10 @@ dependencies {
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     // Describes the API (OpenAPI). The description is served only when API_DOCS_ENABLED is true.
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-api:3.2.0")
+    // Link previews: an HTTP client that lets us decide which addresses a host name may stand for,
+    // and a parser for the fetched page. Neither runs scripts or fetches anything by itself.
+    implementation("org.apache.httpcomponents.client5:httpclient5")
+    implementation("org.jsoup:jsoup:1.24.1")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 

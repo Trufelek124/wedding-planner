@@ -1,5 +1,6 @@
 package io.github.trufelek124.weddingplanner.inspirations.internal;
 
+import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationTypes.PreviewStatus;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationTypes.Source;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -24,6 +25,7 @@ class InspirationRepository {
      * @param tags in lower case, in alphabetical order
      * @param planItemId the plan item the idea belongs to, if any
      * @param addedBy the member who saved it; null once that member is gone
+     * @param previewTitle the title the linked page gives itself; empty when none was fetched
      */
     record InspirationRow(
             UUID id,
@@ -35,9 +37,14 @@ class InspirationRepository {
             UUID boardId,
             UUID planItemId,
             UUID addedBy,
+            PreviewStatus previewStatus,
+            String previewTitle,
             int version,
             Instant createdAt,
             Instant updatedAt) {}
+
+    /** A link whose preview is still to be fetched. */
+    record PendingPreview(UUID id, String url, int attempts) {}
 
     /** What a list may be narrowed down by; null means "any". */
     record Filter(UUID boardId, Boolean withoutBoard, String tag, UUID planItemId) {}
@@ -45,8 +52,8 @@ class InspirationRepository {
     record TagCount(String tag, int count) {}
 
     private static final String SELECT = """
-            SELECT i.id, i.url, i.source, i.title, i.note, i.board_id, i.entry_id, i.added_by, i.version,
-                   i.created_at, i.updated_at,
+            SELECT i.id, i.url, i.source, i.title, i.note, i.board_id, i.entry_id, i.added_by, i.preview_status,
+                   i.preview_title, i.version, i.created_at, i.updated_at,
                    ARRAY(SELECT t.tag FROM inspiration_tag t WHERE t.inspiration_id = i.id ORDER BY t.tag) AS tags
             FROM inspiration i
             """;
@@ -90,13 +97,15 @@ class InspirationRepository {
     void insert(UUID weddingId, InspirationRow inspiration) {
         jdbc.sql("""
                 INSERT INTO inspiration (id, wedding_id, url, source, title, note, board_id, entry_id, version,
-                                         added_by, created_at, updated_at)
-                VALUES (:id, :wedding, :url, :source, :title, :note, :board, :planItem, 0, :addedBy, :now, :now)
+                                         added_by, preview_status, preview_next_at, created_at, updated_at)
+                VALUES (:id, :wedding, :url, :source, :title, :note, :board, :planItem, 0, :addedBy,
+                        :preview, CASE WHEN :preview = 'PENDING' THEN :now END, :now, :now)
                 """)
                 .params(fields(inspiration))
                 .param("id", inspiration.id())
                 .param("wedding", weddingId)
                 .param("addedBy", inspiration.addedBy())
+                .param("preview", inspiration.previewStatus().name())
                 .param("now", at(inspiration.createdAt()))
                 .update();
         replaceTags(inspiration.id(), inspiration.tags());
@@ -121,6 +130,68 @@ class InspirationRepository {
             replaceTags(inspiration.id(), inspiration.tags());
         }
         return saved;
+    }
+
+    // ------------------------------------------------------------ previews
+
+    /** The link changed, or went: what was fetched for the old one no longer applies. */
+    void startPreviewAgain(UUID id, PreviewStatus status, Instant now) {
+        jdbc.sql("""
+                UPDATE inspiration
+                SET preview_status = :status, preview_title = '', preview_attempts = 0,
+                    preview_next_at = CASE WHEN :status = 'PENDING' THEN :now END
+                WHERE id = :id
+                """)
+                .param("status", status.name())
+                .param("now", at(now))
+                .param("id", id)
+                .update();
+    }
+
+    /** The links whose turn has come, the longest waiting first. */
+    List<PendingPreview> pendingPreviews(Instant now, int atMost) {
+        return jdbc.sql("""
+                SELECT id, url, preview_attempts AS attempts FROM inspiration
+                WHERE preview_status = 'PENDING' AND url IS NOT NULL AND preview_next_at <= ?
+                ORDER BY preview_next_at, id
+                LIMIT ?
+                """)
+                .params(at(now), atMost)
+                .query(PendingPreview.class)
+                .list();
+    }
+
+    /** Whether the inspiration still has this link and still waits for its preview. Holds the row until the end of the transaction. */
+    boolean stillWaitsForPreview(UUID id, String url) {
+        return !jdbc.sql("SELECT 1 FROM inspiration WHERE id = ? AND url = ? AND preview_status = 'PENDING' FOR UPDATE")
+                .params(id, url)
+                .query(Integer.class)
+                .list()
+                .isEmpty();
+    }
+
+    /**
+     * Records how the fetch ended, unless the link was changed or removed while it ran.
+     *
+     * @return false when what was fetched is for a link the inspiration no longer has
+     */
+    boolean finishPreview(UUID id, String url, PreviewStatus status, String title) {
+        return jdbc.sql("""
+                UPDATE inspiration SET preview_status = ?, preview_title = ?, preview_next_at = NULL
+                WHERE id = ? AND url = ? AND preview_status = 'PENDING'
+                """)
+                        .params(status.name(), title, id, url)
+                        .update()
+                == 1;
+    }
+
+    void tryPreviewLater(UUID id, String url, int attempts, Instant nextAt) {
+        jdbc.sql("""
+                UPDATE inspiration SET preview_attempts = ?, preview_next_at = ?
+                WHERE id = ? AND url = ? AND preview_status = 'PENDING'
+                """)
+                .params(attempts, at(nextAt), id, url)
+                .update();
     }
 
     boolean delete(UUID weddingId, UUID id) {
@@ -179,6 +250,8 @@ class InspirationRepository {
                 row.getObject("board_id", UUID.class),
                 row.getObject("entry_id", UUID.class),
                 row.getObject("added_by", UUID.class),
+                PreviewStatus.valueOf(row.getString("preview_status")),
+                row.getString("preview_title"),
                 row.getInt("version"),
                 row.getObject("created_at", OffsetDateTime.class).toInstant(),
                 row.getObject("updated_at", OffsetDateTime.class).toInstant());

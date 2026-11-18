@@ -140,3 +140,67 @@ A script in this repository, run by the owner on the Mac, publishes the image. I
 - It never asks for, stores or prints a token: the owner logs Docker in to the registry once.
 - The image's name is not written into the repository's files; it is worked out from the repository's address
   or given when the script is called.
+
+## D-003 — Link previews are fetched by the server, from the public internet only
+
+**Date:** 2026-11-18 · **Task:** WP-TS-36 · **Applies to:** the inspirations module, and anything later that fetches an address a person supplied
+
+### Context
+
+For a saved link the planner shows the page's title and its preview picture, as a messenger does (S01 section 7).
+Someone has to fetch the page. A browser may not read other sites' pages, so it is the server, and that makes the
+server fetch an address somebody else chose. Left unguarded, such an address can name what only the server can
+reach: the database beside it, the host's metadata service, an admin page on the home network. It can also be an
+endless download or a picture that is small as a file and enormous in memory.
+
+### What was compared
+
+| | The server fetches, under rules | Nobody fetches | A preview service on the internet |
+|---|---|---|---|
+| A card shows | title and picture where the site gives them | the source and the note only | title and picture |
+| Who learns which links the couple keeps | the linked site, as with any visit | nobody | a third company, for every link |
+| Risk to the server's own network | has to be shut out by the rules below | none | none |
+| Cost | the code and its tests | nothing | a subscription or a free tier's limits |
+
+### Decision
+
+The server fetches previews itself, and only under these rules:
+
+1. **Only the web.** `http` and `https`, on ports 80 and 443, with no user name in the address.
+2. **Only public addresses.** A host name is used only if every address it stands for is a public one. Everything
+   that is not known to be public is refused: this machine, private and shared ranges, link-local addresses (where
+   cloud metadata services live), multicast, reserved and documentation ranges, and the IPv6 forms that carry an
+   IPv4 address inside.
+3. **Checked where it counts.** The check is made by the HTTP client's own name lookup, on the very addresses it
+   then connects to. A name cannot give one answer to the check and another to the connection.
+4. **Every redirect is a new address.** At most three, each judged by rules 1 to 3.
+5. **Limits.** Three seconds to connect, five without a byte, twelve for one fetch; a page up to 1 MB, a picture
+   up to 10 MB.
+6. **Nothing of the owners goes along.** No cookies, no sign-in, no referrer; a fixed, generic client name.
+7. **Nothing comes back but a title and a picture.** The title is kept as plain text of at most 200 characters.
+   The picture is checked like one a person uploads (its kind from its bytes, its size in pixels) and stored
+   as the planner's own copy. No client is told why a fetch failed, so the answers cannot be
+   used to look around the server's network.
+8. **It can be switched off.** `PREVIEWS_ENABLED=false` and the server never goes out for a preview.
+
+A preview is fetched after the save, in the background, so that saving never waits for someone else's server.
+What is still to be fetched is recorded in the database and survives a restart. A site that does not answer is
+tried three times in all.
+
+### What speaks for it
+
+- The alternative that is as safe by construction, not fetching at all, gives up what the owner asked for.
+- A preview service would be told every link the couple keeps. The planner is private; that is not its to share.
+- The rules are few, each has tests, and the tests fail when a rule is taken out.
+
+### What it costs, and what would change the decision
+
+- The rules are ours to keep right. A new kind of address that should be refused has to be added by hand; the
+  list errs on the side of refusing.
+- Instagram and TikTok mostly refuse such fetches. Their cards then show the source and the note, and a screenshot
+  can be attached by hand; that was expected (S01 section 7).
+- The rules are the only barrier: the container may reach whatever its network lets it reach. If the planner ever
+  runs where that matters more than at home, a network rule that lets the container reach only the database and
+  the internet is the second barrier to add.
+- If outgoing requests have to pass through a proxy, rule 3 no longer holds, because the proxy does the lookup.
+  Then the proxy must enforce rule 2, or previews are switched off.

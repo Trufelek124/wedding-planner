@@ -363,6 +363,15 @@
             "format" : "uuid",
             "type" : [ "string", "null" ]
           },
+          "previewStatus" : {
+            "description" : "Whether a title and a picture are still being fetched for the link, were found, or will not come.",
+            "enum" : [ "NONE", "PENDING", "FETCHED" ],
+            "type" : "string"
+          },
+          "previewTitle" : {
+            "description" : "The title the linked page gives itself; empty when none was fetched. Shown where title is empty.",
+            "type" : "string"
+          },
           "source" : {
             "description" : "Where it comes from, worked out from the link; PHOTO when there is no link.",
             "enum" : [ "INSTAGRAM", "TIKTOK", "PINTEREST", "WEB", "PHOTO" ],
@@ -393,7 +402,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "addedById", "boardId", "createdAt", "id", "note", "pictures", "planItemId", "source", "tags", "title", "updatedAt", "url", "version" ],
+        "required" : [ "addedById", "boardId", "createdAt", "id", "note", "pictures", "planItemId", "previewStatus", "previewTitle", "source", "tags", "title", "updatedAt", "url", "version" ],
         "type" : "object"
       },
       "InspirationChange" : {
@@ -594,13 +603,17 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "preview" : {
+            "description" : "true when the server fetched it from the link; false when a person sent it.",
+            "type" : "boolean"
+          },
           "width" : {
             "description" : "In pixels, the right way up; null for a kind the server cannot read.",
             "format" : "int32",
             "type" : [ "integer", "null" ]
           }
         },
-        "required" : [ "contentType", "height", "id", "width" ],
+        "required" : [ "contentType", "height", "id", "preview", "width" ],
         "type" : "object"
       },
       "Problem" : {

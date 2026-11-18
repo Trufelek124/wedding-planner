@@ -65,7 +65,7 @@ class PicturesIntegrationTest extends PostgresIntegrationTest {
         assertThat(kept).hasSize(2);
         assertThat(kept.get(0)).containsEntry("contentType", "image/jpeg").containsEntry("width", 1600).containsEntry("height", 1200);
         assertThat(kept.get(1)).containsEntry("contentType", "image/png").containsEntry("width", 300).containsEntry("height", 200);
-        assertThat(kept.get(0)).containsOnlyKeys("id", "contentType", "width", "height");
+        assertThat(kept.get(0)).containsOnlyKeys("id", "contentType", "width", "height", "preview").containsEntry("preview", false);
         // On the disk: the picture as it came, and a smaller version, both named after the id alone.
         String first = (String) kept.get(0).get("id");
         assertThat(Files.readAllBytes(STORED.resolve(first))).isEqualTo(photo);

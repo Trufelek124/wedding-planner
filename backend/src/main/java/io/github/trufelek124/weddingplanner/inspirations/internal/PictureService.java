@@ -111,8 +111,43 @@ class PictureService {
             pictures.insert(new PictureRow(
                     one.id(), inspirationId, 0, one.format(), one.bytes().length,
                     measured == null ? null : measured.width(), measured == null ? null : measured.height(),
-                    measured != null, now));
+                    measured != null, false, now));
         }
+    }
+
+    /**
+     * Keeps a picture that was fetched for an inspiration's link, if it really is a picture and there
+     * is room for it. It is checked exactly as a picture a person sends. Runs in the caller's transaction.
+     *
+     * @return whether it was kept
+     */
+    boolean keepPreview(UUID inspirationId, byte[] bytes) {
+        if (bytes.length == 0 || pictures.count(inspirationId) >= MOST_PICTURES) {
+            return false;
+        }
+        PictureFormat format = PictureFormat.of(Arrays.copyOf(bytes, Math.min(bytes.length, 16))).orElse(null);
+        if (format == null) {
+            return false;
+        }
+        Measured measured = null;
+        if (format.readable()) {
+            try {
+                measured = Thumbnails.measure(bytes, format);
+            } catch (NotAPicture | TooManyPixels notKept) {
+                return false;
+            }
+        }
+        UUID id = UUID.randomUUID();
+        forget(List.of(id), TransactionSynchronization.STATUS_ROLLED_BACK);
+        try {
+            store.write(id, bytes, measured == null ? null : measured.thumbnail());
+        } catch (IOException e) {
+            throw new UncheckedIOException("A preview picture could not be written to the media directory", e);
+        }
+        pictures.insert(new PictureRow(
+                id, inspirationId, 0, format, bytes.length, measured == null ? null : measured.width(),
+                measured == null ? null : measured.height(), measured != null, true, clock.instant()));
+        return true;
     }
 
     @Transactional

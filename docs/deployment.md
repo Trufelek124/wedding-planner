@@ -72,7 +72,7 @@ The planner is at `http://localhost:8080` once `docker ps` shows the app as `hea
 | Health | `GET /actuator/health` answers 200 only while the database can be reached, and 503 within five seconds when it cannot. The image carries a health check that asks exactly that. |
 | Logs | Standard output. People appear by id only, never by name or address. |
 | Memory | The Java heap takes 60 % of the container's memory limit (`JAVA_TOOL_OPTIONS`). 1 GB is plenty for two people. |
-| Goes out to | `www.googleapis.com`, for Google's signing keys at sign-in. The Anthropic API and Gmail join with epic 7. |
+| Goes out to | `www.googleapis.com`, for Google's signing keys at sign-in. Any public web address, to fetch the title and preview picture of a link someone saved; never an address inside the server's own network (decision D-003). The Anthropic API and Gmail join with epic 7. |
 
 ## Settings
 
@@ -87,6 +87,7 @@ installation has to fill in, without values.
 | `ALLOWED_EMAILS` | yes | The addresses that may sign in, separated by commas: the two owners. Empty means nobody. |
 | `GOOGLE_OAUTH_WEB_CLIENT_ID` | for Google sign-in | The client id of the Google OAuth web client (WP-TS-14). Empty means nobody can sign in with Google. |
 | `DEV_LOGIN_ENABLED` | no, default `false` | Signing in as an allowed address without Google. **Never `true` on a server others can reach.** |
+| `PREVIEWS_ENABLED` | no, default `true` | `false`: the server never goes out to fetch a preview for a saved link. Links are kept without one. |
 | `API_DOCS_ENABLED` | no, default `false` | Serves the API description at `/v3/api-docs`. For building clients, not for production. |
 | `APP_WEB_DIR` | set in the image | Where the web app's files are (`/app/web`). |
 | `APP_MEDIA_DIR` | set in the image | Where kept files go (`/data/media`). The server does not start without it, nor when it cannot write there. |
@@ -103,6 +104,9 @@ No time zone setting is needed: every date is read in the wedding's own time zon
 - The backend does no rate limiting and blocks no addresses; that is the proxy's part. Who may sign in is
   decided by `ALLOWED_EMAILS` alone.
 - Do not publish port 8080 on the server; let the proxy reach it over a private network.
+- Outgoing requests for link previews must not be routed through an HTTP proxy: the planner checks the address it
+  connects to itself, and a proxy would take that out of its hands (decision D-003). If they must be, set
+  `PREVIEWS_ENABLED=false`.
 
 ## Runbook
 

@@ -579,6 +579,13 @@ export interface components {
              */
             planItemId: string | null;
             /**
+             * @description Whether a title and a picture are still being fetched for the link, were found, or will not come.
+             * @enum {string}
+             */
+            previewStatus: "NONE" | "PENDING" | "FETCHED";
+            /** @description The title the linked page gives itself; empty when none was fetched. Shown where title is empty. */
+            previewTitle: string;
+            /**
              * @description Where it comes from, worked out from the link; PHOTO when there is no link.
              * @enum {string}
              */
@@ -688,6 +695,8 @@ export interface components {
             height: number | null;
             /** Format: uuid */
             id: string;
+            /** @description true when the server fetched it from the link; false when a person sent it. */
+            preview: boolean;
             /**
              * Format: int32
              * @description In pixels, the right way up; null for a kind the server cannot read.

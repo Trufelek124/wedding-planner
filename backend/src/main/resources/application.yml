@@ -29,6 +29,12 @@ app:
   web-dir: ${APP_WEB_DIR:}
   # Directory for the files that are kept: the pictures of inspirations. The server does not start without it.
   media-dir: ${APP_MEDIA_DIR}
+  previews:
+    # For a saved link the server fetches the page's title and preview picture from the public internet.
+    # false: it never goes out for that; links are kept without a preview.
+    automatic: ${PREVIEWS_ENABLED:true}
+    # How often it looks for links still to be fetched, besides right after one is saved.
+    poll-interval: 30s
   identity:
     # Signs the access tokens. At least 32 characters; changing it signs everyone out.
     jwt-secret: ${APP_JWT_SECRET}

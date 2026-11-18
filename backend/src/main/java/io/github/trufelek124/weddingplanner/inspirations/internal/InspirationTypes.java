@@ -17,6 +17,17 @@ final class InspirationTypes {
         PHOTO
     }
 
+    /** How far the server got with fetching a title and a picture for a link. */
+    @Schema(name = "PreviewStatus")
+    enum PreviewStatus {
+        /** There is no link, or the link gave nothing. */
+        NONE,
+        /** Not tried yet, or to be tried again: ask again in a moment. */
+        PENDING,
+        /** A title, a picture or both were found. */
+        FETCHED
+    }
+
     /** What happens to the inspirations of a board that is removed. */
     @Schema(name = "InspirationsOnDelete")
     enum InspirationsOnDelete {

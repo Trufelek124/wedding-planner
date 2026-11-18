@@ -10,6 +10,7 @@ import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationDto
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRepository.Filter;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRepository.InspirationRow;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRepository.TagCount;
+import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationTypes.PreviewStatus;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationTypes.Source;
 import io.github.trufelek124.weddingplanner.inspirations.internal.PictureRepository.PictureRow;
 import io.github.trufelek124.weddingplanner.planning.PlanItems;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Locale;
@@ -37,6 +39,7 @@ class InspirationService {
     private final InspirationRepository inspirations;
     private final PictureRepository pictures;
     private final PictureService pictureFiles;
+    private final PreviewWorker previews;
     private final BoardRepository boards;
     private final PlanItems planItems;
     private final Weddings weddings;
@@ -46,6 +49,7 @@ class InspirationService {
             InspirationRepository inspirations,
             PictureRepository pictures,
             PictureService pictureFiles,
+            PreviewWorker previews,
             BoardRepository boards,
             PlanItems planItems,
             Weddings weddings,
@@ -53,6 +57,7 @@ class InspirationService {
         this.inspirations = inspirations;
         this.pictures = pictures;
         this.pictureFiles = pictureFiles;
+        this.previews = previews;
         this.boards = boards;
         this.planItems = planItems;
         this.weddings = weddings;
@@ -87,8 +92,12 @@ class InspirationService {
         InspirationRow inspiration = new InspirationRow(
                 UUID.randomUUID(), link.map(URI::toString).orElse(null), link.map(Links::sourceOf).orElse(Source.PHOTO),
                 request.title().strip(), request.note().strip(), tagsAsKept(request.tags()), request.boardId(),
-                request.planItemId(), membership.memberId(), 0, now, now);
+                request.planItemId(), membership.memberId(), link.isPresent() ? PreviewStatus.PENDING : PreviewStatus.NONE, "",
+                0, now, now);
         inspirations.insert(membership.weddingId(), inspiration);
+        if (link.isPresent()) {
+            previews.wakeOnceSaved();
+        }
         return shown(existing(membership, inspiration.id()));
     }
 
@@ -101,10 +110,19 @@ class InspirationService {
         InspirationRow after = new InspirationRow(
                 id, link.map(URI::toString).orElse(null), link.map(Links::sourceOf).orElse(Source.PHOTO),
                 request.title().strip(), request.note().strip(), tagsAsKept(request.tags()), request.boardId(),
-                request.planItemId(), before.addedBy(), before.version(), before.createdAt(), now);
+                request.planItemId(), before.addedBy(), before.previewStatus(), before.previewTitle(), before.version(),
+                before.createdAt(), now);
         if (!inspirations.update(membership.weddingId(), after, request.version(), now)) {
             throw new ApiException(
                     ProblemCode.CHANGED_MEANWHILE, "Someone else changed this in the meantime. Load it again, then make your change.");
+        }
+        if (!Objects.equals(before.url(), after.url())) {
+            // Another link, or none any more: what was fetched for the old one goes, and the new one gets its turn.
+            pictureFiles.forgetOnceDeleted(pictures.deletePreviews(id));
+            inspirations.startPreviewAgain(id, link.isPresent() ? PreviewStatus.PENDING : PreviewStatus.NONE, now);
+            if (link.isPresent()) {
+                previews.wakeOnceSaved();
+            }
         }
         return shown(existing(membership, id));
     }
