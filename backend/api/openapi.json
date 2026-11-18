@@ -482,6 +482,233 @@
         "required" : [ "idToken" ],
         "type" : "object"
       },
+      "Guest" : {
+        "description" : "Someone on the guest list.",
+        "properties" : {
+          "children" : {
+            "description" : "How many children come along.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "dietaryNeeds" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "email" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "heads" : {
+            "description" : "How many people this entry stands for: the guest, the plus-one and the children.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "householdId" : {
+            "description" : "The household the guest is invited with.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "needsAccommodation" : {
+            "type" : "boolean"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "plusOne" : {
+            "description" : "Comes with one more person who is not on the list by name.",
+            "type" : "boolean"
+          },
+          "sideMemberId" : {
+            "description" : "The member whose guest this is; null for a guest of both.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "enum" : [ "NOT_INVITED", "INVITED", "CONFIRMED", "DECLINED", "MAYBE" ],
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "Send this back with a change; it tells whether someone else saved in between.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "children", "createdAt", "dietaryNeeds", "email", "heads", "householdId", "id", "name", "needsAccommodation", "notes", "phone", "plusOne", "sideMemberId", "status", "updatedAt", "version" ],
+        "type" : "object"
+      },
+      "GuestChange" : {
+        "description" : "All fields of a guest as they should be from now on.",
+        "properties" : {
+          "children" : {
+            "format" : "int32",
+            "maximum" : 20,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "dietaryNeeds" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "householdId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "name" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "needsAccommodation" : {
+            "type" : "boolean"
+          },
+          "notes" : {
+            "maxLength" : 10000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phone" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "plusOne" : {
+            "type" : "boolean"
+          },
+          "sideMemberId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "enum" : [ "NOT_INVITED", "INVITED", "CONFIRMED", "DECLINED", "MAYBE" ],
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "The version of the guest this change is based on.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "children", "dietaryNeeds", "email", "householdId", "name", "needsAccommodation", "notes", "phone", "plusOne", "sideMemberId", "status", "version" ],
+        "type" : "object"
+      },
+      "GuestCounts" : {
+        "description" : "The head count: in all, status by status, and side by side. Every status and every side is there, also with nobody in it.",
+        "properties" : {
+          "bySide" : {
+            "description" : "The two members in the wedding's order, then the guests of both.",
+            "items" : {
+              "$ref" : "#/components/schemas/GuestsBySide"
+            },
+            "type" : "array"
+          },
+          "byStatus" : {
+            "description" : "In the order: not invited, invited, confirmed, declined, maybe.",
+            "items" : {
+              "$ref" : "#/components/schemas/GuestsByStatus"
+            },
+            "type" : "array"
+          },
+          "total" : {
+            "$ref" : "#/components/schemas/HeadCount"
+          }
+        },
+        "required" : [ "bySide", "byStatus", "total" ],
+        "type" : "object"
+      },
+      "GuestStatusChange" : {
+        "properties" : {
+          "status" : {
+            "enum" : [ "NOT_INVITED", "INVITED", "CONFIRMED", "DECLINED", "MAYBE" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "status" ],
+        "type" : "object"
+      },
+      "GuestsBySide" : {
+        "properties" : {
+          "byStatus" : {
+            "description" : "The same side status by status, in the order of the statuses.",
+            "items" : {
+              "$ref" : "#/components/schemas/GuestsByStatus"
+            },
+            "type" : "array"
+          },
+          "count" : {
+            "$ref" : "#/components/schemas/HeadCount"
+          },
+          "sideMemberId" : {
+            "description" : "The member whose guest this is; null for a guest of both.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "byStatus", "count", "sideMemberId" ],
+        "type" : "object"
+      },
+      "GuestsByStatus" : {
+        "properties" : {
+          "count" : {
+            "$ref" : "#/components/schemas/HeadCount"
+          },
+          "status" : {
+            "enum" : [ "NOT_INVITED", "INVITED", "CONFIRMED", "DECLINED", "MAYBE" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "count", "status" ],
+        "type" : "object"
+      },
+      "HeadCount" : {
+        "description" : "How many people: the guests themselves, their plus-ones and their children.",
+        "properties" : {
+          "children" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "guests" : {
+            "description" : "The guests on the list by name.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "heads" : {
+            "description" : "All three together.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "plusOnes" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "children", "guests", "heads", "plusOnes" ],
+        "type" : "object"
+      },
       "Home" : {
         "description" : "What the first page shows: how long until the wedding, and what to do next.",
         "properties" : {
@@ -527,6 +754,36 @@
           }
         },
         "required" : [ "budget", "daysLeft", "next", "nextPayments", "overdue", "today", "weddingDate" ],
+        "type" : "object"
+      },
+      "Household" : {
+        "description" : "People who are invited together: a family, a couple.",
+        "properties" : {
+          "guests" : {
+            "description" : "How many guests belong to it.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "guests", "id", "name" ],
+        "type" : "object"
+      },
+      "HouseholdName" : {
+        "properties" : {
+          "name" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
         "type" : "object"
       },
       "Inspiration" : {
@@ -772,6 +1029,70 @@
           }
         },
         "required" : [ "amount", "assigneeIds", "categoryId", "dueDate", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "startDate", "status", "title", "vendorId" ],
+        "type" : "object"
+      },
+      "NewGuest" : {
+        "description" : "A guest to put on the list.",
+        "properties" : {
+          "children" : {
+            "description" : "How many children come along.",
+            "format" : "int32",
+            "maximum" : 20,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "dietaryNeeds" : {
+            "description" : "May be empty.",
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "description" : "May be empty.",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "householdId" : {
+            "description" : "The household the guest is invited with.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "name" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "needsAccommodation" : {
+            "type" : "boolean"
+          },
+          "notes" : {
+            "description" : "Free text; may be empty.",
+            "maxLength" : 10000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phone" : {
+            "description" : "As the person writes it; may be empty.",
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "plusOne" : {
+            "description" : "Comes with one more person who is not on the list by name.",
+            "type" : "boolean"
+          },
+          "sideMemberId" : {
+            "description" : "The member whose guest this is; null for a guest of both.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "enum" : [ "NOT_INVITED", "INVITED", "CONFIRMED", "DECLINED", "MAYBE" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "children", "dietaryNeeds", "email", "householdId", "name", "needsAccommodation", "notes", "phone", "plusOne", "sideMemberId", "status" ],
         "type" : "object"
       },
       "NewInspiration" : {
@@ -1515,7 +1836,7 @@
     },
     "/api/boards" : {
       "get" : {
-        "operationId" : "list_4",
+        "operationId" : "list_6",
         "responses" : {
           "200" : {
             "content" : {
@@ -1544,7 +1865,7 @@
         "tags" : [ "board-controller" ]
       },
       "post" : {
-        "operationId" : "add_3",
+        "operationId" : "add_4",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1582,7 +1903,7 @@
     },
     "/api/boards/{id}" : {
       "delete" : {
-        "operationId" : "delete_4",
+        "operationId" : "delete_6",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1619,7 +1940,7 @@
         "tags" : [ "board-controller" ]
       },
       "put" : {
-        "operationId" : "rename_2",
+        "operationId" : "rename_3",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1666,7 +1987,7 @@
     },
     "/api/budget" : {
       "get" : {
-        "operationId" : "get_4",
+        "operationId" : "get_5",
         "responses" : {
           "200" : {
             "content" : {
@@ -1692,7 +2013,7 @@
         "tags" : [ "budget-controller" ]
       },
       "put" : {
-        "operationId" : "change_3",
+        "operationId" : "change_4",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1730,7 +2051,7 @@
     },
     "/api/categories" : {
       "get" : {
-        "operationId" : "list_3",
+        "operationId" : "list_5",
         "responses" : {
           "200" : {
             "content" : {
@@ -1759,7 +2080,7 @@
         "tags" : [ "category-controller" ]
       },
       "post" : {
-        "operationId" : "add_2",
+        "operationId" : "add_3",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1797,7 +2118,7 @@
     },
     "/api/categories/{id}" : {
       "delete" : {
-        "operationId" : "delete_3",
+        "operationId" : "delete_5",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1825,7 +2146,7 @@
         "tags" : [ "category-controller" ]
       },
       "put" : {
-        "operationId" : "rename_1",
+        "operationId" : "rename_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1872,7 +2193,7 @@
     },
     "/api/entries" : {
       "get" : {
-        "operationId" : "list_2",
+        "operationId" : "list_4",
         "parameters" : [ {
           "in" : "query",
           "name" : "kind",
@@ -2003,7 +2324,7 @@
         "tags" : [ "entry-controller" ]
       },
       "post" : {
-        "operationId" : "create_1",
+        "operationId" : "create_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2041,7 +2362,7 @@
     },
     "/api/entries/{id}" : {
       "delete" : {
-        "operationId" : "delete_2",
+        "operationId" : "delete_4",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2078,7 +2399,7 @@
         "tags" : [ "entry-controller" ]
       },
       "get" : {
-        "operationId" : "get_3",
+        "operationId" : "get_4",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2113,7 +2434,7 @@
         "tags" : [ "entry-controller" ]
       },
       "put" : {
-        "operationId" : "change_2",
+        "operationId" : "change_3",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2295,7 +2616,7 @@
     },
     "/api/entries/{id}/status" : {
       "put" : {
-        "operationId" : "setStatus",
+        "operationId" : "setStatus_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2340,6 +2661,307 @@
         "tags" : [ "entry-controller" ]
       }
     },
+    "/api/guests" : {
+      "get" : {
+        "operationId" : "list_3",
+        "parameters" : [ {
+          "description" : "Only guests in one of these states.",
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "enum" : [ "NOT_INVITED", "INVITED", "CONFIRMED", "DECLINED", "MAYBE" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        }, {
+          "description" : "Only the guests of this member.",
+          "in" : "query",
+          "name" : "sideMemberId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "true: only the guests who are both's.",
+          "in" : "query",
+          "name" : "bothSides",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        }, {
+          "description" : "Only the guests of this household.",
+          "in" : "query",
+          "name" : "householdId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "description" : "true: only the guests who belong to no household.",
+          "in" : "query",
+          "name" : "withoutHousehold",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Guest"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "guest-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NewGuest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Guest"
+                }
+              }
+            },
+            "description" : "Created"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "guest-controller" ]
+      }
+    },
+    "/api/guests/counts" : {
+      "get" : {
+        "operationId" : "counts",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GuestCounts"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "guest-controller" ]
+      }
+    },
+    "/api/guests/{id}" : {
+      "delete" : {
+        "operationId" : "delete_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "guest-controller" ]
+      },
+      "get" : {
+        "operationId" : "get_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Guest"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "guest-controller" ]
+      },
+      "put" : {
+        "operationId" : "change_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GuestChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Guest"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "guest-controller" ]
+      }
+    },
+    "/api/guests/{id}/status" : {
+      "put" : {
+        "operationId" : "setStatus",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GuestStatusChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Guest"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "guest-controller" ]
+      }
+    },
     "/api/home" : {
       "get" : {
         "operationId" : "home",
@@ -2366,6 +2988,148 @@
           }
         },
         "tags" : [ "home-controller" ]
+      }
+    },
+    "/api/households" : {
+      "get" : {
+        "operationId" : "list_2",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Household"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "household-controller" ]
+      },
+      "post" : {
+        "operationId" : "add_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/HouseholdName"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Household"
+                }
+              }
+            },
+            "description" : "Created"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "household-controller" ]
+      }
+    },
+    "/api/households/{id}" : {
+      "delete" : {
+        "operationId" : "delete_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "household-controller" ]
+      },
+      "put" : {
+        "operationId" : "rename_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/HouseholdName"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Household"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "household-controller" ]
       }
     },
     "/api/inspirations" : {

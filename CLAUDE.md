@@ -95,7 +95,7 @@ closing comment quotes its summary lines and its exit code.
 
 ## The backend's modules
 
-`api`, `appinfo`, `webapp`, `identity`, `wedding`, `vendors`, `planning`, `inspirations`. A module uses another only
+`api`, `appinfo`, `webapp`, `identity`, `wedding`, `vendors`, `planning`, `inspirations`, `guests`. A module uses another only
 through the types in that module's own package, and never in a circle (`ModularityTest`).
 
 - `planning` and `inspirations` use `vendors` (`Vendors.exists`), not the other way round. What the register needs
@@ -103,6 +103,7 @@ through the types in that module's own package, and never in a circle (`Modulari
   and what its payments come to) and `VendorCategories`. A new kind of record that can point to a vendor implements
   `VendorUse` in its own module.
 - `inspirations` uses `planning` (`PlanItems.exists`).
+- `guests` stands by itself: the guest list, its households and the head count.
 
 ## Changing the API
 

@@ -107,9 +107,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_4"];
+        get: operations["list_6"];
         put?: never;
-        post: operations["add_3"];
+        post: operations["add_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -124,9 +124,9 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["rename_2"];
+        put: operations["rename_3"];
         post?: never;
-        delete: operations["delete_4"];
+        delete: operations["delete_6"];
         options?: never;
         head?: never;
         patch?: never;
@@ -139,8 +139,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_4"];
-        put: operations["change_3"];
+        get: operations["get_5"];
+        put: operations["change_4"];
         post?: never;
         delete?: never;
         options?: never;
@@ -155,9 +155,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_3"];
+        get: operations["list_5"];
         put?: never;
-        post: operations["add_2"];
+        post: operations["add_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -172,9 +172,9 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["rename_1"];
+        put: operations["rename_2"];
         post?: never;
-        delete: operations["delete_3"];
+        delete: operations["delete_5"];
         options?: never;
         head?: never;
         patch?: never;
@@ -187,9 +187,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_2"];
+        get: operations["list_4"];
         put?: never;
-        post: operations["create_1"];
+        post: operations["create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -203,10 +203,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_3"];
-        put: operations["change_2"];
+        get: operations["get_4"];
+        put: operations["change_3"];
         post?: never;
-        delete: operations["delete_2"];
+        delete: operations["delete_4"];
         options?: never;
         head?: never;
         patch?: never;
@@ -252,6 +252,70 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put: operations["setStatus_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_3"];
+        put?: never;
+        post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guests/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["counts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_3"];
+        put: operations["change_2"];
+        post?: never;
+        delete: operations["delete_3"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guests/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
         put: operations["setStatus"];
         post?: never;
         delete?: never;
@@ -271,6 +335,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_2"];
+        put?: never;
+        post: operations["add_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["rename_1"];
+        post?: never;
+        delete: operations["delete_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -721,6 +817,120 @@ export interface components {
             /** @description The ID token Google handed to the client. */
             idToken: string;
         };
+        /** @description Someone on the guest list. */
+        Guest: {
+            /**
+             * Format: int32
+             * @description How many children come along.
+             */
+            children: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description May be empty. */
+            dietaryNeeds: string;
+            /** @description May be empty. */
+            email: string;
+            /**
+             * Format: int32
+             * @description How many people this entry stands for: the guest, the plus-one and the children.
+             */
+            heads: number;
+            /**
+             * Format: uuid
+             * @description The household the guest is invited with.
+             */
+            householdId: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            needsAccommodation: boolean;
+            notes: string;
+            /** @description May be empty. */
+            phone: string;
+            /** @description Comes with one more person who is not on the list by name. */
+            plusOne: boolean;
+            /**
+             * Format: uuid
+             * @description The member whose guest this is; null for a guest of both.
+             */
+            sideMemberId: string | null;
+            /** @enum {string} */
+            status: "NOT_INVITED" | "INVITED" | "CONFIRMED" | "DECLINED" | "MAYBE";
+            /** Format: date-time */
+            updatedAt: string;
+            /**
+             * Format: int32
+             * @description Send this back with a change; it tells whether someone else saved in between.
+             */
+            version: number;
+        };
+        /** @description All fields of a guest as they should be from now on. */
+        GuestChange: {
+            /** Format: int32 */
+            children: number;
+            dietaryNeeds: string;
+            email: string;
+            /** Format: uuid */
+            householdId: string | null;
+            name: string;
+            needsAccommodation: boolean;
+            notes: string;
+            phone: string;
+            plusOne: boolean;
+            /** Format: uuid */
+            sideMemberId: string | null;
+            /** @enum {string} */
+            status: "NOT_INVITED" | "INVITED" | "CONFIRMED" | "DECLINED" | "MAYBE";
+            /**
+             * Format: int32
+             * @description The version of the guest this change is based on.
+             */
+            version: number;
+        };
+        /** @description The head count: in all, status by status, and side by side. Every status and every side is there, also with nobody in it. */
+        GuestCounts: {
+            /** @description The two members in the wedding's order, then the guests of both. */
+            bySide: components["schemas"]["GuestsBySide"][];
+            /** @description In the order: not invited, invited, confirmed, declined, maybe. */
+            byStatus: components["schemas"]["GuestsByStatus"][];
+            total: components["schemas"]["HeadCount"];
+        };
+        GuestStatusChange: {
+            /** @enum {string} */
+            status: "NOT_INVITED" | "INVITED" | "CONFIRMED" | "DECLINED" | "MAYBE";
+        };
+        GuestsBySide: {
+            /** @description The same side status by status, in the order of the statuses. */
+            byStatus: components["schemas"]["GuestsByStatus"][];
+            count: components["schemas"]["HeadCount"];
+            /**
+             * Format: uuid
+             * @description The member whose guest this is; null for a guest of both.
+             */
+            sideMemberId: string | null;
+        };
+        GuestsByStatus: {
+            count: components["schemas"]["HeadCount"];
+            /** @enum {string} */
+            status: "NOT_INVITED" | "INVITED" | "CONFIRMED" | "DECLINED" | "MAYBE";
+        };
+        /** @description How many people: the guests themselves, their plus-ones and their children. */
+        HeadCount: {
+            /** Format: int32 */
+            children: number;
+            /**
+             * Format: int32
+             * @description The guests on the list by name.
+             */
+            guests: number;
+            /**
+             * Format: int32
+             * @description All three together.
+             */
+            heads: number;
+            /** Format: int32 */
+            plusOnes: number;
+        };
         /** @description What the first page shows: how long until the wedding, and what to do next. */
         Home: {
             /** @description The money at a glance. */
@@ -746,6 +956,20 @@ export interface components {
              * @description The wedding day; null while it is not fixed.
              */
             weddingDate: string | null;
+        };
+        /** @description People who are invited together: a family, a couple. */
+        Household: {
+            /**
+             * Format: int32
+             * @description How many guests belong to it.
+             */
+            guests: number;
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        HouseholdName: {
+            name: string;
         };
         /** @description An idea the couple kept: a link or pictures, on a board, with a note and tags. */
         Inspiration: {
@@ -882,6 +1106,38 @@ export interface components {
              * @description The vendor the entry concerns.
              */
             vendorId: string | null;
+        };
+        /** @description A guest to put on the list. */
+        NewGuest: {
+            /**
+             * Format: int32
+             * @description How many children come along.
+             */
+            children: number;
+            /** @description May be empty. */
+            dietaryNeeds: string;
+            /** @description May be empty. */
+            email: string;
+            /**
+             * Format: uuid
+             * @description The household the guest is invited with.
+             */
+            householdId: string | null;
+            name: string;
+            needsAccommodation: boolean;
+            /** @description Free text; may be empty. */
+            notes: string;
+            /** @description As the person writes it; may be empty. */
+            phone: string;
+            /** @description Comes with one more person who is not on the list by name. */
+            plusOne: boolean;
+            /**
+             * Format: uuid
+             * @description The member whose guest this is; null for a guest of both.
+             */
+            sideMemberId: string | null;
+            /** @enum {string} */
+            status: "NOT_INVITED" | "INVITED" | "CONFIRMED" | "DECLINED" | "MAYBE";
         };
         /** @description An idea to keep: a link, or the start of one that pictures are added to. */
         NewInspiration: {
@@ -1350,7 +1606,7 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -1379,7 +1635,7 @@ export interface operations {
             };
         };
     };
-    add_3: {
+    add_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1412,7 +1668,7 @@ export interface operations {
             };
         };
     };
-    rename_2: {
+    rename_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1447,7 +1703,7 @@ export interface operations {
             };
         };
     };
-    delete_4: {
+    delete_6: {
         parameters: {
             query?: {
                 /** @description For a board with inspirations: keep them without a board, or delete them too. */
@@ -1479,7 +1735,7 @@ export interface operations {
             };
         };
     };
-    get_4: {
+    get_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -1508,7 +1764,7 @@ export interface operations {
             };
         };
     };
-    change_3: {
+    change_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1541,7 +1797,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -1570,7 +1826,7 @@ export interface operations {
             };
         };
     };
-    add_2: {
+    add_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1603,7 +1859,7 @@ export interface operations {
             };
         };
     };
-    rename_1: {
+    rename_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1638,7 +1894,7 @@ export interface operations {
             };
         };
     };
-    delete_3: {
+    delete_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -1667,7 +1923,7 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_4: {
         parameters: {
             query?: {
                 kind?: "PLAN_ITEM" | "TASK";
@@ -1716,7 +1972,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    create_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1749,7 +2005,7 @@ export interface operations {
             };
         };
     };
-    get_3: {
+    get_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1780,7 +2036,7 @@ export interface operations {
             };
         };
     };
-    change_2: {
+    change_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1815,7 +2071,7 @@ export interface operations {
             };
         };
     };
-    delete_2: {
+    delete_4: {
         parameters: {
             query?: {
                 /** @description For a plan item with tasks: what happens to them. Without it such a plan item is not deleted and the answer is the entry-has-tasks problem. */
@@ -1946,7 +2202,7 @@ export interface operations {
             };
         };
     };
-    setStatus: {
+    setStatus_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1981,6 +2237,238 @@ export interface operations {
             };
         };
     };
+    list_3: {
+        parameters: {
+            query?: {
+                /** @description Only guests in one of these states. */
+                status?: ("NOT_INVITED" | "INVITED" | "CONFIRMED" | "DECLINED" | "MAYBE")[];
+                /** @description Only the guests of this member. */
+                sideMemberId?: string;
+                /** @description true: only the guests who are both's. */
+                bothSides?: boolean;
+                /** @description Only the guests of this household. */
+                householdId?: string;
+                /** @description true: only the guests who belong to no household. */
+                withoutHousehold?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Guest"][];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewGuest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Guest"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    counts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestCounts"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Guest"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    change_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestChange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Guest"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestStatusChange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Guest"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     home: {
         parameters: {
             query?: never;
@@ -1998,6 +2486,132 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Home"];
                 };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Household"][];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    add_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdName"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Household"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rename_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdName"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Household"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Any error. */
             default: {
