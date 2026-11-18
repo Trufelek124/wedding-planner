@@ -5,6 +5,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("org.openapi.generator")
+    id("com.google.devtools.ksp")
 }
 
 // The server the app talks to is fixed when the app is built:
@@ -68,6 +69,12 @@ android {
     }
 }
 
+// The database's layout is written out at every build and committed (app/schemas): a later version
+// of the app needs it to carry over what an earlier one stored.
+ksp {
+    arg("room.schemaLocation", layout.projectDirectory.dir("schemas").asFile.path)
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
 
@@ -91,6 +98,10 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.2.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    // What was loaded, kept for when there is no connection; and moving between the screens.
+    implementation("androidx.room:room-runtime:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 

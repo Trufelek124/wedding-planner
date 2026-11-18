@@ -112,10 +112,25 @@ first uses it, at the version D-005 names.
 - `Api` (`api/Api.kt`) sends the access token and renews it once on a 401; `getOpen`/`postOpen` are for the sign-in
   endpoints. What goes wrong is an `ApiFailure`; a screen decides from its kind what to say, in words from
   `strings.xml`. The refresh token is on the phone only encrypted; the access token only in memory.
+- The phone keeps a copy of the planner (`data/`): `PlannerRepository.load()` asks the server for everything the
+  screens show and puts it in the place of the last load, all of it or nothing; the screens read only the copy, so
+  they work without a connection and say from when it is. The tables are in `Rows.kt`; their layout is written to
+  `android/app/schemas/` at every build and committed. Until the phone keeps something the server does not have,
+  an older copy is dropped and loaded again; from then on a change of the tables needs a migration.
+- The phone reads the server's answers into classes of its own (`data/Wire.kt`): only the fields it uses, and a
+  value from a fixed set as text, so a field or a value a newer server adds does not break an app that is already
+  on a phone. `WireAgreesWithTheContractTest` holds them against the generated models, and the tests' own answers
+  (`StandIn`) against the contract. The generated models are for what the phone sends.
+- How a fact reads is in `planner/Words.kt`, the same words as the web's `labels.ts`; money is `money()` in
+  `money/Money.kt`, on whole numbers of the smallest unit as on the web. Screen texts are in `strings.xml`.
+- The app runs on Android 9 and later (minSdk 28): lint is part of the gate and stops what only a newer Android has.
 - Nothing personal in the log: no address, name or token. What holds one overrides `toString()`.
 - Everything is tested on the JVM (Robolectric); there is no emulator in a cloud session. `StandInPhone` is the
-  container with a `StandInServer`, a key outside the Keystore and a `StandInGoogle`; `AppRootTest` drives the
-  screens with it as a person would, and checks the log.
+  container with a `StandInServer`, a key outside the Keystore, a `StandInGoogle`, a clock set by hand and a real
+  database in a folder; `AppRootTest` and `PlannerScreensTest` drive the screens with it as a person would, and
+  check the log and what is left in the phone's files.
+- A character that cannot be seen (a no-break space, a minus sign that is not a hyphen) is written as its escape
+  (`\u00a0`), in Kotlin as in TypeScript.
 - A screen has a test that writes its picture: `compose.picture("name")` (`ui/Pictures.kt`), in a test class with
   `@GraphicsMode(GraphicsMode.Mode.NATIVE)` and `@Config(qualifiers = PHONE)`. The pictures land in
   `android/app/build/outputs/roborazzi/`; whoever changes a screen opens its picture. None is committed.

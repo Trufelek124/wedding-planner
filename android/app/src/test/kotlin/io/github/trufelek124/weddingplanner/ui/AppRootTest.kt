@@ -11,6 +11,8 @@ import androidx.compose.ui.test.performTextInput
 import io.github.trufelek124.weddingplanner.StandInGoogle
 import io.github.trufelek124.weddingplanner.StandInPhone
 import io.github.trufelek124.weddingplanner.api.StandInServer
+import io.github.trufelek124.weddingplanner.data.StandIn
+import io.github.trufelek124.weddingplanner.data.planner
 import io.github.trufelek124.weddingplanner.signin.GoogleAnswer
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -54,7 +56,7 @@ class AppRootTest {
         server.json("POST /api/auth/dev", StandInServer.session())
         server.json("POST /api/auth/refresh", StandInServer.session(accessToken = "access-2", refreshToken = "refresh-2"))
         server.nothing("POST /api/auth/sign-out")
-        server.json("GET /api/wedding", WEDDING)
+        server.planner()
     }
 
     @After
@@ -98,13 +100,13 @@ class AppRootTest {
         compose.onNodeWithText("Sign in with Google").performClick()
 
         waitFor("Anna & Marek")
-        compose.onNodeWithText("Saturday, 19 June 2027").assertIsDisplayed()
+        compose.onNodeWithText("Saturday 19 June 2027").assertIsDisplayed()
         compose.onNodeWithText("Signed in as Anna").assertIsDisplayed()
         // The picker is opened for the server's own OAuth client, or the server could not check the proof.
         assertEquals(listOf("client-1.apps.example"), phone.google.askedFor)
         assertEquals("""{"idToken":"proof-from-google"}""", server.routes("POST /api/auth/google").single().body)
         assertEquals("Bearer access-1", server.routes("GET /api/wedding").single().authorization)
-        compose.picture("account")
+        compose.onNodeWithText("213 days to go").assertIsDisplayed()
     }
 
     @Test
@@ -241,7 +243,7 @@ class AppRootTest {
         waitFor("The wedding is not set up yet. Set it up in the web app first, then come back here.")
         compose.onNodeWithText("Signed in as Anna").assertIsDisplayed()
         compose.onNodeWithText("Sign out").assertIsDisplayed()
-        compose.picture("account-wedding-not-set-up")
+        compose.picture("nothing-yet-wedding-not-set-up")
     }
 
     @Test
@@ -257,7 +259,7 @@ class AppRootTest {
 
     @Test
     fun `a wedding without a day says that the day is not fixed`() {
-        server.json("GET /api/wedding", WEDDING.replace("\"2027-06-19\"", "null"))
+        server.planner(wedding = StandIn.wedding(date = null), home = StandIn.home(daysLeft = null, weddingDate = null))
         open()
 
         signInForDevelopment()
@@ -273,7 +275,7 @@ class AppRootTest {
         signInForDevelopment()
         waitFor("The server cannot be reached. What you see here will load once there is a connection.")
 
-        server.json("GET /api/wedding", WEDDING)
+        server.planner()
         compose.onNodeWithText("Try again").performClick()
 
         waitFor("Anna & Marek")
@@ -320,8 +322,9 @@ class AppRootTest {
         compose.waitUntil(WAIT) { server.routes("POST /api/auth/sign-out").isNotEmpty() }
         assertEquals("""{"refreshToken":"refresh-1"}""", server.routes("POST /api/auth/sign-out").single().body)
         assertEquals(1, phone.google.forgotten)
-        val kept = phone.stored.readBytes().toString(Charsets.ISO_8859_1)
+        val kept = phone.everythingKept()
         assertFalse(kept.contains("Anna"))
+        assertFalse(kept.contains("Marek"))
         assertFalse(kept.contains("11111111"))
         assertFalse(kept.contains("refresh"))
     }
@@ -403,11 +406,5 @@ class AppRootTest {
 
     private companion object {
         const val WAIT = 10_000L
-
-        val WEDDING = """
-            {"id":"99999999-9999-4999-8999-999999999999","date":"2027-06-19","timeZone":"Europe/Warsaw","currency":"PLN",
-             "members":[{"id":"11111111-1111-4111-8111-111111111111","displayName":"Anna","signedIn":true,"you":true},
-                        {"id":"22222222-2222-4222-8222-222222222222","displayName":"Marek","signedIn":false,"you":false}]}
-        """.trimIndent()
     }
 }

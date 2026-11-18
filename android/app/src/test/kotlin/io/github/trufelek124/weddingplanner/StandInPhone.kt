@@ -1,6 +1,13 @@
 package io.github.trufelek124.weddingplanner
 
 import android.app.Activity
+import android.content.Context
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import io.github.trufelek124.weddingplanner.data.PlannerDatabase
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import io.github.trufelek124.weddingplanner.api.StandInServer
 import io.github.trufelek124.weddingplanner.session.AesGcmCipher
@@ -33,21 +40,32 @@ class StandInGoogle(var answer: GoogleAnswer = GoogleAnswer.Cancelled) : GoogleA
     }
 }
 
+/** A clock a test sets by hand. The phone stands in Warsaw, where it is an hour later than this says in winter. */
+class StandInClock(var now: Instant = Instant.parse("2026-11-18T13:05:00Z")) : Clock() {
+    override fun instant(): Instant = now
+    override fun getZone(): ZoneId = ZoneId.of("Europe/Warsaw")
+    override fun withZone(zone: ZoneId): Clock = this
+}
+
 /**
  * A phone for tests: the app's container with a stand-in server, a key that is not in a Keystore,
- * and a stand-in for Google. What it stores goes to [folder], so that a second phone made on the
- * same folder is the same phone after a restart.
+ * a stand-in for Google and a clock set by hand. What it stores goes to [folder], so that a second
+ * phone made on the same folder is the same phone after a restart.
  */
 class StandInPhone(
     private val folder: File,
     val server: StandInServer = StandInServer(),
     val google: StandInGoogle = StandInGoogle(),
     private val key: SecretKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey(),
+    val clock: StandInClock = StandInClock(),
 ) {
 
     private val running = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     val stored: File = File(folder, "session.preferences_pb")
+
+    private val database: PlannerDatabase =
+        Room.databaseBuilder(ApplicationProvider.getApplicationContext<Context>(), PlannerDatabase::class.java, File(folder, "planner.db").path).build()
 
     val container = AppContainer(
         server = ServerAddress.parse("https://planner.example"),
@@ -55,16 +73,22 @@ class StandInPhone(
         sessionFile = PreferenceDataStoreFactory.create(scope = running) { stored },
         cipher = AesGcmCipher { key },
         googleAccounts = google,
+        database = database,
+        clock = clock,
     )
+
+    /** Everything the phone keeps in its files, read as text: to look for what must not be there. */
+    fun everythingKept(): String = folder.listFiles().orEmpty().filter { it.isFile }.joinToString("") { it.readBytes().toString(Charsets.ISO_8859_1) }
 
     /** Switches the phone off. What it stored stays in the folder. */
     fun off() {
         runBlocking { running.coroutineContext.job.cancelAndJoin() }
+        database.close()
     }
 
-    /** The same phone, switched on again: the same storage, key and server, nothing in memory. */
+    /** The same phone, switched on again: the same storage, key, clock and server, nothing in memory. */
     fun restarted(): StandInPhone {
         off()
-        return StandInPhone(folder, server, google, key)
+        return StandInPhone(folder, server, google, key, clock)
     }
 }

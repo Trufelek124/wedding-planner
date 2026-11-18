@@ -22,15 +22,45 @@
     <string name="dev_sign_in_email_needed">Enter an e-mail address.</string>
     <string name="server_address">Server: %1$s</string>
 
-    <!-- Signed in -->
+    <!-- Signed in, and nothing of the planner on the phone yet -->
     <string name="signed_in_as">Signed in as %1$s</string>
     <string name="sign_out">Sign out</string>
     <string name="wedding_loading">Loading your wedding…</string>
-    <string name="wedding_names">%1$s &amp; %2$s</string>
     <string name="wedding_day_not_fixed">The day is not fixed yet.</string>
     <string name="wedding_not_set_up">The wedding is not set up yet. Set it up in the web app first, then come back here.</string>
     <string name="wedding_full">This planner already belongs to two people, and you are not one of them.</string>
     <string name="wedding_unreachable">The server cannot be reached. What you see here will load once there is a connection.</string>
     <string name="wedding_failed">Your wedding could not be loaded. Try again.</string>
-    <string name="more_is_coming">The plan and the tasks come to the phone next.</string>
+
+    <!-- Moving between the screens -->
+    <string name="nav_home">Home</string>
+    <string name="nav_plan">Plan</string>
+    <string name="nav_tasks">Tasks</string>
+    <string name="load_again">Load again</string>
+    <string name="notice_no_connection">No connection. This is what was loaded on %1$s.</string>
+    <string name="notice_not_loaded">The latest could not be loaded. This is what was loaded on %1$s.</string>
+    <string name="loaded_on">Loaded on %1$s</string>
+
+    <!-- Home -->
+    <string name="home_nothing_waiting">Nothing is waiting for you. What has to happen is in the plan; single things to do are under tasks.</string>
+    <string name="home_overdue">Overdue</string>
+    <string name="home_next">Next</string>
+    <string name="home_budget">Budget</string>
+    <string name="home_next_payments">Next payments</string>
+
+    <!-- The plan and the tasks -->
+    <string name="filter_to_do">To do</string>
+    <string name="filter_everything">Everything</string>
+    <string name="filter_payments">Payments only</string>
+    <string name="plan_scheduled">Scheduled</string>
+    <string name="plan_not_scheduled">Not scheduled</string>
+    <string name="plan_empty">Nothing in the plan yet. The plan is put together in the web app.</string>
+    <string name="plan_nothing_to_do">Nothing in the plan is left to do.</string>
+    <string name="tasks_empty">No tasks yet.</string>
+    <string name="tasks_nothing_to_do">No tasks to do.</string>
+    <string name="tasks_no_payments">No payments here.</string>
+    <string name="tasks_show">show its tasks</string>
+    <string name="tasks_hide">hide its tasks</string>
+    <string name="tasks_shown">tasks shown</string>
+    <string name="tasks_hidden">tasks hidden</string>
 </resources>

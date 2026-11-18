@@ -1,0 +1,113 @@
+package io.github.trufelek124.weddingplanner.data
+
+import java.time.Instant
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+
+enum class Kind { PLAN_ITEM, TASK }
+
+/** [OTHER] is a state a newer server knows and this app does not: it counts as still to do. */
+enum class Status {
+    NOT_STARTED,
+    IN_PROGRESS,
+    DONE,
+    DROPPED,
+    OTHER;
+
+    /** Still to do. */
+    val open: Boolean get() = this != DONE && this != DROPPED
+}
+
+enum class Priority { CRITICAL, HIGH, NORMAL, LOW }
+
+/** A plan item or a task, as the screens show it. */
+data class Entry(
+    val id: String,
+    val kind: Kind,
+    val title: String,
+    val notes: String,
+    val categoryId: String?,
+    val startDate: LocalDate?,
+    val dueDate: LocalDate?,
+    val status: Status,
+    /** The level as shown today: worked out by the server or set by hand. */
+    val priority: Priority,
+    /** Why it has that level, as the server names it: "DUE_WITHIN_3_DAYS". */
+    val priorityReason: String,
+    /** Tasks only: the plan item it belongs to. */
+    val parentId: String?,
+    val vendorId: String?,
+    /** For a payment: what it costs, in the smallest unit of the wedding's currency. */
+    val amount: Long?,
+    /** For a payment: which part of the price, as the server names it; null when that was not said. */
+    val paymentKind: String?,
+    val paidOn: LocalDate?,
+    val assigneeIds: List<String>,
+    val taskCount: Int,
+    val version: Int,
+) {
+    /** A payment is a task with an amount (D-004). */
+    val isPayment: Boolean get() = amount != null
+}
+
+/** One of the two people. */
+class Member(val id: String, val displayName: String, val you: Boolean) {
+
+    /** A name is personal data: what gets printed is only which member it is. */
+    override fun toString(): String = "Member[id=$id]"
+}
+
+/** The money at a glance, in the smallest unit of the wedding's currency. */
+data class Budget(val total: Long?, val planned: Long, val committed: Long, val paid: Long)
+
+/**
+ * Everything the phone holds of the planner, as the server said it at [loadedAt].
+ *
+ * @param today the date where the wedding takes place, at the moment of loading
+ * @param daysLeft the days to the wedding on [today]; null while the day is not fixed
+ * @param entries every plan item and task, in the server's order
+ * @param categories what each category is called, by its id, in the plan's order
+ * @param vendors what each vendor is called, by its id
+ */
+class Planner(
+    val loadedAt: Instant,
+    val weddingDate: LocalDate?,
+    val currency: String,
+    val timeZone: String,
+    val today: LocalDate,
+    val daysLeft: Long?,
+    val members: List<Member>,
+    val entries: List<Entry>,
+    val categories: Map<String, String>,
+    val vendors: Map<String, String>,
+    val overdue: List<Entry>,
+    val next: List<Entry>,
+    val nextPayments: List<Entry>,
+    val budget: Budget,
+) {
+    private val byId = entries.associateBy { it.id }
+
+    val planItems: List<Entry> get() = entries.filter { it.kind == Kind.PLAN_ITEM }
+
+    val tasks: List<Entry> get() = entries.filter { it.kind == Kind.TASK }
+
+    fun tasksOf(planItem: Entry): List<Entry> = entries.filter { it.kind == Kind.TASK && it.parentId == planItem.id }
+
+    fun entry(id: String): Entry? = byId[id]
+
+    /** "Anna & Marek": the members who do it, in the wedding's order; null when nobody is named. */
+    fun peopleOf(entry: Entry): String? =
+        members.filter { it.id in entry.assigneeIds }.joinToString(" & ") { it.displayName }.ifEmpty { null }
+
+    /**
+     * The days to the wedding on [day]. On the day of loading it is what the server counted; a copy
+     * that is older is counted on from there, so that the number is right without a connection too.
+     */
+    fun daysLeftOn(day: LocalDate): Long? {
+        val wedding = weddingDate ?: return null
+        return if (day == today && daysLeft != null) daysLeft else ChronoUnit.DAYS.between(day, wedding)
+    }
+
+    /** Names, titles and notes are the couple's own: nothing of them gets printed. */
+    override fun toString(): String = "Planner[${entries.size} entries, loaded $loadedAt]"
+}

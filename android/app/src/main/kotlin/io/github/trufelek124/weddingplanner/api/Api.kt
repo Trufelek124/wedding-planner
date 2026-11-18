@@ -2,6 +2,7 @@ package io.github.trufelek124.weddingplanner.api
 
 import io.github.trufelek124.weddingplanner.ServerAddress
 import io.ktor.client.HttpClient
+import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
@@ -17,8 +18,10 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import io.ktor.serialization.ContentConvertException
 import io.ktor.serialization.kotlinx.json.json
 import java.io.IOException
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -56,16 +59,29 @@ class Api(engine: HttpClientEngine, private val server: ServerAddress, private v
     }
 
     /** A call that needs a signed-in person. */
-    suspend inline fun <reified T> get(path: String): T = answer(HttpMethod.Get, path, null, signedIn = true).body()
+    suspend inline fun <reified T> get(path: String): T = read { answer(HttpMethod.Get, path, null, signedIn = true).body() }
 
     suspend inline fun <reified T> send(method: HttpMethod, path: String, body: Any?): T =
-        answer(method, path, body, signedIn = true).body()
+        read { answer(method, path, body, signedIn = true).body() }
 
     /** A call anyone may make: the sign-in endpoints themselves. */
-    suspend inline fun <reified T> getOpen(path: String): T = answer(HttpMethod.Get, path, null, signedIn = false).body()
+    suspend inline fun <reified T> getOpen(path: String): T = read { answer(HttpMethod.Get, path, null, signedIn = false).body() }
 
     suspend inline fun <reified T> postOpen(path: String, body: Any?): T =
-        answer(HttpMethod.Post, path, body, signedIn = false).body()
+        read { answer(HttpMethod.Post, path, body, signedIn = false).body() }
+
+    /** An answer that is not what the contract says is a failure like any other, not a crash. */
+    @PublishedApi
+    internal inline fun <T> read(answer: () -> T): T =
+        try {
+            answer()
+        } catch (unreadable: ContentConvertException) {
+            throw ApiFailure.Unreadable(unreadable)
+        } catch (unreadable: SerializationException) {
+            throw ApiFailure.Unreadable(unreadable)
+        } catch (notJson: NoTransformationFoundException) {
+            throw ApiFailure.Unreadable(notJson)
+        }
 
     /** The same for an answer without content. */
     suspend fun postOpenForNothing(path: String, body: Any?) {

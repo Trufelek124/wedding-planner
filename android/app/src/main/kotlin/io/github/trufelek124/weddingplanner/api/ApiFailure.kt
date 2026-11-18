@@ -28,6 +28,9 @@ sealed class ApiFailure(message: String, cause: Throwable? = null) : IOException
     /** No answer: no connection, the server is down, or it took too long. */
     class Unreachable(cause: Throwable) : ApiFailure("the server cannot be reached", cause)
 
+    /** The server answered, but not with what this version of the app can read. */
+    class Unreadable(cause: Throwable) : ApiFailure("the answer cannot be read", cause)
+
     /** The session is over: the server no longer accepts this phone's sign-in. */
     class SignedOut : ApiFailure("signed out")
 

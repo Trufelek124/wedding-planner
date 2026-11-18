@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import io.github.trufelek124.weddingplanner.api.Api
+import io.github.trufelek124.weddingplanner.data.PlannerDatabase
+import io.github.trufelek124.weddingplanner.data.PlannerRepository
 import io.github.trufelek124.weddingplanner.session.AesGcmCipher
 import io.github.trufelek124.weddingplanner.session.KeystoreKey
 import io.github.trufelek124.weddingplanner.session.Session
@@ -16,6 +18,7 @@ import io.github.trufelek124.weddingplanner.signin.CredentialManagerGoogleAccoun
 import io.github.trufelek124.weddingplanner.signin.GoogleAccounts
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
+import java.time.Clock
 
 /**
  * Everything the screens share, made once and handed out by hand (D-005: no dependency-injection
@@ -30,16 +33,23 @@ class AppContainer(
     sessionFile: DataStore<Preferences>,
     cipher: TokenCipher,
     val googleAccounts: GoogleAccounts,
+    database: PlannerDatabase,
+    val clock: Clock = Clock.systemDefaultZone(),
 ) {
 
-    /** Signing out removes the account's data: what later tasks store on the phone is cleared here as well. */
+    /** Signing out removes the account's data from the phone: whatever a task keeps here is cleared in [forgetEverything]. */
     val session: Session = Session(
         api = { api },
         store = SessionStore(sessionFile, cipher),
-        forgetEverything = { googleAccounts.forget() },
+        forgetEverything = {
+            planner.forget()
+            googleAccounts.forget()
+        },
     )
 
     val api: Api = Api(engine, server, session.accessTokens)
+
+    val planner: PlannerRepository = PlannerRepository({ api }, database, clock)
 
     companion object {
 
@@ -49,6 +59,7 @@ class AppContainer(
             sessionFile = PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("session") },
             cipher = AesGcmCipher(KeystoreKey::get),
             googleAccounts = CredentialManagerGoogleAccounts(context),
+            database = PlannerDatabase.onThePhone(context),
         )
     }
 }
