@@ -486,6 +486,12 @@
    "publicId": "WP-TS-52",
    "id": "aa8404a2-5473-44af-ab86-77cb583eb61c",
    "title": "An entry sent twice is added once: the client may choose a new entry's id"
+  },
+  "EP5-S2-T2": {
+   "type": "task",
+   "publicId": "WP-TS-53",
+   "id": "a434d1a0-cc6a-4dbe-a1ac-6b1a6d11f03a",
+   "title": "An inspiration sent twice is added once: the client may choose a new inspiration's id"
   }
  }
 }

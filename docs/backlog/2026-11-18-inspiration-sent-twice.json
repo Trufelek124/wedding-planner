@@ -1,0 +1,21 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP5-S2-T2",
+   "story": "EP5-S2",
+   "title": "An inspiration sent twice is added once: the client may choose a new inspiration's id",
+   "description": "A phone that shares a link or pictures without a good connection may not learn that the server took the share, and sends it again when the connection returns. So that this adds the inspiration once, a new inspiration may carry an id chosen by the client, as a new entry already may (WP-TS-52): the server uses it, and answers a second request with the same id with the inspiration it already has, without adding or changing anything. Left out, the server chooses the id as before. The API description and the web's generated types follow, and the web form sends an id of its own. Done when the backend's tests cover both cases and the gate passes.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  }
+ ]
+}
