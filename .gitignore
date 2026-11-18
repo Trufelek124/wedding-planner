@@ -3,3 +3,8 @@ __pycache__/
 
 # Filled-in settings of an installation. Only the example without values is kept.
 deploy/.env
+
+# Signing keys never belong here, wherever they are put by mistake (docs/android-release.md).
+*.jks
+*.keystore
+*.p12

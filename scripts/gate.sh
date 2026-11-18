@@ -68,7 +68,10 @@ android() {
   step android "lint" ./gradlew lintDebug
   step android "tests" ./gradlew testDebugUnitTest
   step android "debug build" ./gradlew assembleDebug
-  SUMMARY+=("android  $(tests_in "$ROOT/android/app/build/test-results/testDebugUnitTest/*.xml") tests, lint, debug build")
+  # The release variant, made small and looked into. The address is a stand-in: a release build is only made for
+  # an https one. It is signed when the machine has the owner's key, and unsigned everywhere else.
+  step android "release build" ./gradlew checkReleaseApk -PserverUrl=https://planner.example
+  SUMMARY+=("android  $(tests_in "$ROOT/android/app/build/test-results/testDebugUnitTest/*.xml") tests, lint, debug build, release build")
 }
 
 if [ $# -eq 0 ]; then

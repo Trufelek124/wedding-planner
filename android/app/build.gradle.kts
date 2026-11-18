@@ -1,3 +1,4 @@
+import java.util.zip.ZipFile
 import javax.inject.Inject
 
 plugins {
@@ -12,6 +13,25 @@ plugins {
 //   ./gradlew assembleDebug -PserverUrl=https://planner.example
 // The default is the address under which an emulator reaches the machine it runs on.
 val serverUrl = providers.gradleProperty("serverUrl").orElse("http://10.0.2.2:8080")
+
+// The key that signs the release build is the owner's. Where it is, what it is called and its
+// passwords come from the owner's machine: Gradle properties (~/.gradle/gradle.properties) or the
+// environment, never this repository. Without them the release build is made unsigned, which is
+// what the gate does; with only some of them the build stops, because that is a mistake.
+// docs/android-release.md says how the key is made and used.
+val releaseKey = mapOf(
+    "wpReleaseStoreFile" to "WP_RELEASE_STORE_FILE",
+    "wpReleaseStorePassword" to "WP_RELEASE_STORE_PASSWORD",
+    "wpReleaseKeyAlias" to "WP_RELEASE_KEY_ALIAS",
+    "wpReleaseKeyPassword" to "WP_RELEASE_KEY_PASSWORD",
+).mapValues { (property, variable) -> providers.gradleProperty(property).orElse(providers.environmentVariable(variable)).orNull?.takeIf { it.isNotBlank() } }
+val releaseKeyGiven = releaseKey.values.all { it != null }
+if (!releaseKeyGiven && releaseKey.values.any { it != null }) {
+    throw GradleException(
+        "The release key is only partly given. Missing: " + releaseKey.filterValues { it == null }.keys.joinToString() +
+            ". Give all four, or none for an unsigned build (docs/android-release.md).",
+    )
+}
 
 // The API's data classes are generated from the backend's API description at every build
 // and are never committed or edited: change the backend, then ./gradlew updateApiContract there.
@@ -46,6 +66,27 @@ android {
         versionName = "0.1.0"
 
         buildConfigField("String", "SERVER_URL", "\"${serverUrl.get()}\"")
+    }
+
+    signingConfigs {
+        if (releaseKeyGiven) {
+            create("release") {
+                storeFile = file(releaseKey.getValue("wpReleaseStoreFile")!!)
+                storePassword = releaseKey.getValue("wpReleaseStorePassword")
+                keyAlias = releaseKey.getValue("wpReleaseKeyAlias")
+                keyPassword = releaseKey.getValue("wpReleaseKeyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // What the app does not use is left out, and what is left is made small: the debug app is about 45 MB.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = if (releaseKeyGiven) signingConfigs.getByName("release") else null
+        }
     }
 
     buildFeatures {
@@ -138,6 +179,91 @@ abstract class ApiModelSources : DefaultTask() {
             into(sources)
         }
     }
+}
+
+// Outside debug builds the app may only talk https (plain http is allowed in the debug manifest
+// alone). A release build for an address that cannot work is not made.
+val checkReleaseServer = tasks.register("checkReleaseServer") {
+    val address = serverUrl
+    doLast {
+        if (!address.get().startsWith("https://")) {
+            throw GradleException(
+                "A release build needs the server's https address: ./gradlew assembleRelease -PserverUrl=https://… (it was given ${address.get()}).",
+            )
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(checkReleaseServer) }
+
+// Looks into the release app after it was shrunk. Shrinking leaves out what nothing refers to, and
+// some things are only ever found by their name while the app runs: left out, the app builds, and
+// fails on the phone. There is no phone where this is built, so the app itself is read instead.
+abstract class CheckReleaseApk : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val apks: DirectoryProperty
+
+    @TaskAction
+    fun check() {
+        val apk = apks.get().asFile.listFiles { file -> file.extension == "apk" }?.singleOrNull()
+            ?: throw GradleException("Expected one release apk in ${apks.get().asFile}")
+        val code = StringBuilder()
+        var manifest = ""
+        // A signature for Android 7 and later is not a file in the archive: it stands in a block of its own, marked by these words.
+        val signed = String(apk.readBytes(), Charsets.ISO_8859_1).contains("APK Sig Block 42")
+        ZipFile(apk).use { zip ->
+            for (entry in zip.entries()) {
+                when {
+                    entry.name.endsWith(".dex") -> code.append(String(zip.getInputStream(entry).readBytes(), Charsets.ISO_8859_1))
+                    // The manifest is kept in a compact form whose words are written with two bytes a letter.
+                    entry.name == "AndroidManifest.xml" -> manifest = String(zip.getInputStream(entry).readBytes(), Charsets.UTF_16LE)
+                }
+            }
+        }
+        val wrong = mutableListOf<String>()
+        // Started by Android or by a library from their names alone.
+        for (found in FOUND_BY_NAME) {
+            if (!code.contains("L" + found.replace('.', '/') + ";")) {
+                wrong += "$found is not in the app: it is found by name when the app runs, and shrinking has left it out"
+            }
+        }
+        if (manifest.contains("usesCleartextTraffic")) {
+            wrong += "the manifest allows plain http, which only a debug build may"
+        }
+        if (manifest.contains("debuggable")) {
+            wrong += "the manifest says the app can be debugged"
+        }
+        if (wrong.isNotEmpty()) {
+            throw GradleException("The release app is not as it should be:\n - " + wrong.joinToString("\n - "))
+        }
+        logger.lifecycle("release app: ${apk.name}, ${apk.length() / 1024} KiB, ${if (signed) "signed" else "not signed (no key was given)"}")
+    }
+
+    companion object {
+        private const val APP = "io.github.trufelek124.weddingplanner"
+        val FOUND_BY_NAME = listOf(
+            // Named in the manifest.
+            "$APP.MainActivity",
+            "$APP.WeddingPlannerApp",
+            // WorkManager stores the worker's name and makes it from that when its time comes.
+            "$APP.data.SendWorker",
+            // Room looks for the generated code of the database under this name.
+            "$APP.data.PlannerDatabase_Impl",
+            // What reads the server's answers and writes the phone's requests is looked up for each class.
+            "$APP.data.EntryWire\$\$serializer",
+            "$APP.data.HomeWire\$\$serializer",
+            "$APP.data.WeddingWire\$\$serializer",
+            "$APP.api.model.Session\$\$serializer",
+            "$APP.api.model.AuthConfig\$\$serializer",
+            "$APP.api.model.RefreshRequest\$\$serializer",
+        )
+    }
+}
+
+val checkReleaseApk = tasks.register<CheckReleaseApk>("checkReleaseApk") {
+    // By its name: the release build's own tasks do not exist yet when this is read.
+    dependsOn("assembleRelease")
+    apks = layout.buildDirectory.dir("outputs/apk/release")
 }
 
 val apiModelSources = tasks.register<ApiModelSources>("apiModelSources") {

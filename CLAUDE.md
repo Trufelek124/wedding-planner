@@ -20,6 +20,7 @@ guests, vendors or mail. Configuration that names the owner's systems lives in e
 | `docs/backlog/` | Backlog batches that were imported into the tracker |
 | `scripts/ops/` | Tracker tooling: `ik.py`, `ik_seed.py`, `ik_sync_docs.py` |
 | `scripts/publish-image.sh` | Publishes the image. The owner runs it on the Mac, from `main` (D-002); a session never publishes |
+| `docs/android-release.md` | The phone app's release build: the owner's signing key, its fingerprint for Google sign-in, installing |
 
 The interface is in English. Tests never call the real AI service or the real Gmail.
 
@@ -41,7 +42,7 @@ dependency that is there. That is the session's network, not the build: do not c
 |---|---|---|
 | `backend/` | `cd backend && ./gradlew test` | `./gradlew devDatabase` (PostgreSQL 18 on port 5433, prints the database variables), then `./gradlew bootRun` with those and `APP_JWT_SECRET` (32+ characters), `ALLOWED_EMAILS` (made-up addresses), `APP_MEDIA_DIR` (any directory; pictures go there) and `DEV_LOGIN_ENABLED=true` set |
 | `web/` | `cd web && npm ci && npm run lint && npm test && npm run build` | `npm run dev` (port 5173; forwards `/api` and `/actuator` to the backend on 8080) |
-| `android/` | `cd android && ./gradlew lintDebug testDebugUnitTest assembleDebug` | No emulator in a cloud session: install `app/build/outputs/apk/debug/app-debug.apk` on a phone. The server address is a build setting: `-PserverUrl=https://…` |
+| `android/` | `cd android && ./gradlew lintDebug testDebugUnitTest assembleDebug` and `./gradlew checkReleaseApk -PserverUrl=https://planner.example` | No emulator in a cloud session: install `app/build/outputs/apk/debug/app-debug.apk` on a phone. The server address is a build setting: `-PserverUrl=https://…` |
 | `scripts/ops/` | the script's `--dry-run` against the tracker | — |
 | `docs/` | `scripts/ops/ik_sync_docs.py --dry-run` | — |
 
@@ -115,8 +116,9 @@ first uses it, at the version D-005 names.
 - The phone keeps a copy of the planner (`data/`): `PlannerRepository.load()` asks the server for everything the
   screens show and puts it in the place of the last load, all of it or nothing; the screens read only the copy, so
   they work without a connection and say from when it is. The tables are in `Rows.kt`; their layout is written to
-  `android/app/schemas/` at every build and committed. Until the phone keeps something the server does not have,
-  an older copy is dropped and loaded again; from then on a change of the tables needs a migration.
+  `android/app/schemas/` at every build and committed. The database also holds what exists nowhere else (the
+  changes waiting to be sent), so every change of the tables needs a migration and a new version;
+  `DatabaseCarriesOverTest` opens a database built from the older layout with the newer app.
 - A change made on the phone (a tick, a new task, an edit) is written to the table `waiting_change` first, laid
   over what the screens show at once, and sent by `PlannerRepository.sync()`, which then loads again: by the app
   while it is open, and by `SendWorker` (WorkManager) once there is a connection when it is not. One change waits
@@ -138,6 +140,10 @@ first uses it, at the version D-005 names.
   arithmetic on its dates (`TimelineLayout.kt`), tested without a screen. It only shows: nothing on it can be
   moved. Time scrolls sideways on a node of its own, around the list that scrolls up and down; putting both on
   one node takes the list's own scrolling away from a screen reader. What a drag does, buttons do as well.
+- The release build is made small (R8) with names left as they are; `checkReleaseApk` looks into the finished app
+  for what is only found by name when it runs. A class that Android or a library makes from its name goes on that
+  task's list; a rule in `proguard-rules.pro` says why it is there. The key that signs it is the owner's and comes
+  from outside the repository (`docs/android-release.md`); a session never has it, and builds unsigned.
 - The app runs on Android 9 and later (minSdk 28): lint is part of the gate and stops what only a newer Android has.
 - Nothing personal in the log: no address, name or token. What holds one overrides `toString()`.
 - Everything is tested on the JVM (Robolectric); there is no emulator in a cloud session. `StandInPhone` is the
