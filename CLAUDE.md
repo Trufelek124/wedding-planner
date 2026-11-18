@@ -77,6 +77,9 @@ closing comment quotes its summary lines and its exit code.
   can do on the chart also has a key there or a control on the entry's form.
 - "Today" is the date where the wedding takes place. The home page takes the days left from the server
   (`GET /api/home`) and never counts them from the device's clock.
+- A picture of an inspiration is only handed out with the access token, which an `<img>` cannot send. The page
+  fetches it through `pictureAddress` (`src/inspirations/pictures.ts`) and shows the browser's own `blob:` address;
+  never put an `/api/…` address into `src`. Signing out lets go of all of them.
 - Every colour, size and radius comes from the tokens at the top of `src/index.css`; light and dark both work.
 - What a person reads is written for that person. This includes the server's validation messages
   (`message = "Enter your partner's name."`), which the forms show next to the field.

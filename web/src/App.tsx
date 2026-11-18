@@ -5,6 +5,9 @@ import { restore, signOut, type Me } from './auth/session.ts'
 import { SignInPage } from './auth/SignInPage.tsx'
 import { useSession } from './auth/useSession.ts'
 import { HomePage } from './home/HomePage.tsx'
+import { BoardsPage } from './inspirations/BoardsPage.tsx'
+import { InspirationFormPage } from './inspirations/InspirationFormPage.tsx'
+import { InspirationsPage } from './inspirations/InspirationsPage.tsx'
 import { ChartPage } from './planning/ChartPage.tsx'
 import { EntryFormPage } from './planning/EntryFormPage.tsx'
 import { PlanPage } from './planning/PlanPage.tsx'
@@ -66,6 +69,10 @@ function SignedIn({ user }: { user: Me }) {
                   <Route path="tasks" element={<TasksPage />} />
                   <Route path="entries/new" element={<EntryFormPage />} />
                   <Route path="entries/:id" element={<EntryFormPage />} />
+                  <Route path="inspirations" element={<InspirationsPage />} />
+                  <Route path="inspirations/boards" element={<BoardsPage />} />
+                  <Route path="inspirations/new" element={<InspirationFormPage />} />
+                  <Route path="inspirations/:id" element={<InspirationFormPage />} />
                   {/* An address that names no page leads home. */}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>

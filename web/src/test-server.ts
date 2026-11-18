@@ -3,6 +3,9 @@ import type { Schemas } from './api/client.ts'
 
 type Entry = Schemas['Entry']
 type Home = Schemas['Home']
+type Inspiration = Schemas['Inspiration']
+type Picture = Schemas['Picture']
+type Board = Schemas['Board']
 
 type Handler = Response | Error | ((request: Request) => Response | Promise<Response>)
 
@@ -145,6 +148,81 @@ export function planningServer(entries: Entry[], extra: Record<string, Handler> 
       const kind = new URL(request.url).searchParams.get('kind')
       return Response.json(entries.filter((candidate) => kind === null || candidate.kind === kind))
     },
+    ...extra,
+  })
+}
+
+export const DRESS: Board = { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd01', name: 'Dress', inspirationCount: 2 }
+export const CAKE: Board = { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd02', name: 'Cake', inspirationCount: 0 }
+
+let inspirationNumber = 0
+let pictureNumber = 0
+
+/** A picture's record as the server sends it. */
+export function picture(overrides: Partial<Picture> = {}): Picture {
+  pictureNumber += 1
+  return {
+    id: `ffffffff-ffff-4fff-8fff-${String(pictureNumber).padStart(12, '0')}`,
+    contentType: 'image/jpeg',
+    width: 800,
+    height: 1000,
+    preview: false,
+    ...overrides,
+  }
+}
+
+/** An inspiration as the server sends it; name only what the test is about. */
+export function inspiration(overrides: Partial<Inspiration> = {}): Inspiration {
+  inspirationNumber += 1
+  return {
+    id: `99999999-9999-4999-8999-${String(inspirationNumber).padStart(12, '0')}`,
+    url: `https://example.com/idea-${inspirationNumber}`,
+    source: 'WEB',
+    title: '',
+    note: '',
+    tags: [],
+    boardId: null,
+    planItemId: null,
+    addedById: ANNA_MEMBER,
+    previewStatus: 'NONE',
+    previewTitle: '',
+    pictures: [],
+    version: 0,
+    createdAt: '2026-11-18T10:00:00Z',
+    updatedAt: '2026-11-18T10:00:00Z',
+    ...overrides,
+  }
+}
+
+/** The bytes of a picture, as far as a test needs them: jsdom shows no picture anyway. */
+export function pictureBytes(): Response {
+  return new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), { headers: { 'Content-Type': 'image/jpeg' } })
+}
+
+/**
+ * A server with a signed-in owner, a wedding, two boards and the given inspirations. Every picture of
+ * theirs can be fetched. The list is not narrowed down: what was asked for is for the test to check.
+ */
+export function inspirationsServer(inspirations: Inspiration[], extra: Record<string, Handler> = {}): FakeServer {
+  const tags = new Map<string, number>()
+  const pictures: Record<string, Handler> = {}
+  for (const one of inspirations) {
+    for (const tag of one.tags) {
+      tags.set(tag, (tags.get(tag) ?? 0) + 1)
+    }
+    for (const its of one.pictures) {
+      pictures[`GET /api/inspirations/${one.id}/pictures/${its.id}`] = pictureBytes
+    }
+  }
+  return fakeServer({
+    'GET /api/home': home(),
+    'POST /api/auth/refresh': session(),
+    'GET /api/wedding': weddingOfAnnaAndPiotr(),
+    'GET /api/boards': Response.json([CAKE, DRESS]),
+    'GET /api/inspirations': Response.json(inspirations),
+    'GET /api/inspirations/tags': Response.json([...tags].map(([tag, count]) => ({ tag, count }))),
+    'GET /api/entries': Response.json([]),
+    ...pictures,
     ...extra,
   })
 }
