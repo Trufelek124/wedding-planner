@@ -6,6 +6,9 @@ import { SignInPage } from './auth/SignInPage.tsx'
 import { useSession } from './auth/useSession.ts'
 import { BudgetPage } from './budget/BudgetPage.tsx'
 import { BudgetPlanPage } from './budget/BudgetPlanPage.tsx'
+import { GuestFormPage } from './guests/GuestFormPage.tsx'
+import { GuestsPage } from './guests/GuestsPage.tsx'
+import { HouseholdsPage } from './guests/HouseholdsPage.tsx'
 import { HomePage } from './home/HomePage.tsx'
 import { BoardsPage } from './inspirations/BoardsPage.tsx'
 import { InspirationFormPage } from './inspirations/InspirationFormPage.tsx'
@@ -76,6 +79,10 @@ function SignedIn({ user }: { user: Me }) {
                   <Route path="entries/:id" element={<EntryFormPage />} />
                   <Route path="budget" element={<BudgetPage />} />
                   <Route path="budget/plan" element={<BudgetPlanPage />} />
+                  <Route path="guests" element={<GuestsPage />} />
+                  <Route path="guests/households" element={<HouseholdsPage />} />
+                  <Route path="guests/new" element={<GuestFormPage />} />
+                  <Route path="guests/:id" element={<GuestFormPage />} />
                   <Route path="vendors" element={<VendorsPage />} />
                   <Route path="vendors/new" element={<VendorFormPage />} />
                   <Route path="vendors/:id" element={<VendorPage />} />

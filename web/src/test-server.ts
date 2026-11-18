@@ -5,6 +5,9 @@ type Entry = Schemas['Entry']
 type Home = Schemas['Home']
 type Budget = Schemas['Budget']
 type Vendor = Schemas['Vendor']
+type Guest = Schemas['Guest']
+type GuestCounts = Schemas['GuestCounts']
+type HeadCount = Schemas['HeadCount']
 type Inspiration = Schemas['Inspiration']
 type Picture = Schemas['Picture']
 type Board = Schemas['Board']
@@ -289,5 +292,56 @@ export function vendor(overrides: Partial<Vendor> = {}): Vendor {
     createdAt: '2026-11-18T10:00:00Z',
     updatedAt: '2026-11-18T10:00:00Z',
     ...overrides,
+  }
+}
+
+let guestNumber = 0
+
+/** A guest as the server sends it, made up; name only what the test is about. */
+export function guest(overrides: Partial<Guest> = {}): Guest {
+  guestNumber += 1
+  const plusOne = overrides.plusOne ?? false
+  const children = overrides.children ?? 0
+  return {
+    id: `bbbbbbbb-0000-4000-8000-${String(guestNumber).padStart(12, '0')}`,
+    name: `Guest ${guestNumber}`,
+    sideMemberId: null,
+    householdId: null,
+    status: 'NOT_INVITED',
+    plusOne,
+    children,
+    dietaryNeeds: '',
+    needsAccommodation: false,
+    phone: '',
+    email: '',
+    notes: '',
+    heads: 1 + (plusOne ? 1 : 0) + children,
+    version: 0,
+    createdAt: '2026-11-18T10:00:00Z',
+    updatedAt: '2026-11-18T10:00:00Z',
+    ...overrides,
+  }
+}
+
+const GUEST_STATUSES = ['NOT_INVITED', 'INVITED', 'CONFIRMED', 'DECLINED', 'MAYBE'] as const
+
+/** The head count the server would give for these guests: every status and every side, also with nobody in it. */
+export function countsOf(guests: Guest[]): GuestCounts {
+  const count = (some: Guest[]): HeadCount => {
+    const plusOnes = some.filter((one) => one.plusOne).length
+    const children = some.reduce((sum, one) => sum + one.children, 0)
+    return { guests: some.length, plusOnes, children, heads: some.length + plusOnes + children }
+  }
+  return {
+    total: count(guests),
+    byStatus: GUEST_STATUSES.map((status) => ({ status, count: count(guests.filter((one) => one.status === status)) })),
+    bySide: [ANNA_MEMBER, PIOTR_MEMBER, null].map((sideMemberId) => {
+      const theirs = guests.filter((one) => one.sideMemberId === sideMemberId)
+      return {
+        sideMemberId,
+        count: count(theirs),
+        byStatus: GUEST_STATUSES.map((status) => ({ status, count: count(theirs.filter((one) => one.status === status)) })),
+      }
+    }),
   }
 }

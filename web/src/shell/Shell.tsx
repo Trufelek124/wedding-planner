@@ -10,6 +10,7 @@ const PAGES = [
   { to: '/inspirations', label: 'Inspirations' },
   { to: '/budget', label: 'Budget' },
   { to: '/vendors', label: 'Vendors' },
+  { to: '/guests', label: 'Guests' },
 ]
 
 /** What every page of a signed-in owner shares: the name, the way around, and the way out. */
