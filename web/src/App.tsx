@@ -4,6 +4,8 @@ import { forgetGoogleSignIn } from './auth/google.ts'
 import { restore, signOut, type Me } from './auth/session.ts'
 import { SignInPage } from './auth/SignInPage.tsx'
 import { useSession } from './auth/useSession.ts'
+import { BudgetPage } from './budget/BudgetPage.tsx'
+import { BudgetPlanPage } from './budget/BudgetPlanPage.tsx'
 import { HomePage } from './home/HomePage.tsx'
 import { BoardsPage } from './inspirations/BoardsPage.tsx'
 import { InspirationFormPage } from './inspirations/InspirationFormPage.tsx'
@@ -69,6 +71,8 @@ function SignedIn({ user }: { user: Me }) {
                   <Route path="tasks" element={<TasksPage />} />
                   <Route path="entries/new" element={<EntryFormPage />} />
                   <Route path="entries/:id" element={<EntryFormPage />} />
+                  <Route path="budget" element={<BudgetPage />} />
+                  <Route path="budget/plan" element={<BudgetPlanPage />} />
                   <Route path="inspirations" element={<InspirationsPage />} />
                   <Route path="inspirations/boards" element={<BoardsPage />} />
                   <Route path="inspirations/new" element={<InspirationFormPage />} />

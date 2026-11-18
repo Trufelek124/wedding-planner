@@ -8,6 +8,7 @@ const PAGES = [
   { to: '/plan', label: 'Plan' },
   { to: '/tasks', label: 'Tasks' },
   { to: '/inspirations', label: 'Inspirations' },
+  { to: '/budget', label: 'Budget' },
 ]
 
 /** What every page of a signed-in owner shares: the name, the way around, and the way out. */

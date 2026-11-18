@@ -1,5 +1,5 @@
 import { namesOf, useCurrentWedding } from '../wedding/WeddingContext.ts'
-import { PRIORITY_LABEL, priorityReason, when } from './labels.ts'
+import { moneyInWords, PRIORITY_LABEL, priorityReason, when } from './labels.ts'
 import type { Category, Entry } from './planningApi.ts'
 
 interface EntryMetaProps {
@@ -16,6 +16,7 @@ export function EntryMeta({ entry, categories, planItem }: EntryMetaProps) {
   const people = namesOf(wedding, entry.assigneeIds)
   const reason = priorityReason(entry)
   const facts = [when(entry), planItem, category, people].filter((fact): fact is string => Boolean(fact))
+  const itsMoney = moneyInWords(entry, wedding.currency)
 
   return (
     <p className="entry-meta">
@@ -26,6 +27,7 @@ export function EntryMeta({ entry, categories, planItem }: EntryMetaProps) {
         </span>
         {reason !== null && ` — ${reason}`}
       </span>
+      {itsMoney !== null && <span className="entry-money">{itsMoney}</span>}
       {facts.map((fact) => (
         <span key={fact}>{fact}</span>
       ))}

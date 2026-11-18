@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { ApiError } from '../api/client.ts'
+import { Meter } from '../budget/Meter.tsx'
+import { money } from '../money/money.ts'
+import { shortDate } from '../planning/labels.ts'
 import { listCategories, type Category, type Entry, type Status } from '../planning/planningApi.ts'
 import { TaskRow } from '../planning/TaskRow.tsx'
 import { useLoaded } from '../planning/useLoaded.ts'
@@ -52,18 +55,12 @@ export function HomePage() {
   )
 }
 
-/** Everything overdue, then the five entries to turn to next. */
+/** Everything overdue, the five entries to turn to next, and the money: the budget at a glance and what to pay next. */
 function WhatIsNext({ home, categories, onChanged }: { home: Home; categories: Category[]; onChanged: () => void }) {
   const status = useStatusChange(onChanged)
+  const lists = { categories, pending: status.pending, shown: status.shown, onStatus: status.change }
+  const nothingToDo = home.overdue.length === 0 && home.next.length === 0
 
-  if (home.overdue.length === 0 && home.next.length === 0) {
-    return (
-      <p className="empty">
-        Nothing is waiting for you. What has to happen goes into the <Link to="/plan">plan</Link>; single things to do go
-        under <Link to="/tasks">tasks</Link>.
-      </p>
-    )
-  }
   return (
     <div>
       {status.failed && (
@@ -71,13 +68,104 @@ function WhatIsNext({ home, categories, onChanged }: { home: Home; categories: C
           That change was not saved. Try again.
         </p>
       )}
-      <Entries title="Overdue" entries={home.overdue} categories={categories} pending={status.pending} shown={status.shown} onStatus={status.change} />
-      <Entries title="Next" entries={home.next} categories={categories} pending={status.pending} shown={status.shown} onStatus={status.change} />
-      <p className="see-all">
-        <Link to="/plan">The whole plan</Link>
-        <Link to="/tasks">All tasks</Link>
-      </p>
+      {nothingToDo ? (
+        <p className="empty">
+          Nothing is waiting for you. What has to happen goes into the <Link to="/plan">plan</Link>; single things to do go
+          under <Link to="/tasks">tasks</Link>.
+        </p>
+      ) : (
+        <>
+          <Entries title="Overdue" entries={home.overdue} {...lists} />
+          <Entries title="Next" entries={home.next} {...lists} />
+          <p className="see-all">
+            <Link to="/plan">The whole plan</Link>
+            <Link to="/tasks">All tasks</Link>
+          </p>
+        </>
+      )}
+      <BudgetAtAGlance budget={home.budget} />
+      <NextPayments payments={home.nextPayments} pending={status.pending} shown={status.shown} onStatus={status.change} />
     </div>
+  )
+}
+
+interface NextPaymentsProps {
+  payments: Entry[]
+  pending: PendingStatus | null
+  shown: (entry: Entry) => Status
+  onStatus: (entry: Entry, status: Status) => void
+}
+
+/**
+ * What is to be paid next, as short lines: the same entries may stand in full under "Next" already,
+ * so here each says only what it costs and when.
+ */
+function NextPayments({ payments, pending, shown, onStatus }: NextPaymentsProps) {
+  const { currency } = useCurrentWedding()
+  if (payments.length === 0) {
+    return null
+  }
+  return (
+    <section className="group" aria-labelledby="home-payments">
+      <h2 id="home-payments">Next payments</h2>
+      <ul className="entries">
+        {payments.map((payment) => (
+          <li key={payment.id} className="entry entry-short" data-done={shown(payment) === 'DONE'}>
+            <input
+              type="checkbox"
+              className="tick"
+              aria-label={`Paid: ${payment.title}`}
+              checked={shown(payment) === 'DONE'}
+              disabled={pending?.id === payment.id}
+              onChange={(event) => onStatus(payment, event.target.checked ? 'DONE' : 'NOT_STARTED')}
+            />
+            <div className="entry-body">
+              <Link className="entry-title" to={`/entries/${payment.id}`} state={{ back: '/' }}>
+                {payment.title}
+              </Link>
+              <p className="entry-meta">
+                <span className="entry-money">{payment.amount === null ? '' : money(payment.amount, currency)}</span>
+                <span>{payment.dueDate === null ? 'no date' : `due ${shortDate(payment.dueDate)}`}</span>
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** The four sums in two lines, and the way to the page that has the rest. Nothing at all while there is no money in the planner. */
+function BudgetAtAGlance({ budget }: { budget: Home['budget'] }) {
+  const { currency } = useCurrentWedding()
+  if (budget.total === null && budget.planned === 0 && budget.committed === 0) {
+    return null
+  }
+  const limit = budget.total ?? (budget.planned > 0 ? budget.planned : null)
+  const limitName = budget.total === null ? 'planned' : 'budget'
+  return (
+    <section className="group glance" aria-labelledby="home-budget">
+      <h2 id="home-budget">Budget</h2>
+      <p>
+        <strong>{money(budget.paid, currency)}</strong> paid, <strong>{money(budget.committed - budget.paid, currency)}</strong> still
+        to pay
+        {limit !== null && (
+          <>
+            {' '}
+            — {budget.committed > limit
+              ? `${money(budget.committed - limit, currency)} more than the ${money(limit, currency)} ${limitName}`
+              : `${money(limit - budget.committed, currency)} of the ${money(limit, currency)} ${limitName} not committed`}
+          </>
+        )}
+        .
+      </p>
+      {budget.committed > 0 && (
+        <Meter limit={limit} committed={budget.committed} paid={budget.paid} currency={currency} about="The whole budget" limitName={limitName} />
+      )}
+      <p className="see-all">
+        <Link to="/budget">The budget</Link>
+      </p>
+    </section>
   )
 }
 

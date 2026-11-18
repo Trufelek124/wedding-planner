@@ -3,6 +3,7 @@ import type { Schemas } from './api/client.ts'
 
 type Entry = Schemas['Entry']
 type Home = Schemas['Home']
+type Budget = Schemas['Budget']
 type Inspiration = Schemas['Inspiration']
 type Picture = Schemas['Picture']
 type Board = Schemas['Board']
@@ -237,4 +238,21 @@ export function inspirationsServer(inspirations: Inspiration[], extra: Record<st
     ...pictures,
     ...extra,
   })
+}
+
+/** A budget as the server sends it: both test categories with nothing in them, unless the test says otherwise. */
+export function budget(overrides: Partial<Budget> = {}): Budget {
+  return {
+    total: null,
+    planned: 0,
+    committed: 0,
+    paid: 0,
+    categories: [
+      { categoryId: VENUE.id, name: VENUE.name, planned: null, committed: 0, paid: 0, payments: 0 },
+      { categoryId: FLOWERS.id, name: FLOWERS.name, planned: null, committed: 0, paid: 0, payments: 0 },
+    ],
+    uncategorised: { committed: 0, paid: 0, payments: 0 },
+    version: 0,
+    ...overrides,
+  }
 }

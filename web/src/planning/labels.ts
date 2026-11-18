@@ -1,4 +1,5 @@
-import type { Entry, Kind, Priority, Status } from './planningApi.ts'
+import { money } from '../money/money.ts'
+import type { Entry, Kind, PaymentKind, Priority, Status } from './planningApi.ts'
 
 export const STATUS_LABEL: Record<Status, string> = {
   NOT_STARTED: 'Not started',
@@ -44,6 +45,34 @@ export function priorityInWords(entry: Pick<Entry, 'kind' | 'priority' | 'priori
 }
 
 export const KIND_LABEL: Record<Kind, string> = { PLAN_ITEM: 'plan item', TASK: 'task' }
+
+export const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
+  DEPOSIT: 'Deposit',
+  INSTALMENT: 'Instalment',
+  FINAL: 'Final payment',
+}
+
+/**
+ * What a payment says about its money: "2,500.00 zł, deposit, paid 10 Nov 2026" or "… to pay".
+ * Null for an entry that carries none.
+ */
+export function moneyInWords(entry: Pick<Entry, 'amount' | 'paymentKind' | 'paidOn' | 'status'>, currency: string): string | null {
+  if (entry.amount === null) {
+    return null
+  }
+  const words = [money(entry.amount, currency)]
+  if (entry.paymentKind !== null) {
+    words.push((PAYMENT_KIND_LABEL as Partial<Record<string, string>>)[entry.paymentKind]?.toLowerCase() ?? 'payment')
+  }
+  if (entry.status === 'DONE') {
+    words.push(entry.paidOn === null ? 'paid' : `paid ${shortDate(entry.paidOn)}`)
+  } else if (entry.status === 'DROPPED') {
+    words.push('dropped, not counted')
+  } else {
+    words.push('to pay')
+  }
+  return words.join(', ')
+}
 
 /** "19 Jun 2027" */
 export function shortDate(date: string): string {

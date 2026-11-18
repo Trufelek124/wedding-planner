@@ -11,8 +11,13 @@ export interface Filters {
   category: string
   /** One level, or '' for any. */
   priority: Priority | ''
+  /** 'payments' for only the tasks that carry an amount; '' for all. */
+  money: '' | 'payments'
   sort: SortChoice
 }
+
+/** The choice "filed under no category", as the address spells it. */
+export const NO_CATEGORY = 'none'
 
 const STATUS_CHOICES: readonly string[] = ['open', 'all', 'NOT_STARTED', 'IN_PROGRESS', 'DONE', 'DROPPED']
 const PRIORITY_CHOICES: readonly string[] = ['CRITICAL', 'HIGH', 'NORMAL', 'LOW']
@@ -30,6 +35,7 @@ export function useFilters(): { filters: Filters; set: (name: keyof Filters, val
     who: params.get('who') ?? '',
     category: params.get('category') ?? '',
     priority: (PRIORITY_CHOICES.includes(priority) ? priority : '') as Priority | '',
+    money: params.get('money') === 'payments' ? 'payments' : '',
     sort: (SORT_CHOICES.includes(sort) ? sort : 'date') as SortChoice,
   }
 
@@ -42,8 +48,13 @@ export function useFilters(): { filters: Filters; set: (name: keyof Filters, val
   if (filters.who !== '') {
     query.assigneeId = filters.who
   }
-  if (filters.category !== '') {
+  if (filters.category === NO_CATEGORY) {
+    query.withoutCategory = true
+  } else if (filters.category !== '') {
     query.categoryId = filters.category
+  }
+  if (filters.money === 'payments') {
+    query.payment = true
   }
   if (filters.priority !== '') {
     query.priority = [filters.priority]

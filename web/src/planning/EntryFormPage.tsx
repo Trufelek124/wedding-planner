@@ -4,7 +4,8 @@ import { ApiError } from '../api/client.ts'
 import { Field } from '../ui/Field.tsx'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
-import { KIND_LABEL, PRIORITY_LABEL, priorityInWords, STATUS_LABEL } from './labels.ts'
+import { moneyToType, moneyTyped } from '../money/money.ts'
+import { KIND_LABEL, PAYMENT_KIND_LABEL, PRIORITY_LABEL, priorityInWords, STATUS_LABEL } from './labels.ts'
 import {
   changeEntry,
   convertEntry,
@@ -16,6 +17,7 @@ import {
   type Category,
   type Entry,
   type Kind,
+  type PaymentKind,
   type Priority,
   type Status,
 } from './planningApi.ts'
@@ -24,6 +26,7 @@ import { WaitsFor } from './WaitsFor.tsx'
 
 const STATUSES: Status[] = ['NOT_STARTED', 'IN_PROGRESS', 'DONE', 'DROPPED']
 const PRIORITIES: Priority[] = ['CRITICAL', 'HIGH', 'NORMAL', 'LOW']
+const PAYMENT_KINDS: PaymentKind[] = ['DEPOSIT', 'INSTALMENT', 'FINAL']
 
 /** The page for adding an entry (`/entries/new?kind=…`) and for changing one (`/entries/:id`). */
 export function EntryFormPage() {
@@ -104,6 +107,12 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
   const decidedNow = existing?.priorityMode === 'AUTO' && !byHand ? priorityInWords(existing) : null
   const [priority, setPriority] = useState<Priority>(existing?.priority ?? 'NORMAL')
   const [parentId, setParentId] = useState(existing?.parentId ?? parentAsked ?? '')
+  // Money is typed as people write it and sent as whole numbers of the currency's smallest unit.
+  const [amountTyped, setAmountTyped] = useState(existing?.amount == null ? '' : moneyToType(existing.amount, wedding.currency))
+  const [paymentKind, setPaymentKind] = useState<PaymentKind | ''>(existing?.paymentKind ?? '')
+  const [paidOn, setPaidOn] = useState(existing?.paidOn ?? '')
+  const [amountProblem, setAmountProblem] = useState<string | null>(null)
+  const isPayment = kind === 'TASK' && amountTyped.trim() !== ''
 
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<ApiError | 'unreachable' | null>(null)
@@ -125,11 +134,10 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
       priorityMode: byHand ? ('MANUAL' as const) : ('AUTO' as const),
       priority: byHand ? priority : null,
       parentId: kind === 'PLAN_ITEM' || parentId === '' ? null : parentId,
-      // The money of a payment is said again as it is: a save replaces the whole entry. A paid date belongs
-      // to a payment that is done; for one that is done only now, the server takes today.
-      amount: existing?.amount ?? null,
-      paymentKind: existing?.paymentKind ?? null,
-      paidOn: existing?.amount != null && status === 'DONE' ? existing.paidOn : null,
+      // A paid date belongs to a payment that is done; left empty, the server takes the day it has, or today.
+      amount: isPayment ? moneyTyped(amountTyped, wedding.currency) : null,
+      paymentKind: isPayment && paymentKind !== '' ? paymentKind : null,
+      paidOn: isPayment && status === 'DONE' && paidOn !== '' ? paidOn : null,
     }
   }
 
@@ -147,6 +155,11 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
 
   function save(event: FormEvent) {
     event.preventDefault()
+    if (isPayment && moneyTyped(amountTyped, wedding.currency) === null) {
+      setAmountProblem('Enter an amount like 2500 or 2500.50.')
+      return
+    }
+    setAmountProblem(null)
     void attempt(async () => {
       if (existing === null) {
         await createEntry({ kind, ...fields() })
@@ -292,6 +305,67 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
           </Field>
         )}
 
+        {kind === 'TASK' && (
+          <fieldset className="choice">
+            <legend>Payment</legend>
+            <Field
+              label={`Amount in ${wedding.currency}`}
+              optional
+              hint="With an amount this task is a payment and counts in the budget, under its category."
+              error={amountProblem ?? fieldError('amount')}
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  name="amount"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={amountTyped}
+                  onChange={(event) => {
+                    setAmountTyped(event.target.value)
+                    // What was said about the old text does not stand over the new one.
+                    setAmountProblem(null)
+                  }}
+                />
+              )}
+            </Field>
+            {isPayment && (
+              <div className="two-columns">
+                <Field label="Kind of payment" optional error={fieldError('paymentKind')}>
+                  {(control) => (
+                    <select
+                      {...control}
+                      name="paymentKind"
+                      value={paymentKind}
+                      onChange={(event) => setPaymentKind(event.target.value as PaymentKind | '')}
+                    >
+                      <option value="">Not said</option>
+                      {PAYMENT_KINDS.map((choice) => (
+                        <option key={choice} value={choice}>
+                          {PAYMENT_KIND_LABEL[choice]}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </Field>
+                {status === 'DONE' && (
+                  <Field
+                    label="Paid on"
+                    optional
+                    hint={existing?.paidOn == null ? 'Left empty, it is today.' : undefined}
+                    error={fieldError('paidOn')}
+                  >
+                    {(control) => (
+                      <input {...control} type="date" name="paidOn" value={paidOn} onChange={(event) => setPaidOn(event.target.value)} />
+                    )}
+                  </Field>
+                )}
+              </div>
+            )}
+            {isPayment && status !== 'DONE' && <p className="hint">It counts as paid once its status is Done.</p>}
+          </fieldset>
+        )}
+
         <fieldset className="choice">
           <legend>Priority</legend>
           <label>
@@ -351,6 +425,8 @@ function EntryForm({ existing, kind, parentAsked, categories, planItems, onLoade
           <h2>More</h2>
           {kind === 'PLAN_ITEM' && taskCount > 0 ? (
             <p className="muted">A plan item that has tasks cannot be turned into a task.</p>
+          ) : existing.amount !== null ? (
+            <p className="muted">A payment stays a task: a plan item carries no money. Take the amount away first to turn it into one.</p>
           ) : (
             <div>
               <button type="button" className="button button-quiet" disabled={busy} onClick={convert}>

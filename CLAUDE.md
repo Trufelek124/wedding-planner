@@ -80,6 +80,10 @@ closing comment quotes its summary lines and its exit code.
 - A picture of an inspiration is only handed out with the access token, which an `<img>` cannot send. The page
   fetches it through `pictureAddress` (`src/inspirations/pictures.ts`) and shows the browser's own `blob:` address;
   never put an `/api/…` address into `src`. Signing out lets go of all of them.
+- Money is shown with `money()` and read from what a person typed with `moneyTyped()` (`src/money/money.ts`), both
+  on whole numbers of the currency's smallest unit; nothing divides by 100 on its own. Over a limit is said in
+  words, with the colour and the sign only beside them. A bar of money is `Meter` (`src/budget/Meter.tsx`).
+- A list tells the form where to return to (`state={{ back }}`), filters included.
 - Every colour, size and radius comes from the tokens at the top of `src/index.css`; light and dark both work.
 - What a person reads is written for that person. This includes the server's validation messages
   (`message = "Enter your partner's name."`), which the forms show next to the field.

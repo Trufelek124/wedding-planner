@@ -236,6 +236,36 @@ describe('adding and changing an entry', () => {
     })
   })
 
+  it('returns to the list as it was narrowed down', async () => {
+    const florist = entry({ title: 'Call the florist', status: 'DONE', completedAt: '2026-11-10T09:00:00Z' })
+    const path = `/api/entries/${florist.id}`
+    planningServer([florist], {
+      [`GET ${path}`]: Response.json(florist),
+      [`PUT ${path}`]: Response.json({ ...florist, version: 1 }),
+    })
+    open('/tasks?status=DONE&sort=title')
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Call the florist' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Tasks' })).toBeInTheDocument()
+    expect(window.location.search).toBe('?status=DONE&sort=title')
+  })
+
+  it('returns to the plan from a task that was opened there', async () => {
+    const invitations = entry({ kind: 'PLAN_ITEM', title: 'Send invitations', taskCount: 1 })
+    const envelopes = entry({ title: 'Order the envelopes', parentId: invitations.id })
+    planningServer([invitations, envelopes], { [`GET /api/entries/${envelopes.id}`]: Response.json(envelopes) })
+    open('/plan?sort=title')
+
+    await userEvent.click(await screen.findByText('1 task'))
+    await userEvent.click(screen.getByRole('link', { name: 'Order the envelopes' }))
+    await userEvent.click(await screen.findByRole('link', { name: 'Cancel' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Plan' })).toBeInTheDocument()
+    expect(window.location.search).toBe('?sort=title')
+  })
+
   it('says a payment\'s money again as it is when the task is saved', async () => {
     const deposit = entry({ title: 'Pay the venue deposit', amount: 250_000, paymentKind: 'DEPOSIT', status: 'DONE',
       completedAt: '2026-11-10T09:00:00Z', paidOn: '2026-11-10', version: 2 })

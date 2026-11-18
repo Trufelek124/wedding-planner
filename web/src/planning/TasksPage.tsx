@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
 import { FilterBar } from './FilterBar.tsx'
 import { useFilters } from './filters.ts'
@@ -10,6 +10,8 @@ import { useStatusChange } from './useStatusChange.ts'
 /** Single things to do, with or without a date. Ticking one off takes one click. */
 export function TasksPage() {
   const { filters, set, query, key } = useFilters()
+  // The form returns to this list as it is narrowed down now.
+  const back = `/tasks${useLocation().search}`
   const tasks = useLoaded(key, (signal) => listEntries({ ...query, kind: 'TASK' }, signal))
   const planItems = useLoaded('plan-items', (signal) => listEntries({ kind: 'PLAN_ITEM', sort: 'TITLE' }, signal))
   const categories = useLoaded('categories', listCategories)
@@ -39,11 +41,11 @@ export function TasksPage() {
     <>
       <div className="page-head">
         <h1>Tasks</h1>
-        <Link className="button" to="/entries/new?kind=TASK">
+        <Link className="button" to="/entries/new?kind=TASK" state={{ back }}>
           Add a task
         </Link>
       </div>
-      <FilterBar filters={filters} categories={categoryList} onChange={set} />
+      <FilterBar filters={filters} categories={categoryList} onChange={set} money />
       {status.failed && (
         <p role="alert" className="alert">
           That change was not saved. Try again.
@@ -51,7 +53,7 @@ export function TasksPage() {
       )}
       {all.length === 0 ? (
         <p className="empty">
-          {filters.status === 'open' && filters.who === '' && filters.category === '' && filters.priority === ''
+          {filters.status === 'open' && filters.who === '' && filters.category === '' && filters.priority === '' && filters.money === ''
             ? 'No tasks to do. Add one when something comes up.'
             : 'Nothing matches these filters.'}
         </p>
@@ -65,6 +67,7 @@ export function TasksPage() {
               planItem={task.parentId === null ? undefined : planItemTitles.get(task.parentId)}
               status={status.shown(task)}
               busy={status.pending?.id === task.id}
+              back={back}
               onStatus={status.change}
             />
           ))}

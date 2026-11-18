@@ -7,6 +7,7 @@ export type EntryChange = Schemas['EntryChange']
 export type Category = Schemas['Category']
 export type Kind = Entry['kind']
 export type Status = Entry['status']
+export type PaymentKind = NonNullable<Entry['paymentKind']>
 export type Priority = Entry['priority']
 /** What a list of entries can be narrowed down by and ordered by. */
 export type EntryFilter = NonNullable<paths['/api/entries']['get']['parameters']['query']>

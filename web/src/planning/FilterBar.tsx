@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from 'react'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
-import type { Filters } from './filters.ts'
+import { NO_CATEGORY, type Filters } from './filters.ts'
 import { PRIORITY_LABEL, STATUS_LABEL } from './labels.ts'
 import type { Category, Priority, Status } from './planningApi.ts'
 
@@ -10,6 +10,8 @@ interface FilterBarProps {
   onChange: (name: keyof Filters, value: string) => void
   /** False where the order is not the reader's to choose, as on the chart. */
   ordered?: boolean
+  /** True where entries can carry money: offers to show the payments only. */
+  money?: boolean
   /** One more control of the page's own, shown last. */
   children?: ReactNode
 }
@@ -18,7 +20,7 @@ const STATUSES: Status[] = ['NOT_STARTED', 'IN_PROGRESS', 'DONE', 'DROPPED']
 const PRIORITIES: Priority[] = ['CRITICAL', 'HIGH', 'NORMAL', 'LOW']
 
 /** Narrows a list down and orders it. Every choice applies at once. */
-export function FilterBar({ filters, categories, onChange, ordered = true, children }: FilterBarProps) {
+export function FilterBar({ filters, categories, onChange, ordered = true, money = false, children }: FilterBarProps) {
   const wedding = useCurrentWedding()
   const id = useId()
 
@@ -56,6 +58,7 @@ export function FilterBar({ filters, categories, onChange, ordered = true, child
               {category.name}
             </option>
           ))}
+          <option value={NO_CATEGORY}>No category</option>
         </select>
       </div>
       <div className="filter">
@@ -69,6 +72,15 @@ export function FilterBar({ filters, categories, onChange, ordered = true, child
           ))}
         </select>
       </div>
+      {money && (
+        <div className="filter">
+          <label htmlFor={`${id}-money`}>Money</label>
+          <select id={`${id}-money`} value={filters.money} onChange={(event) => onChange('money', event.target.value)}>
+            <option value="">With or without</option>
+            <option value="payments">Payments only</option>
+          </select>
+        </div>
+      )}
       {ordered && (
         <div className="filter">
           <label htmlFor={`${id}-sort`}>Order</label>

@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
 import { EntryMeta } from './EntryMeta.tsx'
 import { FilterBar } from './FilterBar.tsx'
@@ -15,6 +15,8 @@ const STATUSES: Status[] = ['NOT_STARTED', 'IN_PROGRESS', 'DONE', 'DROPPED']
 /** Everything that has to happen, step by step. Steps with dates first, then those not yet scheduled. */
 export function PlanPage() {
   const { filters, set, query, key } = useFilters()
+  // The form returns to this list as it is narrowed down now.
+  const back = `/plan${useLocation().search}`
   const items = useLoaded(key, (signal) => listEntries({ ...query, kind: 'PLAN_ITEM' }, signal))
   const tasks = useLoaded('tasks', (signal) => listEntries({ kind: 'TASK', sort: 'DUE_DATE' }, signal))
   const categories = useLoaded('categories', listCategories)
@@ -54,7 +56,7 @@ export function PlanPage() {
     <>
       <div className="page-head">
         <h1>Plan</h1>
-        <Link className="button" to="/entries/new?kind=PLAN_ITEM">
+        <Link className="button" to="/entries/new?kind=PLAN_ITEM" state={{ back }}>
           Add a plan item
         </Link>
       </div>
@@ -73,8 +75,8 @@ export function PlanPage() {
         </p>
       ) : (
         <>
-          <PlanGroup title="Scheduled" items={scheduled} {...group} />
-          <PlanGroup title="Not scheduled" items={notScheduled} {...group} />
+          <PlanGroup title="Scheduled" items={scheduled} back={back} {...group} />
+          <PlanGroup title="Not scheduled" items={notScheduled} back={back} {...group} />
         </>
       )}
     </>
@@ -89,9 +91,11 @@ interface PlanGroupProps {
   pending: PendingStatus | null
   shown: (entry: Entry) => Status
   onStatus: (entry: Entry, status: Status) => void
+  /** Where the form returns to. */
+  back: string
 }
 
-function PlanGroup({ title, items, tasks, categories, pending, shown, onStatus }: PlanGroupProps) {
+function PlanGroup({ title, items, tasks, categories, pending, shown, onStatus, back }: PlanGroupProps) {
   if (items.length === 0) {
     return null
   }
@@ -106,7 +110,7 @@ function PlanGroup({ title, items, tasks, categories, pending, shown, onStatus }
           return (
             <li key={item.id} className="entry entry-plan" data-done={itemStatus === 'DONE' || itemStatus === 'DROPPED'}>
               <div className="entry-body">
-                <Link className="entry-title" to={`/entries/${item.id}`}>
+                <Link className="entry-title" to={`/entries/${item.id}`} state={{ back }}>
                   {item.title}
                 </Link>
                 <EntryMeta entry={item} categories={categories} />
@@ -124,13 +128,14 @@ function PlanGroup({ title, items, tasks, categories, pending, shown, onStatus }
                           categories={categories}
                           status={shown(task)}
                           busy={pending?.id === task.id}
+                          back={back}
                           onStatus={onStatus}
                         />
                       ))}
                     </ul>
                   </details>
                 )}
-                <Link className="quiet-link" to={`/entries/new?kind=TASK&parent=${item.id}`}>
+                <Link className="quiet-link" to={`/entries/new?kind=TASK&parent=${item.id}`} state={{ back }}>
                   Add a task to this
                 </Link>
               </div>
