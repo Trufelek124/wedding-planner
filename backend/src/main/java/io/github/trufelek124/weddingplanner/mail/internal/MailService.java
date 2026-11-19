@@ -60,6 +60,7 @@ class MailService {
     private final TicketRepository tickets;
     private final GoogleClient google;
     private final GmailAccess access;
+    private final MessageRepository messages;
     private final Clock clock;
 
     MailService(
@@ -69,6 +70,7 @@ class MailService {
             TicketRepository tickets,
             GoogleClient google,
             GmailAccess access,
+            MessageRepository messages,
             Clock clock) {
         this.setup = setup;
         this.weddings = weddings;
@@ -76,6 +78,7 @@ class MailService {
         this.tickets = tickets;
         this.google = google;
         this.access = access;
+        this.messages = messages;
         this.clock = clock;
     }
 
@@ -94,12 +97,12 @@ class MailService {
                         .map(connection -> new PartnersConnection(true, connection.state(), connection.lastLookAt()))
                         .orElse(new PartnersConnection(mine.joinedMemberIds().contains(id), ConnectionState.NOT_CONNECTED, null)))
                 .orElse(new PartnersConnection(false, ConnectionState.NOT_CONNECTED, null));
-        return new MailStateResponse(true, yours.map(MailService::view).orElse(notConnected()), partner);
+        return new MailStateResponse(true, yours.map(this::view).orElse(notConnected()), partner);
     }
 
-    private static MyConnection view(Connection connection) {
-        // The sync's count of noted messages does not exist yet.
-        return new MyConnection(connection.state(), connection.address(), connection.connectedAt(), connection.lastLookAt(), 0);
+    private MyConnection view(Connection connection) {
+        return new MyConnection(connection.state(), connection.address(), connection.connectedAt(), connection.lastLookAt(),
+                messages.count(connection.memberId()));
     }
 
     private static MyConnection notConnected() {

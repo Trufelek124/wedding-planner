@@ -30,7 +30,9 @@ import org.springframework.test.context.TestPropertySource;
     // 32 bytes, base64: "0123456789abcdef0123456789abcdef" is not a real key.
     "APP_MAIL_TOKEN_KEY=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
     // A stand-in that is slow is waited for this long, not ten seconds.
-    "app.mail.google-timeout=2s"
+    "app.mail.google-timeout=2s",
+    // The clock of the sync does not run in tests: a test calls the look itself.
+    "app.mail.sync-automatic=false"
 })
 public abstract class MailTestBase extends PostgresIntegrationTest {
 

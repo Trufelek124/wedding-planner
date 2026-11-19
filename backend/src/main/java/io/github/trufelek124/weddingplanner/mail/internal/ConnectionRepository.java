@@ -28,7 +28,9 @@ class ConnectionRepository {
             byte[] tokenSealed,
             Instant connectedAt,
             String syncMarker,
-            Instant lastLookAt) {
+            Instant lastLookAt,
+            int refusals,
+            Instant putOffUntil) {
 
         @Override
         public String toString() {
@@ -46,7 +48,8 @@ class ConnectionRepository {
     }
 
     private static final String SELECT =
-            "SELECT member_id, state, address, token_sealed, connected_at, sync_marker, last_look_at FROM mail_connection";
+            "SELECT member_id, state, address, token_sealed, connected_at, sync_marker, last_look_at, refusals, put_off_until"
+                    + " FROM mail_connection";
 
     private final JdbcClient jdbc;
 
@@ -84,10 +87,16 @@ class ConnectionRepository {
                     token_sealed = EXCLUDED.token_sealed,
                     connected_at = EXCLUDED.connected_at,
                     sync_marker = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.sync_marker END,
-                    last_look_at = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.last_look_at END
+                    last_look_at = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.last_look_at END,
+                    refusals = 0,
+                    put_off_until = NULL
                 """)
                 .params(memberId, address, tokenSealed, at(now))
                 .update();
+        if (before.isPresent() && !before.get().address().equals(address)) {
+            // Another mailbox: what was noted of the old one is no longer true of this one.
+            jdbc.sql("DELETE FROM mail_message WHERE member_id = ?").param(memberId).update();
+        }
         return before;
     }
 
@@ -116,6 +125,33 @@ class ConnectionRepository {
                 == 1;
     }
 
+    /** The connections the sync may look at now: connected, and not put off for a later time. Oldest connection first. */
+    List<Connection> dueForLook(Instant now) {
+        return jdbc.sql(SELECT + " WHERE state = 'CONNECTED' AND (put_off_until IS NULL OR put_off_until <= ?) ORDER BY connected_at, member_id")
+                .param(at(now))
+                .query(ConnectionRepository::connection)
+                .list();
+    }
+
+    /**
+     * Google refused or failed: leave this mailbox until a later time that grows with every refusal in a row (5, 10,
+     * 20, 40 minutes, then an hour at most). Only for the connection the look began with.
+     *
+     * @return until when, or empty when that connection is gone or was replaced
+     */
+    Optional<Instant> putOff(UUID memberId, Instant connectedAt, Instant now) {
+        return jdbc.sql("""
+                UPDATE mail_connection
+                SET refusals = refusals + 1,
+                    put_off_until = ? + interval '1 minute' * LEAST(5 * power(2, LEAST(refusals, 10)), 60)
+                WHERE member_id = ? AND connected_at = ?
+                RETURNING put_off_until
+                """)
+                .params(at(now), memberId, at(connectedAt))
+                .query((rows, number) -> rows.getObject("put_off_until", OffsetDateTime.class).toInstant())
+                .optional();
+    }
+
     private static Connection connection(java.sql.ResultSet rows, int number) throws java.sql.SQLException {
         return new Connection(
                 rows.getObject("member_id", UUID.class),
@@ -126,7 +162,11 @@ class ConnectionRepository {
                 rows.getString("sync_marker"),
                 rows.getObject("last_look_at", OffsetDateTime.class) == null
                         ? null
-                        : rows.getObject("last_look_at", OffsetDateTime.class).toInstant());
+                        : rows.getObject("last_look_at", OffsetDateTime.class).toInstant(),
+                rows.getInt("refusals"),
+                rows.getObject("put_off_until", OffsetDateTime.class) == null
+                        ? null
+                        : rows.getObject("put_off_until", OffsetDateTime.class).toInstant());
     }
 
     private static OffsetDateTime at(Instant instant) {

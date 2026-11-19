@@ -10,9 +10,12 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -23,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Stands in for Google's OAuth, token, revoke and Gmail addresses in tests. It behaves as Google does where the
@@ -69,6 +73,112 @@ public final class StandInGoogle {
         public static Reply dropped() {
             return new Reply(0, null, null, null, 0, true);
         }
+
+        /** In a prepared series: this call is answered as usual. */
+        public static Reply normally() {
+            return new Reply(0, null, null, null, 0, false);
+        }
+    }
+
+    /** A message in a made-up mailbox. Only what Gmail's list and history would say of it. */
+    private record Message(String id, String threadId, Set<String> labels, Instant date, long historyId) {}
+
+    /**
+     * A made-up mailbox: messages with their labels and dates, the marker (Gmail's history id) that grows with every
+     * delivery, pages of its own size, and a way to make the marker too old. Everything made up.
+     */
+    public static final class Mailbox {
+
+        private final List<Message> messages = new ArrayList<>();
+        private long historyId = 1000;
+        private long oldestValid = 0;
+        private int pageSize = 2;
+
+        /** A message arrives, with these labels (INBOX, SENT, DRAFT, SPAM, TRASH, CHAT ...), written at {@code date}. */
+        public synchronized void deliver(String id, String threadId, Instant date, String... labels) {
+            historyId++;
+            messages.add(new Message(id, threadId, Set.of(labels), date, historyId));
+        }
+
+        /** Google no longer knows what happened before now: every marker taken until now is "too old". */
+        public synchronized void forgetHistory() {
+            oldestValid = historyId;
+        }
+
+        /** The marker the mailbox stands at: for a mailbox whose markers must not be mistaken for other numbers. */
+        public synchronized void markerIs(long marker) {
+            historyId = marker;
+            oldestValid = 0;
+        }
+
+        public synchronized void pageSize(int size) {
+            pageSize = size;
+        }
+
+        public synchronized String marker() {
+            return Long.toString(historyId);
+        }
+
+        private synchronized String list(Map<String, String> query) {
+            long after = 0;
+            Set<String> without = new java.util.HashSet<>();
+            for (String token : query.getOrDefault("q", "").split("\\s+")) {
+                if (token.startsWith("after:")) {
+                    after = Long.parseLong(token.substring(6));
+                } else if (token.startsWith("-in:")) {
+                    without.add(token.substring(4).toUpperCase(java.util.Locale.ROOT)
+                            .replace("DRAFTS", "DRAFT").replace("CHATS", "CHAT"));
+                }
+            }
+            long since = after;
+            // Stricter than Google, which leaves out spam and the bin unless asked: here the planner must say so itself.
+            List<Message> matching = new ArrayList<>();
+            for (int i = messages.size() - 1; i >= 0; i--) {
+                Message message = messages.get(i);
+                if (message.date().getEpochSecond() >= since && message.labels().stream().noneMatch(without::contains)) {
+                    matching.add(message);
+                }
+            }
+            int from = offset(query.get("pageToken"));
+            int to = Math.min(matching.size(), from + pageSize);
+            StringBuilder body = new StringBuilder("{");
+            if (from < to) {
+                body.append("\"messages\":[").append(matching.subList(from, to).stream()
+                        .map(m -> "{\"id\":\"" + m.id() + "\",\"threadId\":\"" + m.threadId() + "\"}")
+                        .collect(Collectors.joining(","))).append("],");
+            }
+            if (to < matching.size()) {
+                body.append("\"nextPageToken\":\"page-").append(to).append("\",");
+            }
+            return body.append("\"resultSizeEstimate\":").append(matching.size()).append("}").toString();
+        }
+
+        /** Null: the marker is too old (404). */
+        private synchronized String history(Map<String, String> query) {
+            long start = Long.parseLong(query.getOrDefault("startHistoryId", "0"));
+            if (start < oldestValid) {
+                return null;
+            }
+            List<Message> added = messages.stream().filter(m -> m.historyId() > start).toList();
+            int from = offset(query.get("pageToken"));
+            int to = Math.min(added.size(), from + pageSize);
+            StringBuilder body = new StringBuilder("{");
+            if (from < to) {
+                body.append("\"history\":[").append(added.subList(from, to).stream()
+                        .map(m -> "{\"id\":\"" + m.historyId() + "\",\"messagesAdded\":[{\"message\":{\"id\":\"" + m.id()
+                                + "\",\"threadId\":\"" + m.threadId() + "\",\"labelIds\":["
+                                + m.labels().stream().map(l -> "\"" + l + "\"").collect(Collectors.joining(",")) + "]}}]}")
+                        .collect(Collectors.joining(","))).append("],");
+            }
+            if (to < added.size()) {
+                body.append("\"nextPageToken\":\"page-").append(to).append("\",");
+            }
+            return body.append("\"historyId\":\"").append(historyId).append("\"}").toString();
+        }
+
+        private static int offset(String pageToken) {
+            return pageToken == null ? 0 : Integer.parseInt(pageToken.substring("page-".length()));
+        }
     }
 
     private final HttpServer server;
@@ -86,6 +196,9 @@ public final class StandInGoogle {
     private volatile Reply everyRevoke;
     private volatile Reply everyProfile;
     private final Set<String> verifiersSeen = ConcurrentHashMap.newKeySet();
+    private final Map<String, Mailbox> mailboxes = new ConcurrentHashMap<>();
+    private final Map<String, Deque<Reply>> series = new ConcurrentHashMap<>();
+    private final Map<String, Reply> everyOfAccount = new ConcurrentHashMap<>();
 
     private StandInGoogle() {
         try {
@@ -98,6 +211,8 @@ public final class StandInGoogle {
             server.createContext("/token", this::token);
             server.createContext("/revoke", this::revoke);
             server.createContext("/gmail/v1/users/me/profile", this::profile);
+            server.createContext("/gmail/v1/users/me/messages", exchange -> gmail(exchange, "/gmail/v1/users/me/messages", Mailbox::list));
+            server.createContext("/gmail/v1/users/me/history", exchange -> gmail(exchange, "/gmail/v1/users/me/history", Mailbox::history));
             server.createContext("/elsewhere", exchange -> {
                 record(exchange, "/elsewhere", Map.of());
                 answer(exchange, 200, "application/json", "{\"hello\":\"elsewhere\"}");
@@ -148,6 +263,31 @@ public final class StandInGoogle {
         everyToken = null;
         everyRevoke = null;
         everyProfile = null;
+        mailboxes.clear();
+        series.clear();
+        everyOfAccount.clear();
+    }
+
+    /** The made-up mailbox of this account (an address at .example), made when first asked for. */
+    public Mailbox mailbox(String account) {
+        return mailboxes.computeIfAbsent(account, name -> new Mailbox());
+    }
+
+    /**
+     * The next calls to this path (a whole one, like "/gmail/v1/users/me/messages") are answered like
+     * this, one reply each in turn; {@link Reply#normally()} lets one through. After the last, calls are as usual.
+     */
+    public void answerNextCallsToWith(String path, Reply... replies) {
+        series.computeIfAbsent(path, key -> new java.util.concurrent.ConcurrentLinkedDeque<>()).addAll(List.of(replies));
+    }
+
+    /** Every Gmail call made with this account's access tokens is answered like this, until {@link #reset}. */
+    public void answerEveryGmailCallOfWith(String account, Reply reply) {
+        everyOfAccount.put(account, reply);
+    }
+
+    public void stopAnsweringGmailCallsOf(String account) {
+        everyOfAccount.remove(account);
     }
 
     public Map<String, String> query(String authorizationUrl) {
@@ -222,6 +362,11 @@ public final class StandInGoogle {
     /** The tokens that were sent to the revoke address. */
     public List<String> revokedTokens() {
         return calls("/revoke").stream().map(call -> call.form().get("token")).toList();
+    }
+
+    /** The refresh token Google handed out for this account's mailbox. */
+    public String refreshTokenOf(String account) {
+        return refreshTokens.entrySet().stream().filter(entry -> entry.getValue().equals(account)).map(Map.Entry::getKey).findFirst().orElseThrow();
     }
 
     public List<String> refreshTokensIssued() {
@@ -300,14 +445,54 @@ public final class StandInGoogle {
         if (prepared != null && replied(exchange, prepared)) {
             return;
         }
-        String header = exchange.getRequestHeaders().getFirst("Authorization");
-        String account = header != null && header.startsWith("Bearer ") ? accessTokens.get(header.substring(7)) : null;
+        String account = accountOf(exchange);
+        Reply more = preparedForGmail("/gmail/v1/users/me/profile", account);
+        if (more != null && replied(exchange, more)) {
+            return;
+        }
         if (account == null) {
             answer(exchange, 401, "application/json", "{\"error\":{\"code\":401}}");
             return;
         }
+        String marker = mailboxes.containsKey(account) ? mailboxes.get(account).marker() : "4711";
         answer(exchange, 200, "application/json",
-                "{\"emailAddress\":\"" + account + "\",\"messagesTotal\":12,\"threadsTotal\":7,\"historyId\":\"4711\"}");
+                "{\"emailAddress\":\"" + account + "\",\"messagesTotal\":12,\"threadsTotal\":7,\"historyId\":\"" + marker + "\"}");
+    }
+
+    /** Messages and history: what the calls of the planner's sync reach. What Google says is made from the account's mailbox. */
+    private void gmail(HttpExchange exchange, String path, java.util.function.BiFunction<Mailbox, Map<String, String>, String> what)
+            throws IOException {
+        Map<String, String> query = form(exchange.getRequestURI().getRawQuery());
+        record(exchange, path, query);
+        String account = accountOf(exchange);
+        Reply prepared = preparedForGmail(path, account);
+        if (prepared != null && replied(exchange, prepared)) {
+            return;
+        }
+        if (account == null) {
+            answer(exchange, 401, "application/json", "{\"error\":{\"code\":401}}");
+            return;
+        }
+        String body = what.apply(mailbox(account), query);
+        if (body == null) {
+            answer(exchange, 404, "application/json", "{\"error\":{\"code\":404,\"status\":\"NOT_FOUND\"}}");
+        } else {
+            answer(exchange, 200, "application/json", body);
+        }
+    }
+
+    private String accountOf(HttpExchange exchange) {
+        String header = exchange.getRequestHeaders().getFirst("Authorization");
+        return header != null && header.startsWith("Bearer ") ? accessTokens.get(header.substring(7)) : null;
+    }
+
+    private Reply preparedForGmail(String path, String account) {
+        Reply every = account == null ? null : everyOfAccount.get(account);
+        if (every != null) {
+            return every;
+        }
+        Deque<Reply> next = series.get(path);
+        return next == null ? null : next.poll();
     }
 
     /** Plays a prepared reply when it is a complete one; a "slow" one only waits, and the normal answer follows. */

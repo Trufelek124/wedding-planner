@@ -69,6 +69,10 @@ app:
     gmail-uri: https://gmail.googleapis.com
     # How long one call to Google, answer included, may take.
     google-timeout: 10s
+    # How often the server looks at the connected mailboxes (S03 section 5), counted from the end of the last look.
+    sync-interval: ${MAIL_SYNC_INTERVAL:5m}
+    # false: the server never looks by itself (tests call the look themselves). Nothing runs while the import is off.
+    sync-automatic: ${MAIL_SYNC_ENABLED:true}
 
 server:
   port: 8080

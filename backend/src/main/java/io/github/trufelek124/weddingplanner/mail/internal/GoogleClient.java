@@ -60,7 +60,11 @@ class GoogleClient {
         REDIRECTED,
         REFUSED,
         SERVER_TROUBLE,
-        UNUSABLE
+        UNUSABLE,
+        /** 401: the access token is no good (any more). */
+        UNAUTHORIZED,
+        /** 404: what was asked for is not there; for a sync marker, that it has grown too old. */
+        NOT_FOUND
     }
 
     static final class GoogleFailure extends Exception {
@@ -181,6 +185,50 @@ class GoogleClient {
             throw new GoogleFailure(Failure.UNUSABLE);
         }
         return address;
+    }
+
+    /**
+     * One read of a Gmail address, {@code path} below {@code /gmail/v1/users/me}, with the limits of every call. The
+     * answer is a JSON object. A 401 and a 404 are told apart from the rest; too many requests (429, or 403 with a
+     * rate limit as its reason) and Google's own failures are {@link Failure#SERVER_TROUBLE}.
+     */
+    JsonNode gmailGet(String accessToken, String path, Map<String, String> query) throws GoogleFailure {
+        Google google = setup.require().google();
+        String base = google.gmailUri().toString().replaceAll("/+$", "");
+        String address = base + "/gmail/v1/users/me/" + path + (query.isEmpty() ? "" : "?" + form(query));
+        HttpRequest request = HttpRequest.newBuilder(URI.create(address))
+                .header("Authorization", "Bearer " + accessToken)
+                .header("Accept", "application/json")
+                .timeout(google.timeout())
+                .GET()
+                .build();
+        Answer answer = send(request);
+        if (answer.status() == 401) {
+            throw new GoogleFailure(Failure.UNAUTHORIZED);
+        }
+        if (answer.status() == 404) {
+            throw new GoogleFailure(Failure.NOT_FOUND);
+        }
+        if (answer.status() == 403 && rateLimited(answer.json())) {
+            throw new GoogleFailure(Failure.SERVER_TROUBLE);
+        }
+        return succeeded(answer);
+    }
+
+    private static boolean rateLimited(JsonNode json) {
+        if (json == null) {
+            return false;
+        }
+        JsonNode errors = json.path("error").path("errors");
+        if (errors.isArray()) {
+            for (JsonNode error : errors) {
+                String reason = error.path("reason").asString("");
+                if (reason.toLowerCase(Locale.ROOT).contains("ratelimit") || reason.toLowerCase(Locale.ROOT).contains("quota")) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** Asks Google to withdraw the permission this token stands for. Whatever Google answers, nothing else depends on it. */
