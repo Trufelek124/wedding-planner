@@ -85,6 +85,18 @@
    "id": "65ac27c4-3684-42ab-bb57-4a75e01b3457",
    "sha256": "e1b6ca5190de665545c86cf1b9cfdf504e05c0b7911f5e9da02b8897b59a20c0",
    "commit": "48015f1"
+  },
+  "docs/specs/S03-mail-connection-and-sync.md": {
+   "publicId": "WP-DOC-10",
+   "id": "2c206000-bf22-4895-8793-dfa921bce8cf",
+   "sha256": "a90a3b8a5d7b4bf461357b3ac80a446060cd11919f243bf7f2aad8b369626205",
+   "commit": "3c937a8"
+  },
+  "docs/decisions.md#D-006": {
+   "publicId": "WP-DOC-11",
+   "id": "97aefc60-e07d-4248-9324-9c994d2da5d8",
+   "sha256": "8348982bd294bf2b2ec7c9c509852e792be82c963c1e798b49a2275bfbc3c814",
+   "commit": "3c937a8"
   }
  }
 }
