@@ -83,6 +83,7 @@ class StandInPhone(
         database = database,
         sendLater = { askedToSendLater += 1 },
         shareFolder = File(folder, "shares"),
+        pictureFolder = File(folder, "pictures"),
         clock = clock,
     )
 
@@ -99,7 +100,7 @@ class StandInPhone(
         var restful = 0
         while (restful < 5 && System.currentTimeMillis() < until) {
             shadowOf(Looper.getMainLooper()).idle()
-            restful = if (container.planner.quiet) restful + 1 else 0
+            restful = if (container.planner.quiet && container.pictures.quiet) restful + 1 else 0
             Thread.sleep(10)
         }
         off()

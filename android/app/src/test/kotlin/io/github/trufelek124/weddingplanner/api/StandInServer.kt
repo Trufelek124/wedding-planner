@@ -20,7 +20,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class StandInServer {
 
     /** What the app sent, in order. */
-    data class Call(val route: String, val authorization: String?, val origin: String?, val body: String, val contentType: String? = null)
+    data class Call(val route: String, val authorization: String?, val origin: String?, val body: String, val contentType: String? = null, val query: String = "")
 
     // The app asks for several things at once, and each is answered on a thread of its own: what is
     // written here while answering has to bear that, or a call goes missing from the list now and then.
@@ -39,7 +39,7 @@ class StandInServer {
         val route = "${request.method.value} ${request.url.encodedPath}"
         calls += Call(
             route, request.headers[HttpHeaders.Authorization], request.headers[HttpHeaders.Origin], String(request.body.toByteArray()),
-            request.body.contentType?.withoutParameters()?.toString(),
+            request.body.contentType?.withoutParameters()?.toString(), request.url.encodedQuery,
         )
         if (down) {
             throw IOException("Failed to connect")

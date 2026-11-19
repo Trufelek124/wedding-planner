@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import io.github.trufelek124.weddingplanner.api.Api
 import io.github.trufelek124.weddingplanner.data.PlannerDatabase
+import io.github.trufelek124.weddingplanner.data.PictureStore
 import io.github.trufelek124.weddingplanner.data.PlannerRepository
 import io.github.trufelek124.weddingplanner.data.SendLater
 import io.github.trufelek124.weddingplanner.data.SendWithWorkManager
@@ -43,14 +44,23 @@ class AppContainer(
     val sendLater: SendLater,
     /** The app's own folder for the pictures of what was shared to the planner and waits to be sent. */
     shareFolder: File,
+    /** The app's own folder for the pictures of the inspirations that were fetched; the system may empty it when space is short. */
+    pictureFolder: File,
     val clock: Clock = Clock.systemDefaultZone(),
 ) {
+
+    /**
+     * For what has to go on after the screen that started it is gone: a share is sent while the
+     * person is already back in the app they shared from.
+     */
+    val background: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /** Signing out removes the account's data from the phone: whatever a task keeps here is cleared in [forgetEverything]. */
     val session: Session = Session(
         api = { api },
         store = SessionStore(sessionFile, cipher),
         forgetEverything = {
+            pictures.forget()
             planner.forget()
             googleAccounts.forget()
         },
@@ -58,13 +68,10 @@ class AppContainer(
 
     val api: Api = Api(engine, server, session.accessTokens)
 
-    val planner: PlannerRepository = PlannerRepository({ api }, database, clock, shareFolder)
+    val planner: PlannerRepository = PlannerRepository({ api }, database, clock, shareFolder, afterLoad = { pictures.afterLoad(it.inspirations) })
 
-    /**
-     * For what has to go on after the screen that started it is gone: a share is sent while the
-     * person is already back in the app they shared from.
-     */
-    val background: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    /** The pictures of the inspirations on the phone: fetched with the access token, kept in files, let go of at sign-out. */
+    val pictures: PictureStore = PictureStore({ api }, pictureFolder, background)
 
     companion object {
 
@@ -77,6 +84,7 @@ class AppContainer(
             database = PlannerDatabase.onThePhone(context),
             sendLater = SendWithWorkManager(context.applicationContext),
             shareFolder = File(context.filesDir, "shares"),
+            pictureFolder = File(context.cacheDir, "pictures"),
         )
     }
 }

@@ -151,9 +151,18 @@ first uses it, at the version D-005 names.
   changed there is a guest's status, and an inspiration is added through the share sheet (S01 §4).
 - The inspirations are part of the copy (`inspiration`, `inspiration_picture`) and stand on a board behind More,
   narrowed down by board and by tag; what was shared on the phone and still waits stands first. A card's face is a
-  slot: words where there is no picture to show. What a waiting share's link is called before the server has seen
-  it repeats the server's rule (`sourceOfLink` in `planner/InspirationWords.kt`, `Links.sourceOf` in the backend):
-  change both together. An idea's link opens through `planner/Contact.kt` like every other address.
+  slot: the picture, in its own shape within bounds, and words where there is none to show. What a waiting share's
+  link is called before the server has seen it repeats the server's rule (`sourceOfLink` in
+  `planner/InspirationWords.kt`, `Links.sourceOf` in the backend): change both together. An idea's link opens
+  through `planner/Contact.kt` like every other address.
+- A picture of an inspiration is only handed out with the access token. `Api.fetchTo` streams it to a file with a
+  limit on its size; `PictureStore` (`data/`) keeps the files in a folder under the cache directory: under a
+  temporary name until whole, one fetch per picture however many ask, a few at a time, and what could not be had
+  is not asked for again until the next load. After every load the board's small pictures are fetched in the
+  background and the files of what is gone are removed; signing out removes all of them, also what is on its way.
+  `PictureDecoding` never reads a picture larger than its place needs and never on the main thread;
+  `PicturesModel` holds what is decoded and lets go of it with the signed-in person's models. There is no picture
+  library (D-005). A test makes its own pictures (`TestPictures.kt`); none is committed.
 - A guest's status chosen on the phone waits in a table of its own (`waiting_guest_status`, one row per guest; a
   further choice replaces it) and is sent by `sync()` after the tasks and before the shares. The server takes it
   whatever version it has, so there is no "changed meanwhile" here: only "the guest is gone" and "not taken", which

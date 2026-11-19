@@ -239,4 +239,11 @@ class InspirationWordsTest {
         assertEquals(listOf("s2"), sharesShown(shares, "none", null).map { it.id })
         assertEquals(emptyList<String>(), sharesShown(shares, null, "boho").map { it.id })
     }
+
+    @Test
+    fun `a picture on an idea's own screen says which of how many it is, and that it is missing`() {
+        assertEquals("Picture 1 of 3", pictureInWords(1, 3))
+        assertEquals("Picture 3 of 3", pictureInWords(3, 3))
+        assertEquals("This picture could not be loaded.", PICTURE_MISSING)
+    }
 }

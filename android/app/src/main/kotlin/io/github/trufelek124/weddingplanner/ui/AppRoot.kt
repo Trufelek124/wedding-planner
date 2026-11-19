@@ -25,6 +25,7 @@ import io.github.trufelek124.weddingplanner.AppContainer
 import io.github.trufelek124.weddingplanner.BuildConfig
 import io.github.trufelek124.weddingplanner.R
 import io.github.trufelek124.weddingplanner.planner.Changes
+import io.github.trufelek124.weddingplanner.planner.PicturesModel
 import io.github.trufelek124.weddingplanner.planner.PlannerScreens
 import io.github.trufelek124.weddingplanner.planner.PlannerViewModel
 import io.github.trufelek124.weddingplanner.session.SessionState
@@ -77,6 +78,9 @@ fun AppRoot(container: AppContainer, debugBuild: Boolean = BuildConfig.DEBUG) {
                 factory = viewModelFactory { initializer { PlannerViewModel(container.planner, container.session, container.sendLater) } },
             )
             val ui by model.ui.collectAsStateWithLifecycle()
+            val pictures: PicturesModel = viewModel(
+                factory = viewModelFactory { initializer { PicturesModel(container.pictures, container.planner::sharePicture) } },
+            )
             PlannerScreens(
                 ui = ui,
                 userName = session.user.displayName,
@@ -87,6 +91,7 @@ fun AppRoot(container: AppContainer, debugBuild: Boolean = BuildConfig.DEBUG) {
                 ),
                 onLoad = model::load,
                 onSignOut = model::signOut,
+                pictures = pictures,
             )
         }
     }

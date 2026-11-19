@@ -60,6 +60,8 @@ class PlannerRepository(
     private val clock: Clock,
     /** The app's own folder for the pictures of shares that wait to be sent. */
     shareFolder: File,
+    /** Told after every load that was kept, with what the phone then holds: the pictures of the ideas are fetched from it. */
+    private val afterLoad: (Planner) -> Unit = {},
 ) {
 
     private val dao = database.planner()
@@ -101,6 +103,9 @@ class PlannerRepository(
     suspend fun sync(): Load = talking.withLock {
         if (send() == Sending.SIGNED_OUT) Load.SIGNED_OUT else load()
     }
+
+    /** The phone's own copy of a picture that was shared and waits to be sent; null when there is none. */
+    fun sharePicture(share: WaitingShare, number: Int): File? = shareFiles.picture(share.id, number)
 
     // ---------------------------------------------------------------- changing a task
 
@@ -476,7 +481,7 @@ class PlannerRepository(
                 else -> Load.FAILED
             }
         }
-        return written {
+        val kept = written {
             // A sign-out while the server was answering: what came back is nobody's any more.
             if (forgotten != since) {
                 Load.SIGNED_OUT
@@ -485,6 +490,12 @@ class PlannerRepository(
                 Load.LOADED
             }
         }
+        // A sign-out since then has taken the planner away: nothing is fetched for whoever signed out.
+        if (kept == Load.LOADED && forgotten == since) {
+            // Not under the lock, and nothing that goes wrong here is the load's.
+            withContext(Dispatchers.IO) { dao.stored()?.let(::plannerOf) }?.let { runCatching { afterLoad(it) } }
+        }
+        return kept
     }
 
     /**

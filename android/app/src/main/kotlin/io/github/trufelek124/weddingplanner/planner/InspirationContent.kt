@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -40,6 +41,8 @@ import io.github.trufelek124.weddingplanner.ui.QuietButton
  *
  * @param onVendor leads to the vendor the idea belongs to
  * @param face what stands where the picture belongs; the default says it in words
+ * @param pictureItems the pictures themselves, as items of the list, one under the other; null for the words of [face]
+ *     alone. Used only for an idea that holds pictures.
  * @param foot what stands under everything: when this was loaded
  */
 @Composable
@@ -49,6 +52,7 @@ fun InspirationContent(
     onVendor: (Vendor) -> Unit,
     modifier: Modifier = Modifier,
     face: @Composable (Inspiration) -> Unit = { WordsFace(faceInWords(it), large = true) },
+    pictureItems: (LazyListScope.(Inspiration) -> Unit)? = null,
     foot: @Composable () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -61,7 +65,11 @@ fun InspirationContent(
     val addedBy = idea.addedById?.let(planner::memberName)
 
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
-        item(key = "face") { Column(modifier = Modifier.padding(bottom = 8.dp)) { face(idea) } }
+        if (pictureItems != null && idea.pictures.isNotEmpty()) {
+            pictureItems(idea)
+        } else {
+            item(key = "face") { Column(modifier = Modifier.padding(bottom = 8.dp)) { face(idea) } }
+        }
         item(key = "from") { IdeaRow(stringResource(R.string.inspiration_from), sourceName(idea)) }
         item(key = "board") { IdeaRow(stringResource(R.string.inspiration_board), board ?: stringResource(R.string.inspiration_no_board)) }
         if (planItem != null) {

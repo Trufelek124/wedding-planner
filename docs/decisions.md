@@ -295,6 +295,7 @@ whatever is chosen has to be buildable and checkable on the JVM.
 | Moving between screens | Navigation for Compose | A state variable: no back stack, nothing to share a link into |
 | Handing objects to each other | One container written by hand, created with the application | Hilt, as in the other app: worth it there with dozens of modules, not for a dozen objects |
 | Looking at a screen | Robolectric draws it, Roborazzi writes the picture | An emulator: none here. Nothing: a screen nobody has seen |
+| Showing the pictures of the inspirations (added with WP-TS-60) | Fetched through the app's own `Api`, kept as files by a store written by hand, decoded by the platform | A picture library (Coil): the pictures need the access token, have to stay for when there is no connection and have to be gone at sign-out — all of which would have to be built into the library's parts anyway, for one board |
 
 ### Decision
 

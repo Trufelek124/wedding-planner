@@ -7,14 +7,17 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.InputProvider
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.header
+import io.ktor.client.request.prepareGet
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
@@ -22,9 +25,11 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.content.TextContent
 import io.ktor.http.contentType
+import io.ktor.http.contentLength
 import io.ktor.http.isSuccess
 import io.ktor.serialization.ContentConvertException
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.streams.asInput
 import java.io.File
 import java.io.IOException
@@ -85,6 +90,68 @@ class Api(engine: HttpClientEngine, private val server: ServerAddress, private v
     suspend inline fun <reified T> sendFiles(path: String, part: String, files: List<File>): T = read {
         answer(HttpMethod.Post, path, FilesToSend(part, files), signedIn = true).body()
     }
+
+
+    /**
+     * Fetches a file, a picture, into [file]: the token sent and renewed once like any call. The body goes to the disk
+     * as it arrives and is never held whole in memory; more than [mostBytes] of it is refused, and what was written
+     * is removed again whenever this does not end well, so that a half-fetched file is never left behind. The server
+     * is asked for what it has as a picture, not as JSON.
+     *
+     * @throws ApiFailure for anything that goes wrong; a file the disk could not take counts as [ApiFailure.Unreachable]
+     */
+    suspend fun fetchTo(path: String, file: File, mostBytes: Long) {
+        try {
+            val token = tokens.current() ?: throw ApiFailure.SignedOut()
+            if (!streamed(path, token, file, mostBytes, mayRenew = true)) {
+                val newer = tokens.renewed(token) ?: throw ApiFailure.SignedOut()
+                streamed(path, newer, file, mostBytes, mayRenew = false)
+            }
+        } catch (failure: Throwable) {
+            file.delete()
+            throw failure
+        }
+    }
+
+    /** One try of [fetchTo]; false when the server refused the token and a newer one may be tried. */
+    private suspend fun streamed(path: String, token: String, file: File, mostBytes: Long, mayRenew: Boolean): Boolean =
+        try {
+            http.prepareGet(server.resolve(path)) {
+                header(HttpHeaders.Accept, "image/*, application/problem+json")
+                header(HttpHeaders.Authorization, "Bearer $token")
+                // A large picture on a slow line takes longer than a question does.
+                timeout { requestTimeoutMillis = PICTURE_TIMEOUT_MILLIS }
+            }.execute { response ->
+                if (response.status.value == 401 && mayRenew) {
+                    return@execute false
+                }
+                if (!response.status.isSuccess()) {
+                    throw problemOf(response)
+                }
+                if ((response.contentLength() ?: 0L) > mostBytes) {
+                    throw ApiFailure.Unreadable(IOException("the file is larger than the limit"))
+                }
+                val channel = response.bodyAsChannel()
+                file.outputStream().use { out ->
+                    val buffer = ByteArray(32 * 1024)
+                    var taken = 0L
+                    while (true) {
+                        val read = channel.readAvailable(buffer, 0, buffer.size)
+                        if (read < 0) break
+                        taken += read
+                        if (taken > mostBytes) {
+                            throw ApiFailure.Unreadable(IOException("the file is larger than the limit"))
+                        }
+                        out.write(buffer, 0, read)
+                    }
+                }
+                true
+            }
+        } catch (failure: ApiFailure) {
+            throw failure
+        } catch (failure: IOException) {
+            throw ApiFailure.Unreachable(failure)
+        }
 
     /** An answer that is not what the contract says is a failure like any other, not a crash. */
     @PublishedApi
@@ -193,6 +260,8 @@ class Api(engine: HttpClientEngine, private val server: ServerAddress, private v
     internal class FilesToSend(val part: String, val files: List<File>)
 
     companion object {
+        private const val PICTURE_TIMEOUT_MILLIS = 120_000L
+
         /** A newer server may send fields this app does not know yet; every field it knows is always sent. */
         val JSON: Json = Json {
             ignoreUnknownKeys = true

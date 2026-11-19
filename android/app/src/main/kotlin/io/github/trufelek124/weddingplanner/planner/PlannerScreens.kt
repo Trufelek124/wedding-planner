@@ -132,12 +132,20 @@ class Changes(
  * @param clock the phone's clock: for today's date and for saying when something was loaded
  */
 @Composable
-fun PlannerScreens(ui: PlannerUi, userName: String, clock: Clock, changes: Changes, onLoad: () -> Unit, onSignOut: () -> Unit) {
+fun PlannerScreens(
+    ui: PlannerUi,
+    userName: String,
+    clock: Clock,
+    changes: Changes,
+    onLoad: () -> Unit,
+    onSignOut: () -> Unit,
+    pictures: PicturesModel? = null,
+) {
     val planner = ui.planner
     if (planner == null) {
         NothingYet(ui, userName, onLoad, onSignOut)
     } else {
-        Places(planner, ui, userName, clock, changes, onLoad, onSignOut)
+        Places(planner, ui, userName, clock, changes, onLoad, onSignOut, pictures)
     }
 }
 
@@ -214,7 +222,16 @@ private fun SignedInAs(userName: String, unsent: Int, onSignOut: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clock, changes: Changes, onLoad: () -> Unit, onSignOut: () -> Unit) {
+private fun Places(
+    planner: Planner,
+    ui: PlannerUi,
+    userName: String,
+    clock: Clock,
+    changes: Changes,
+    onLoad: () -> Unit,
+    onSignOut: () -> Unit,
+    pictures: PicturesModel?,
+) {
     val navigation = rememberNavController()
     val current by navigation.currentBackStackEntryAsState()
     val route = current?.destination?.route
@@ -383,7 +400,14 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                         }
                     }
                     composable(INSPIRATIONS) {
-                        InspirationsContent(planner, onOpen = { navigation.navigate("$INSPIRATION?id=${Uri.encode(it.id)}") }, foot = loaded)
+                        if (pictures == null) {
+                            InspirationsContent(planner, onOpen = { navigation.navigate("$INSPIRATION?id=${Uri.encode(it.id)}") }, foot = loaded)
+                        } else {
+                            InspirationsContent(
+                                planner, onOpen = { navigation.navigate("$INSPIRATION?id=${Uri.encode(it.id)}") },
+                                face = { PictureFace(it, pictures) }, shareFace = { SharePictureFace(it, pictures) }, foot = loaded,
+                            )
+                        }
                     }
                     composable(
                         route = INSPIRATION_ROUTE,
@@ -394,7 +418,10 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                             // Removed in the web app and loaded again since.
                             InspirationGone(onBack = { navigation.popBackStack() })
                         } else {
-                            InspirationContent(planner, idea, onVendor = { navigation.navigate("$VENDOR?id=${Uri.encode(it.id)}") }, foot = loaded)
+                            InspirationContent(
+                                planner, idea, onVendor = { navigation.navigate("$VENDOR?id=${Uri.encode(it.id)}") },
+                                pictureItems = pictures?.let { shown -> { one -> pictureItems(one, shown) } }, foot = loaded,
+                            )
                         }
                     }
                     composable(

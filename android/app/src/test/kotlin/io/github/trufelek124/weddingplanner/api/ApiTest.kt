@@ -14,7 +14,17 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.io.File
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import io.ktor.utils.io.ByteReadChannel
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertFalse
 
 class ApiTest {
 
@@ -169,5 +179,91 @@ class ApiTest {
 
         assertEquals("the server answered 400 (urn:wedding-planner:problem:bad-request)", refused.message)
         assertThrows(ApiFailure.SignedOut::class.java) { throw ApiFailure.SignedOut() }
+    }
+
+    // ---------------------------------------------------------------- fetching a file
+
+    @get:Rule
+    val folder = TemporaryFolder()
+
+    private val bytes = ByteArray(100_000) { (it % 251).toByte() }
+
+    @Test
+    fun `fetches a file with the token, into the file and nowhere else`() = runTest {
+        server.answer("GET /api/inspirations/i1/pictures/p1") { respondPicture(bytes) }
+        val into = File(folder.root, "picture")
+
+        api.fetchTo("/api/inspirations/i1/pictures/p1?size=THUMBNAIL", into, 1_000_000)
+
+        assertArrayEquals(bytes, into.readBytes())
+        assertEquals("Bearer access-1", server.calls.single().authorization)
+        assertEquals("size=THUMBNAIL", server.calls.single().query)
+        assertEquals(listOf("picture"), folder.root.list()!!.toList())
+    }
+
+    @Test
+    fun `renews the token once for a file too`() = runTest {
+        newer = "access-2"
+        server.answer("GET /api/inspirations/i1/pictures/p1") { request ->
+            if (request.headers["Authorization"] == "Bearer access-2") respondPicture(bytes) else respondProblem(401, "unauthenticated")
+        }
+        val into = File(folder.root, "picture")
+
+        api.fetchTo("/api/inspirations/i1/pictures/p1", into, 1_000_000)
+
+        assertArrayEquals(bytes, into.readBytes())
+        assertEquals(listOf("Bearer access-1", "Bearer access-2"), server.calls.map { it.authorization })
+        assertEquals(1, renewals)
+    }
+
+    @Test
+    fun `a file that is refused leaves nothing, and says why as any call does`() = runTest {
+        server.problem("GET /api/inspirations/i1/pictures/p1", 404, "not-found")
+        val into = File(folder.root, "picture")
+
+        val refused = failure { api.fetchTo("/api/inspirations/i1/pictures/p1", into, 1_000_000) }
+
+        assertTrue(refused is ApiFailure.Problem && refused.status == 404)
+        assertFalse(into.exists())
+        // A refusal of the token the second time is not tried a third time.
+        server.problem("GET /api/inspirations/i1/pictures/p2", 401, "unauthenticated")
+        newer = "access-2"
+        server.calls.clear()
+        assertTrue(failure { api.fetchTo("/api/inspirations/i1/pictures/p2", into, 1_000_000) } is ApiFailure.Problem)
+        assertEquals(2, server.calls.size)
+        assertFalse(into.exists())
+    }
+
+    @Test
+    fun `no connection leaves no file, and with no token nothing is asked`() = runTest {
+        val into = File(folder.root, "picture")
+
+        assertTrue(failure { api.fetchTo("/api/inspirations/i1/pictures/p1", into, 1_000_000) } is ApiFailure.Unreachable)
+        assertFalse(into.exists())
+
+        token = null
+        server.calls.clear()
+        assertTrue(failure { api.fetchTo("/api/inspirations/i1/pictures/p1", into, 1_000_000) } is ApiFailure.SignedOut)
+        assertTrue(server.calls.isEmpty())
+    }
+
+    @Test
+    fun `a file larger than the limit is refused, whether it says so beforehand or only shows it while it comes`() = runTest {
+        val into = File(folder.root, "picture")
+        server.answer("GET /api/inspirations/i1/pictures/p1") { respondPicture(bytes) }
+
+        assertTrue(failure { api.fetchTo("/api/inspirations/i1/pictures/p1", into, 99_999) } is ApiFailure.Unreadable)
+        assertFalse(into.exists())
+
+        // One that does not say how long it is: the limit stops it part of the way, and what was written goes again.
+        server.answer("GET /api/inspirations/i1/pictures/p2") {
+            respond(ByteReadChannel(bytes), HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "image/jpeg"))
+        }
+        assertTrue(failure { api.fetchTo("/api/inspirations/i1/pictures/p2", into, 50_000) } is ApiFailure.Unreadable)
+        assertFalse(into.exists())
+
+        // Exactly the limit is taken.
+        api.fetchTo("/api/inspirations/i1/pictures/p2", into, 100_000)
+        assertEquals(100_000L, into.length())
     }
 }

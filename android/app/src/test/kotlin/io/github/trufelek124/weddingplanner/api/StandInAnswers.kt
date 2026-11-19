@@ -19,3 +19,7 @@ fun MockRequestHandleScope.respondProblem(status: Int, kind: String): HttpRespon
         HttpStatusCode.fromValue(status),
         headersOf(HttpHeaders.ContentType, "application/problem+json"),
     )
+
+/** A picture's bytes as the server answers with them. */
+fun MockRequestHandleScope.respondPicture(bytes: ByteArray): HttpResponseData =
+    respond(bytes, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "image/jpeg"))

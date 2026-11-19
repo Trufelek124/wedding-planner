@@ -89,6 +89,12 @@ private fun whatItIs(pictures: Int): String = when (pictures) {
 /** "1 picture", "3 pictures" */
 fun picturesInWords(pictures: Int): String = if (pictures == 1) "1 picture" else "$pictures pictures"
 
+/** What stands where a picture is when the phone neither holds it nor can fetch it: the web's words. */
+const val PICTURE_MISSING = "This picture could not be loaded."
+
+/** What a picture on an idea's own screen says to a screen reader: "Picture 2 of 3". [number] counts from 1. */
+fun pictureInWords(number: Int, of: Int): String = "Picture $number of $of"
+
 /** "1 more picture", "3 more pictures": the pictures after the one the card shows; null where there are none. */
 fun morePicturesInWords(more: Int): String? = when {
     more <= 0 -> null

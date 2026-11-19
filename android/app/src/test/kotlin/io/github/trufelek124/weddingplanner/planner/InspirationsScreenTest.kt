@@ -6,6 +6,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
@@ -48,7 +49,7 @@ import org.robolectric.shadows.ShadowLog
 /**
  * The inspirations behind More: the board of ideas narrowed down by board and by tag, and one idea with
  * its facts and the way to its original. The same facts and words as the web's board, kept on the phone and
- * shown without a connection. The pictures themselves come later: where one belongs the card says in words what
+ * shown without a connection. The pictures themselves are in InspirationPicturesScreenTest: here the stand-in server has none to give, so where one belongs the card says in words what
  * is there. Everyone and everything here is made up.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -118,6 +119,10 @@ class InspirationsScreenTest : SignedInPhoneTest() {
         scrollTo(line(name) and hasClickAction())
         compose.onNode(line(name) and hasClickAction()).performClick()
         compose.waitUntil(WAIT) { compose.onAllNodes(hasText(name) and isHeading()).fetchSemanticsNodes().isNotEmpty() }
+        // The stand-in server has no pictures to give: each place settles on its words before the page is looked at, or the
+        // page changes its length under the test.
+        val pictures = mapOf("Lace sleeves" to 2, "Garden arch" to 1, "Pictures" to 3)[name] ?: 0
+        compose.waitUntil(WAIT) { compose.onAllNodes(hasText(PICTURE_MISSING)).fetchSemanticsNodes().size == pictures }
         compose.waitForIdle()
     }
 
@@ -436,6 +441,8 @@ class InspirationsScreenTest : SignedInPhoneTest() {
         open()
 
         openInspirations()
+        // The copy of the shared pictures is read from the phone's own folder, which takes a moment.
+        waitFor("2 pictures")
 
         compose.onNode(line("Waiting to be sent", "From TikTok", "TikTok") and hasContentDescription("From TikTok. Waiting to be sent. TikTok")).assertIsDisplayed()
         compose.onNode(line("Waiting to be sent", "Pictures", "2 pictures") and hasContentDescription("Pictures. Waiting to be sent. 2 pictures")).assertIsDisplayed()
@@ -496,7 +503,8 @@ class InspirationsScreenTest : SignedInPhoneTest() {
 
         compose.onNode(hasText("More") and isSelectable()).assertIsSelected()
         compose.onNodeWithContentDescription("Back").assertIsDisplayed()
-        compose.onNodeWithText("2 pictures").assertIsDisplayed()
+        // This phone holds none of its two pictures and the server is not asked for them here: each says so.
+        compose.onAllNodes(hasText(PICTURE_MISSING)).assertCountEquals(2)
         compose.onNode(line("Comes from", "Instagram")).assertIsDisplayed()
         compose.picture("inspiration")
         compose.onNode(line("Board", "Dress")).assertIsDisplayed()
@@ -602,6 +610,8 @@ class InspirationsScreenTest : SignedInPhoneTest() {
 
         pressTheLink("Open the original on Instagram")
 
+        // The page is shorter than it was with a block of words in place of the pictures: the message may be below the window.
+        scrollTo(hasText("No app on this phone can open that."))
         compose.onNodeWithText("No app on this phone can open that.").assertIsDisplayed()
         compose.onNode(hasText("Lace sleeves") and isHeading()).assertIsDisplayed()
         assertNull(started())

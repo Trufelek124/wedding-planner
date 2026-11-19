@@ -62,6 +62,9 @@ internal fun requestOf(share: ShareRow): JsonObject = buildJsonObject {
  */
 internal class ShareFiles(private val root: File) {
 
+    /** The file of the [number]th picture of a share, if it is there. */
+    fun picture(inspirationId: String, number: Int): File? = File(File(root, inspirationId), number.toString()).takeIf { it.isFile }
+
     fun of(share: ShareRow): List<File> = (0 until share.pictures).map { File(File(root, share.inspirationId), it.toString()) }
 
     /**

@@ -93,9 +93,11 @@ object StandIn {
         vendorId: String? = null,
         addedById: String? = ANNA,
         version: Int = 0,
+        /** The size the server says its pictures have, width then height. */
+        size: Pair<Int, Int> = 800 to 600,
     ): String {
         val held = (List(previews) { true } + List(pictures) { false }).mapIndexed { number, preview ->
-            """{"id":"pic-$number","contentType":"image/jpeg","width":800,"height":600,"preview":$preview}"""
+            """{"id":"pic-$number","contentType":"image/jpeg","width":${size.first},"height":${size.second},"preview":$preview}"""
         }
         return """{"id":"$id","url":${text(url)},"source":"${source ?: if (url == null) "PHOTO" else "INSTAGRAM"}","title":"$title","note":"$note","tags":${list(tags)},""" +
             """"boardId":${text(boardId)},"planItemId":${text(planItemId)},"vendorId":${text(vendorId)},"addedById":${text(addedById)},""" +
