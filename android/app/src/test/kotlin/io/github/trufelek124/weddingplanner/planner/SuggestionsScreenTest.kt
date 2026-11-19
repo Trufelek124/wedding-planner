@@ -176,13 +176,13 @@ class SuggestionsScreenTest : SignedInPhoneTest() {
         compose.onNode(hasText("More") and isSelectable()).assertIsSelected()
         compose.onNode(
             line(
-                "Payment", "Pay the deposit", "due 1 Dec 2026", "2,500.00 zł, deposit", "Category: Venue", "Vendor: Palace on the Hill", "By bank transfer",
+                "Payment", "Pay the deposit", "due 1 Dec 2026", "2,500.00\u00a0zł, deposit", "Category: Venue", "Vendor: Palace on the Hill", "By bank transfer",
                 "From Jan from Palace on the Hill (jan@palace.example)", "Subject: Deposit for the hall", "Arrived 18 Nov 2026 at 14:05, in Marek's inbox",
                 "Please pay the deposit by 1 December.", "62% sure",
             ),
         ).assertIsDisplayed()
         assertEquals(
-            "Payment: Pay the deposit. due 1 Dec 2026. 2,500.00 zł, deposit. Category: Venue. Vendor: Palace on the Hill. Notes: By bank transfer. " +
+            "Payment: Pay the deposit. due 1 Dec 2026. 2,500.00\u00a0zł, deposit. Category: Venue. Vendor: Palace on the Hill. Notes: By bank transfer. " +
                 "From Jan from Palace on the Hill (jan@palace.example). Subject: Deposit for the hall. Arrived 18 Nov 2026 at 14:05, in Marek's inbox. " +
                 "Quotation from the e-mail: “Please pay the deposit by 1 December.”. 62% sure",
             statements().first(),

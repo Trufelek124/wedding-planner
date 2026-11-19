@@ -82,11 +82,11 @@ class SuggestionWordsTest {
 
     @Test
     fun `an amount is told with money and the kind of payment`() {
-        assertEquals("2,500.00 zł, deposit", suggestionAmount(suggestion(SuggestionKind.PAYMENT, amount = 250000, paymentKind = "DEPOSIT"), "PLN"))
-        assertEquals("1,000.00 zł, instalment", suggestionAmount(suggestion(amount = 100000, paymentKind = "INSTALMENT"), "PLN"))
-        assertEquals("500.00 zł, final payment", suggestionAmount(suggestion(amount = 50000, paymentKind = "FINAL"), "PLN"))
-        assertEquals("500.00 zł, payment", suggestionAmount(suggestion(amount = 50000, paymentKind = "SOMETHING_NEW"), "PLN"))
-        assertEquals("500.00 zł", suggestionAmount(suggestion(amount = 50000), "PLN"))
+        assertEquals("2,500.00\u00a0zł, deposit", suggestionAmount(suggestion(SuggestionKind.PAYMENT, amount = 250000, paymentKind = "DEPOSIT"), "PLN"))
+        assertEquals("1,000.00\u00a0zł, instalment", suggestionAmount(suggestion(amount = 100000, paymentKind = "INSTALMENT"), "PLN"))
+        assertEquals("500.00\u00a0zł, final payment", suggestionAmount(suggestion(amount = 50000, paymentKind = "FINAL"), "PLN"))
+        assertEquals("500.00\u00a0zł, payment", suggestionAmount(suggestion(amount = 50000, paymentKind = "SOMETHING_NEW"), "PLN"))
+        assertEquals("500.00\u00a0zł", suggestionAmount(suggestion(amount = 50000), "PLN"))
         assertNull(suggestionAmount(suggestion(), "PLN"))
     }
 
@@ -125,7 +125,7 @@ class SuggestionWordsTest {
         )
 
         assertEquals(
-            listOf("due 1 Dec 2026", "2,500.00 zł, deposit", "Category: Venue", "Vendor: Palace on the Hill", "E-mail: jan@palace.example"),
+            listOf("due 1 Dec 2026", "2,500.00\u00a0zł, deposit", "Category: Venue", "Vendor: Palace on the Hill", "E-mail: jan@palace.example"),
             suggestionFacts(payment, planner),
         )
         assertTrue(suggestionFacts(suggestion(), planner).isEmpty())
@@ -188,7 +188,7 @@ class SuggestionWordsTest {
         )
 
         assertEquals(
-            "Payment: Pay the deposit. due 1 Dec 2026. 2,500.00 zł, deposit. Vendor: Palace on the Hill. Notes: Bank transfer. " +
+            "Payment: Pay the deposit. due 1 Dec 2026. 2,500.00\u00a0zł, deposit. Vendor: Palace on the Hill. Notes: Bank transfer. " +
                 "From Jan from Palace on the Hill (jan@palace.example). Subject: Deposit for the hall. Arrived 18 Nov 2026 at 14:05, in Anna's inbox. " +
                 "Quotation from the e-mail: “Please pay the deposit by 1 December.”. 62% sure",
             suggestionInWords(card, planner, warsaw),
