@@ -90,6 +90,12 @@ class WeddingService implements Weddings {
                 seat.members().stream().map(MemberRow::id).toList());
     }
 
+    @Override
+    @Transactional
+    public boolean hasMember(UUID weddingId, UUID memberId) {
+        return repository.members(weddingId).stream().anyMatch(member -> member.id().equals(memberId));
+    }
+
     /** Finds the caller's place; a signed-in owner without one takes the free place. */
     private Seat seatOf(UserId user) {
         WeddingRow wedding = repository.find().orElseThrow(WeddingService::notSetUp);

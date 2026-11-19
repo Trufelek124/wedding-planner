@@ -468,6 +468,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_7"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/suggestions/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accepts a suggestion
+         * @description Makes what it proposes (or what the body says) and answers with the suggestion, which now names what was made. Accepting again answers the same and makes nothing more. A suggestion that was rejected answers already-decided. What would be made is checked like adding by hand: if it is not valid the answer lists the fields, nothing is made and the suggestion still waits.
+         */
+        post: operations["accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/suggestions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rejects a suggestion
+         * @description Makes nothing. Rejecting again answers the same; a suggestion that was accepted answers already-decided.
+         */
+        post: operations["reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vendors": {
         parameters: {
             query?: never;
@@ -1250,7 +1306,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:already-decided" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -1268,6 +1324,129 @@ export interface components {
             /** @description Exchanged for a new session when the access token expires; used once. Null for a browser: there it travels in a cookie that scripts cannot read. */
             refreshToken: string | null;
             user: components["schemas"]["Me"];
+        };
+        /** @description What the e-mail import proposes, where it comes from, and what became of it. Its texts were written by whoever sent the mail: show them as plain text. */
+        Suggestion: {
+            /**
+             * Format: int64
+             * @description In the smallest unit of the currency.
+             */
+            amount: number | null;
+            /** Format: uuid */
+            categoryId: string | null;
+            /**
+             * Format: int32
+             * @description The import's confidence as a whole percentage, 0 to 100.
+             */
+            confidence: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            decidedAt: string | null;
+            /**
+             * Format: uuid
+             * @description The member whose request decided it; null while it waits.
+             */
+            decidedBy: string | null;
+            /** Format: date */
+            dueDate: string | null;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The member whose inbox it was in.
+             */
+            inboxMemberId: string;
+            /**
+             * @description What accepting makes: a task, a task with an amount, a step of the plan or a vendor.
+             * @enum {string}
+             */
+            kind: "TASK" | "PAYMENT" | "PLAN_ITEM" | "VENDOR";
+            /**
+             * Format: uuid
+             * @description The task, payment or plan item that accepting made.
+             */
+            madeEntryId: string | null;
+            /**
+             * Format: uuid
+             * @description The vendor that accepting made.
+             */
+            madeVendorId: string | null;
+            /** @description Opens the message in Gmail: always an https address at mail.google.com. */
+            mailLink: string;
+            notes: string;
+            /** @description The quotation the proposal rests on. */
+            passage: string;
+            /** @enum {string|null} */
+            paymentKind: "DEPOSIT" | "INSTALMENT" | "FINAL" | null;
+            /**
+             * Format: date-time
+             * @description When the message arrived.
+             */
+            receivedAt: string;
+            /** @description May be empty. */
+            senderAddress: string;
+            /** @description May be empty. */
+            senderName: string;
+            /**
+             * Format: date
+             * @description A plan item's first day.
+             */
+            startDate: string | null;
+            /** @enum {string} */
+            state: "WAITING" | "ACCEPTED" | "REJECTED";
+            /** @description May be empty. */
+            subject: string;
+            /** @description What is proposed; for a vendor, its name. */
+            title: string;
+            vendorEmail: string | null;
+            /**
+             * Format: uuid
+             * @description A vendor the planner has, found by the sender's address.
+             */
+            vendorId: string | null;
+            /** @description A vendor's name where none matched. */
+            vendorName: string | null;
+            vendorPhone: string | null;
+            vendorWebsite: string | null;
+        };
+        /** @description The proposal's values as the person wants them, when they differ from what was proposed. All of them are given: a value that is left out (null) is made without, not kept from the proposal. The kind cannot be changed. They are checked as the entry's or the vendor's own form is, and answered with the same messages next to the same fields (a vendor's name is `title`). */
+        SuggestionAcceptance: {
+            /**
+             * Format: int64
+             * @description In the smallest unit of the currency; a payment needs one.
+             */
+            amount: number | null;
+            /** Format: uuid */
+            categoryId: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, or a plan item ends.
+             */
+            dueDate: string | null;
+            notes: string | null;
+            /** @enum {string|null} */
+            paymentKind: "DEPOSIT" | "INSTALMENT" | "FINAL" | null;
+            /**
+             * Format: date
+             * @description A plan item's first day.
+             */
+            startDate: string | null;
+            /** @description What is made: for a vendor, its name. */
+            title: string;
+            /** @description A vendor's e-mail address. */
+            vendorEmail: string | null;
+            /**
+             * Format: uuid
+             * @description A vendor the entry concerns.
+             */
+            vendorId: string | null;
+            /** @description A vendor's name where none matched; nothing is made of it. */
+            vendorName: string | null;
+            /** @description A vendor's phone number. */
+            vendorPhone: string | null;
+            /** @description A vendor's website. */
+            vendorWebsite: string | null;
         };
         /** @description A tag in use and how many inspirations carry it. */
         TagCount: {
@@ -2952,6 +3131,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_7: {
+        parameters: {
+            query?: {
+                /** @description Which suggestions: the ones that wait (the default), the accepted or the rejected ones, or ALL. */
+                state?: "WAITING" | "ACCEPTED" | "REJECTED" | "ALL";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"][];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SuggestionAcceptance"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
                 };
             };
             /** @description Any error. */

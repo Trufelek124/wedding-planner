@@ -12,4 +12,7 @@ public interface Weddings {
      *     there is no wedding, and WEDDING_FULL for a third person
      */
     Membership membershipOf(UserId user);
+
+    /** Whether this member belongs to this wedding. */
+    boolean hasMember(java.util.UUID weddingId, java.util.UUID memberId);
 }

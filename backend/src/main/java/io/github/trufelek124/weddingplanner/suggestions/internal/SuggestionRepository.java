@@ -1,0 +1,210 @@
+package io.github.trufelek124.weddingplanner.suggestions.internal;
+
+import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.Kind;
+import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.PaymentKind;
+import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.State;
+import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.Which;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Repository;
+
+@Repository
+class SuggestionRepository {
+
+    /**
+     * A suggestion as stored. It holds parts of someone's mail, so what gets printed is only which one it is.
+     */
+    record SuggestionRow(
+            UUID id,
+            String sourceKey,
+            Kind kind,
+            State state,
+            String title,
+            String notes,
+            LocalDate startDate,
+            LocalDate dueDate,
+            Long amount,
+            PaymentKind paymentKind,
+            UUID categoryId,
+            UUID vendorId,
+            String vendorName,
+            String vendorEmail,
+            String vendorPhone,
+            String vendorWebsite,
+            String senderName,
+            String senderAddress,
+            String subject,
+            Instant receivedAt,
+            UUID inboxMemberId,
+            String mailLink,
+            String passage,
+            int confidence,
+            UUID decidedBy,
+            Instant decidedAt,
+            UUID madeEntryId,
+            UUID madeVendorId,
+            Instant createdAt) {
+
+        @Override
+        public String toString() {
+            return "SuggestionRow[id=" + id + ", kind=" + kind + ", state=" + state + "]";
+        }
+    }
+
+    private static final String SELECT = """
+            SELECT id, source_key, kind, state, title, notes, start_date, due_date, amount, payment_kind, category_id,
+                   vendor_id, vendor_name, vendor_email, vendor_phone, vendor_website, sender_name, sender_address,
+                   subject, received_at, inbox_member_id, mail_link, passage, confidence, decided_by, decided_at,
+                   made_entry_id, made_vendor_id, created_at
+            FROM suggestion
+            """;
+
+    private final JdbcClient jdbc;
+
+    SuggestionRepository(JdbcClient jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    Optional<SuggestionRow> find(UUID weddingId, UUID id) {
+        return jdbc.sql(SELECT + " WHERE wedding_id = ? AND id = ?").params(weddingId, id).query(SuggestionRepository::row).optional();
+    }
+
+    /**
+     * Finds it and holds its row until the transaction ends: whoever decides the same suggestion at the same
+     * moment waits here, and then sees what was decided.
+     */
+    Optional<SuggestionRow> findForDecision(UUID weddingId, UUID id) {
+        return jdbc.sql(SELECT + " WHERE wedding_id = ? AND id = ? FOR UPDATE").params(weddingId, id)
+                .query(SuggestionRepository::row)
+                .optional();
+    }
+
+    Optional<UUID> idOfSource(UUID weddingId, String sourceKey) {
+        return jdbc.sql("SELECT id FROM suggestion WHERE wedding_id = ? AND source_key = ?")
+                .params(weddingId, sourceKey)
+                .query(UUID.class)
+                .optional();
+    }
+
+    /** The newest message first. */
+    List<SuggestionRow> list(UUID weddingId, Which which) {
+        String where = " WHERE wedding_id = ?" + (which == Which.ALL ? "" : " AND state = ?");
+        var statement = jdbc.sql(SELECT + where + " ORDER BY received_at DESC, id");
+        return (which == Which.ALL ? statement.params(weddingId) : statement.params(weddingId, which.name()))
+                .query(SuggestionRepository::row)
+                .list();
+    }
+
+    /** @return false when the wedding already has a suggestion with this source key */
+    boolean insert(UUID weddingId, SuggestionRow s) {
+        return jdbc.sql("""
+                INSERT INTO suggestion (id, wedding_id, source_key, kind, state, title, notes, start_date, due_date, amount,
+                                        payment_kind, category_id, vendor_id, vendor_name, vendor_email, vendor_phone,
+                                        vendor_website, sender_name, sender_address, subject, received_at, inbox_member_id,
+                                        mail_link, passage, confidence, created_at)
+                VALUES (:id, :wedding, :sourceKey, :kind, 'WAITING', :title, :notes, :startDate, :dueDate, :amount,
+                        :paymentKind, :category, :vendor, :vendorName, :vendorEmail, :vendorPhone, :vendorWebsite,
+                        :senderName, :senderAddress, :subject, :receivedAt, :inbox, :mailLink, :passage, :confidence,
+                        :createdAt)
+                ON CONFLICT (wedding_id, source_key) DO NOTHING
+                """)
+                        .param("id", s.id())
+                        .param("wedding", weddingId)
+                        .param("sourceKey", s.sourceKey())
+                        .param("kind", s.kind().name())
+                        .param("title", s.title())
+                        .param("notes", s.notes())
+                        .param("startDate", s.startDate())
+                        .param("dueDate", s.dueDate())
+                        .param("amount", s.amount())
+                        .param("paymentKind", s.paymentKind() == null ? null : s.paymentKind().name())
+                        .param("category", s.categoryId())
+                        .param("vendor", s.vendorId())
+                        .param("vendorName", s.vendorName())
+                        .param("vendorEmail", s.vendorEmail())
+                        .param("vendorPhone", s.vendorPhone())
+                        .param("vendorWebsite", s.vendorWebsite())
+                        .param("senderName", s.senderName())
+                        .param("senderAddress", s.senderAddress())
+                        .param("subject", s.subject())
+                        .param("receivedAt", at(s.receivedAt()))
+                        .param("inbox", s.inboxMemberId())
+                        .param("mailLink", s.mailLink())
+                        .param("passage", s.passage())
+                        .param("confidence", s.confidence())
+                        .param("createdAt", at(s.createdAt()))
+                        .update()
+                == 1;
+    }
+
+    /** Records the decision; only a suggestion that still waits can have one. */
+    void decide(UUID weddingId, UUID id, State state, UUID memberId, Instant now, UUID madeEntryId, UUID madeVendorId) {
+        int changed = jdbc.sql("""
+                UPDATE suggestion
+                SET state = :state, decided_by = :member, decided_at = :now, made_entry_id = :entry, made_vendor_id = :vendor
+                WHERE wedding_id = :wedding AND id = :id AND state = 'WAITING'
+                """)
+                .param("state", state.name())
+                .param("member", memberId)
+                .param("now", at(now))
+                .param("entry", madeEntryId)
+                .param("vendor", madeVendorId)
+                .param("wedding", weddingId)
+                .param("id", id)
+                .update();
+        if (changed != 1) {
+            throw new IllegalStateException("A suggestion that was not waiting was decided");
+        }
+    }
+
+    private static SuggestionRow row(ResultSet row, int number) throws SQLException {
+        String paymentKind = row.getString("payment_kind");
+        return new SuggestionRow(
+                row.getObject("id", UUID.class),
+                row.getString("source_key"),
+                Kind.valueOf(row.getString("kind")),
+                State.valueOf(row.getString("state")),
+                row.getString("title"),
+                row.getString("notes"),
+                row.getObject("start_date", LocalDate.class),
+                row.getObject("due_date", LocalDate.class),
+                row.getObject("amount", Long.class),
+                paymentKind == null ? null : PaymentKind.valueOf(paymentKind),
+                row.getObject("category_id", UUID.class),
+                row.getObject("vendor_id", UUID.class),
+                row.getString("vendor_name"),
+                row.getString("vendor_email"),
+                row.getString("vendor_phone"),
+                row.getString("vendor_website"),
+                row.getString("sender_name"),
+                row.getString("sender_address"),
+                row.getString("subject"),
+                instant(row, "received_at"),
+                row.getObject("inbox_member_id", UUID.class),
+                row.getString("mail_link"),
+                row.getString("passage"),
+                row.getInt("confidence"),
+                row.getObject("decided_by", UUID.class),
+                instant(row, "decided_at"),
+                row.getObject("made_entry_id", UUID.class),
+                row.getObject("made_vendor_id", UUID.class),
+                instant(row, "created_at"));
+    }
+
+    private static Instant instant(ResultSet row, String column) throws SQLException {
+        OffsetDateTime value = row.getObject(column, OffsetDateTime.class);
+        return value == null ? null : value.toInstant();
+    }
+
+    private static OffsetDateTime at(Instant instant) {
+        return OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
+    }
+}

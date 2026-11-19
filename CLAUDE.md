@@ -212,8 +212,8 @@ first uses it, at the version D-005 names.
 
 ## The backend's modules
 
-`api`, `appinfo`, `webapp`, `identity`, `wedding`, `vendors`, `planning`, `inspirations`, `guests`. A module uses another only
-through the types in that module's own package, and never in a circle (`ModularityTest`).
+`api`, `appinfo`, `webapp`, `identity`, `wedding`, `vendors`, `planning`, `inspirations`, `guests`, `suggestions`. A module
+uses another only through the types in that module's own package, and never in a circle (`ModularityTest`).
 
 - `planning` and `inspirations` use `vendors` (`Vendors.exists`), not the other way round. What the register needs
   from them it asks through interfaces of its own that they implement: `VendorUse` (what points to each vendor,
@@ -221,6 +221,15 @@ through the types in that module's own package, and never in a circle (`Modulari
   `VendorUse` in its own module.
 - `inspirations` uses `planning` (`PlanItems.exists`).
 - `guests` stands by itself: the guest list, its households and the head count.
+- `suggestions` (S02) uses `wedding`, `planning` and `vendors`, and nothing uses it. What accepting makes is made by
+  those modules' own "add" (`PlanEntries.addEntry`, `VendorRegister.addVendor`), so the same rules and the same
+  messages per field apply; no rule is copied. A module that makes what another module's form makes goes the same
+  way, with `BeanRules` for the rules the request's type declares.
+- A suggestion is handed in through `Suggestions.handIn`, inside the server: there is no HTTP call that adds one.
+  A decision stands: accept and reject hold the row (`FOR UPDATE`), the same decision again changes nothing, the
+  other one is `already-decided`, and a refused acceptance leaves nothing behind. A suggestion holds parts of
+  someone's mail: nothing of it is logged, tests use made-up mail, and its link can only be an `https` address at
+  `mail.google.com` (checked in the code and by the table).
 
 ## Changing the API
 

@@ -34,6 +34,8 @@ public enum ProblemCode {
     BOARD_HAS_INSPIRATIONS(HttpStatus.CONFLICT, "board-has-inspirations", "This board still has inspirations"),
     /** A vendor that plan items, tasks or inspirations point to: say that they may lose it. */
     VENDOR_IN_USE(HttpStatus.CONFLICT, "vendor-in-use", "Something still points to this vendor"),
+    /** A suggestion was decided the other way first: show what was decided, and by whom. */
+    ALREADY_DECIDED(HttpStatus.CONFLICT, "already-decided", "This suggestion has already been decided"),
     /** What was sent is larger than the server takes; a picture, for instance. */
     UPLOAD_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "upload-too-large", "That is too large to upload"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "method-not-allowed", "Method not allowed"),

@@ -1305,9 +1305,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:already-decided", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "ALREADY_DECIDED", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -1346,6 +1346,189 @@
           }
         },
         "required" : [ "accessToken", "accessTokenExpiresAt", "refreshToken", "user" ],
+        "type" : "object"
+      },
+      "Suggestion" : {
+        "description" : "What the e-mail import proposes, where it comes from, and what became of it. Its texts were written by whoever sent the mail: show them as plain text.",
+        "properties" : {
+          "amount" : {
+            "description" : "In the smallest unit of the currency.",
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "categoryId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "confidence" : {
+            "description" : "The import's confidence as a whole percentage, 0 to 100.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "decidedAt" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "decidedBy" : {
+            "description" : "The member whose request decided it; null while it waits.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "dueDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "inboxMemberId" : {
+            "description" : "The member whose inbox it was in.",
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "description" : "What accepting makes: a task, a task with an amount, a step of the plan or a vendor.",
+            "enum" : [ "TASK", "PAYMENT", "PLAN_ITEM", "VENDOR" ],
+            "type" : "string"
+          },
+          "madeEntryId" : {
+            "description" : "The task, payment or plan item that accepting made.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "madeVendorId" : {
+            "description" : "The vendor that accepting made.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "mailLink" : {
+            "description" : "Opens the message in Gmail: always an https address at mail.google.com.",
+            "type" : "string"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "passage" : {
+            "description" : "The quotation the proposal rests on.",
+            "type" : "string"
+          },
+          "paymentKind" : {
+            "enum" : [ "DEPOSIT", "INSTALMENT", "FINAL" ],
+            "type" : [ "string", "null" ]
+          },
+          "receivedAt" : {
+            "description" : "When the message arrived.",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "senderAddress" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "senderName" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "startDate" : {
+            "description" : "A plan item's first day.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "state" : {
+            "enum" : [ "WAITING", "ACCEPTED", "REJECTED" ],
+            "type" : "string"
+          },
+          "subject" : {
+            "description" : "May be empty.",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "What is proposed; for a vendor, its name.",
+            "type" : "string"
+          },
+          "vendorEmail" : {
+            "type" : [ "string", "null" ]
+          },
+          "vendorId" : {
+            "description" : "A vendor the planner has, found by the sender's address.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "vendorName" : {
+            "description" : "A vendor's name where none matched.",
+            "type" : [ "string", "null" ]
+          },
+          "vendorPhone" : {
+            "type" : [ "string", "null" ]
+          },
+          "vendorWebsite" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "amount", "categoryId", "confidence", "createdAt", "decidedAt", "decidedBy", "dueDate", "id", "inboxMemberId", "kind", "madeEntryId", "madeVendorId", "mailLink", "notes", "passage", "paymentKind", "receivedAt", "senderAddress", "senderName", "startDate", "state", "subject", "title", "vendorEmail", "vendorId", "vendorName", "vendorPhone", "vendorWebsite" ],
+        "type" : "object"
+      },
+      "SuggestionAcceptance" : {
+        "description" : "The proposal's values as the person wants them, when they differ from what was proposed. All of them are given: a value that is left out (null) is made without, not kept from the proposal. The kind cannot be changed. They are checked as the entry's or the vendor's own form is, and answered with the same messages next to the same fields (a vendor's name is `title`).",
+        "properties" : {
+          "amount" : {
+            "description" : "In the smallest unit of the currency; a payment needs one.",
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "categoryId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "dueDate" : {
+            "description" : "The day it is due, or a plan item ends.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "notes" : {
+            "type" : [ "string", "null" ]
+          },
+          "paymentKind" : {
+            "enum" : [ "DEPOSIT", "INSTALMENT", "FINAL" ],
+            "type" : [ "string", "null" ]
+          },
+          "startDate" : {
+            "description" : "A plan item's first day.",
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "title" : {
+            "description" : "What is made: for a vendor, its name.",
+            "type" : "string"
+          },
+          "vendorEmail" : {
+            "description" : "A vendor's e-mail address.",
+            "type" : [ "string", "null" ]
+          },
+          "vendorId" : {
+            "description" : "A vendor the entry concerns.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "vendorName" : {
+            "description" : "A vendor's name where none matched; nothing is made of it.",
+            "type" : [ "string", "null" ]
+          },
+          "vendorPhone" : {
+            "description" : "A vendor's phone number.",
+            "type" : [ "string", "null" ]
+          },
+          "vendorWebsite" : {
+            "description" : "A vendor's website.",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "amount", "categoryId", "dueDate", "notes", "paymentKind", "startDate", "title", "vendorEmail", "vendorId", "vendorName", "vendorPhone", "vendorWebsite" ],
         "type" : "object"
       },
       "TagCount" : {
@@ -3576,6 +3759,135 @@
           }
         },
         "tags" : [ "me-controller" ]
+      }
+    },
+    "/api/suggestions" : {
+      "get" : {
+        "operationId" : "list_7",
+        "parameters" : [ {
+          "description" : "Which suggestions: the ones that wait (the default), the accepted or the rejected ones, or ALL.",
+          "in" : "query",
+          "name" : "state",
+          "required" : false,
+          "schema" : {
+            "default" : "WAITING",
+            "enum" : [ "WAITING", "ACCEPTED", "REJECTED", "ALL" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Suggestion"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "suggestion-controller" ]
+      }
+    },
+    "/api/suggestions/{id}/accept" : {
+      "post" : {
+        "description" : "Makes what it proposes (or what the body says) and answers with the suggestion, which now names what was made. Accepting again answers the same and makes nothing more. A suggestion that was rejected answers already-decided. What would be made is checked like adding by hand: if it is not valid the answer lists the fields, nothing is made and the suggestion still waits.",
+        "operationId" : "accept",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SuggestionAcceptance"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Suggestion"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Accepts a suggestion",
+        "tags" : [ "suggestion-controller" ]
+      }
+    },
+    "/api/suggestions/{id}/reject" : {
+      "post" : {
+        "description" : "Makes nothing. Rejecting again answers the same; a suggestion that was accepted answers already-decided.",
+        "operationId" : "reject",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Suggestion"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Rejects a suggestion",
+        "tags" : [ "suggestion-controller" ]
       }
     },
     "/api/vendors" : {
