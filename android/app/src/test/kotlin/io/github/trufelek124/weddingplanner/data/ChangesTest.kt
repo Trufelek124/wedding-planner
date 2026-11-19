@@ -471,6 +471,150 @@ class ChangesTest {
         assertNull(held().entry("t1")!!.waiting)
     }
 
+    /** The server keeps what it is sent; the answer to the first status that is sent is held up until the test lets it go. */
+    private class OnItsWay(theirs: LivingPlanner) {
+        val arrived = CompletableDeferred<Unit>()
+        val mayAnswer = CompletableDeferred<Unit>()
+
+        init {
+            theirs.holdUp = { request ->
+                if (request.method.value == "PUT" && request.url.encodedPath.endsWith("/status") && !arrived.isCompleted) {
+                    arrived.complete(Unit)
+                    mayAnswer.await()
+                }
+            }
+        }
+    }
+
+    private fun theServerKeeps(deposit: String = deposit()): LivingPlanner = LivingPlanner(
+        server,
+        entries = listOf(deposit, rings(), venue),
+        categories = listOf(StandIn.category("c1", "Venue")),
+        vendors = listOf(StandIn.vendor("v1", "Palace on the Hill")),
+    )
+
+    @Test
+    fun `a tick taken back while it is on its way is not lost`() = runBlocking {
+        val theirs = theServerKeeps()
+        assertEquals(Load.LOADED, planner.sync())
+        planner.setStatus("t1", Status.DONE)
+        val onItsWay = OnItsWay(theirs)
+
+        // Should the request never arrive, the test fails here and does not wait for ever.
+        withTimeout(20_000) {
+            val sending = async { planner.sync() }
+            onItsWay.arrived.await()
+            // The phone's copy still says not done: this is the status the server is about to leave.
+            planner.setStatus("t1", Status.NOT_STARTED)
+            onItsWay.mayAnswer.complete(Unit)
+            sending.await()
+        }
+
+        // The tick is with the server; taking it back still waits, and shows.
+        assertEquals("DONE", theirs.statusOf("t1"))
+        assertEquals(Status.NOT_STARTED, held().entry("t1")!!.status)
+        assertEquals(Waiting.TO_BE_SENT, held().entry("t1")!!.waiting)
+
+        planner.sync()
+
+        assertEquals("NOT_STARTED", theirs.statusOf("t1"))
+        assertEquals(listOf("""{"status":"DONE"}""", """{"status":"NOT_STARTED"}"""), server.routes("PUT /api/entries/t1/status").map { it.body })
+        assertEquals(Status.NOT_STARTED, held().entry("t1")!!.status)
+        assertNull(held().entry("t1")!!.waiting)
+        assertEquals(0, planner.stillToSend())
+    }
+
+    @Test
+    fun `a done task unticked and ticked again while the first is on its way ends done`() = runBlocking {
+        val theirs = theServerKeeps(deposit(status = "DONE", version = 4))
+        assertEquals(Load.LOADED, planner.sync())
+        planner.setStatus("t1", Status.NOT_STARTED)
+        val onItsWay = OnItsWay(theirs)
+
+        withTimeout(20_000) {
+            val sending = async { planner.sync() }
+            onItsWay.arrived.await()
+            planner.setStatus("t1", Status.DONE)
+            onItsWay.mayAnswer.complete(Unit)
+            sending.await()
+        }
+
+        assertEquals("NOT_STARTED", theirs.statusOf("t1"))
+        assertEquals(Status.DONE, held().entry("t1")!!.status)
+        assertEquals(Waiting.TO_BE_SENT, held().entry("t1")!!.waiting)
+
+        planner.sync()
+
+        assertEquals("DONE", theirs.statusOf("t1"))
+        assertEquals(Status.DONE, held().entry("t1")!!.status)
+        assertNull(held().entry("t1")!!.waiting)
+        assertEquals(0, planner.stillToSend())
+    }
+
+    @Test
+    fun `ticking and taking back twice while the tick is on its way leaves nothing to send afterwards`() = runBlocking {
+        val theirs = theServerKeeps()
+        assertEquals(Load.LOADED, planner.sync())
+        planner.setStatus("t1", Status.DONE)
+        val onItsWay = OnItsWay(theirs)
+
+        withTimeout(20_000) {
+            val sending = async { planner.sync() }
+            onItsWay.arrived.await()
+            planner.setStatus("t1", Status.NOT_STARTED)
+            planner.setStatus("t1", Status.DONE)
+            onItsWay.mayAnswer.complete(Unit)
+            sending.await()
+        }
+
+        assertEquals("DONE", theirs.statusOf("t1"))
+        assertEquals(Status.DONE, held().entry("t1")!!.status)
+        assertEquals(0, planner.stillToSend())
+        server.calls.clear()
+        planner.sync()
+        assertTrue(sent().isEmpty())
+    }
+
+    @Test
+    fun `a tick taken back after its answer came is a return to what was, as before`() = runBlocking {
+        val theirs = theServerKeeps()
+        assertEquals(Load.LOADED, planner.sync())
+        planner.setStatus("t1", Status.DONE)
+        planner.sync()
+        assertEquals("DONE", theirs.statusOf("t1"))
+
+        // Nothing is on its way now: taking the tick back is one change, as any other.
+        planner.setStatus("t1", Status.NOT_STARTED)
+        assertEquals(Waiting.TO_BE_SENT, held().entry("t1")!!.waiting)
+        planner.setStatus("t1", Status.DONE)
+        assertNull(held().entry("t1")!!.waiting)
+        server.calls.clear()
+        planner.sync()
+        assertTrue(sent().isEmpty())
+    }
+
+    @Test
+    fun `a sign-out while the tick is on its way leaves nothing behind`() = runBlocking {
+        val theirs = theServerKeeps()
+        assertEquals(Load.LOADED, planner.sync())
+        planner.setStatus("t1", Status.DONE)
+        val onItsWay = OnItsWay(theirs)
+
+        withTimeout(20_000) {
+            val sending = async { planner.sync() }
+            onItsWay.arrived.await()
+            planner.forget()
+            // The session is over: the server is not asked for anything more.
+            server.down = true
+            onItsWay.mayAnswer.complete(Unit)
+            sending.await()
+        }
+
+        assertNull(planner.planner.first())
+        assertEquals(0, planner.stillToSend())
+        assertTrue(database.planner().changes().isEmpty())
+    }
+
     @Test
     fun `signing out removes the waiting changes too`() = runBlocking {
         planner.add(TaskFields(title = "Order the flowers for the secret party"))

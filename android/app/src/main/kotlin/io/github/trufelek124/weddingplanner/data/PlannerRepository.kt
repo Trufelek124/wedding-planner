@@ -26,6 +26,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonPrimitive
 
 /** What asking the server for the planner came to. */
 enum class Load {
@@ -67,6 +68,9 @@ class PlannerRepository(
 
     /** The guests whose waiting status is being sent just now, by id: a choice made meanwhile is then not taken for a return to what was. */
     private val onTheWay: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /** The tasks whose waiting change is being sent just now, by id: a tick taken back meanwhile is then not taken for a return to what was. */
+    private val tasksOnTheWay: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /** Held while talking to the server, so that sending and loading take turns. */
     private val talking = Mutex()
@@ -111,8 +115,9 @@ class PlannerRepository(
             // The entry has to be looked at first: see [letGo].
             waiting.trouble == Trouble.CHANGED_MEANWHILE || waiting.trouble == Trouble.GONE -> Unit
             waiting.kind == ChangeKind.STATUS ->
-                // Ticked and unticked again before it was sent: nothing is left to send.
-                if (row != null && row.status == status.name) {
+                // Ticked and unticked again before it was sent: nothing is left to send. Not so while it is
+                // on its way: the server is about to have the tick, and taking it back is a change of that.
+                if (row != null && row.status == status.name && entryId !in tasksOnTheWay) {
                     dao.deleteChange(waiting.seq)
                 } else {
                     dao.putChange(waiting.copy(body = statusBody(status).toString(), revision = waiting.revision + 1))
@@ -309,10 +314,10 @@ class PlannerRepository(
     internal suspend fun send(): Sending {
         val since = forgotten
         for (queued in dao.changes()) {
-            val change = dao.change(queued.seq) ?: continue
-            if (change.trouble != null) {
-                continue
-            }
+            // Read and marked as on its way in one go: a choice made from here on is a change of what the server is about to have.
+            val change = writing.withLock {
+                dao.change(queued.seq)?.takeIf { it.trouble == null }?.also { tasksOnTheWay += it.entryId }
+            } ?: continue
             val body = bodyOf(change)
             val id = change.entryId
             try {
@@ -346,6 +351,8 @@ class PlannerRepository(
                     // Something is wrong on the server's side: the change waits and is tried again.
                     else -> return Sending.FAILED
                 }
+            } finally {
+                tasksOnTheWay -= id
             }
         }
         val guests = sendGuestStatuses(since)
@@ -413,6 +420,8 @@ class PlannerRepository(
             // Let go of while it was on its way: the server has it all the same.
             now == null -> dao.putEntry(row)
             now.revision == sent.revision -> dao.sent(now, row)
+            // A tick taken back and given again while it was on its way: the server has just what was chosen last.
+            now.kind == ChangeKind.STATUS && bodyOf(now)["status"]?.jsonPrimitive?.content == row.status -> dao.sent(now, row)
             else -> {
                 // Changed again while it was on its way: the rest is a change of what the server now has.
                 dao.putEntry(row)
@@ -484,6 +493,7 @@ class PlannerRepository(
         written {
             forgotten += 1
             onTheWay.clear()
+            tasksOnTheWay.clear()
             dao.forget()
             withContext(Dispatchers.IO) {
                 shareFiles.deleteAll()

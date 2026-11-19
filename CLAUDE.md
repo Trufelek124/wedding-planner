@@ -153,7 +153,9 @@ first uses it, at the version D-005 names.
   further choice replaces it) and is sent by `sync()` after the tasks and before the shares. The server takes it
   whatever version it has, so there is no "changed meanwhile" here: only "the guest is gone" and "not taken", which
   the guests screen says with the guest's name. A choice made while the first is on its way is a change of what
-  the server is about to have and is kept (`onTheWay`), also when it goes back to what the copy says.
+  the server is about to have and is kept (`onTheWay`), also when it goes back to what the copy says. The same
+  holds for a task's tick (`tasksOnTheWay`): taking it back before it was sent leaves nothing to send, taking it
+  back while it is on its way is sent after it.
 - How many people come is the server's count (`Planner.guestCounts`), never added up on the phone, and a copy
   without one shows none. A list is narrowed down by status with `StatusChips`; the guest list comes before the
   head count's breakdown, because finding a guest is what the screen is mostly opened for. While a status chosen
@@ -179,6 +181,9 @@ first uses it, at the version D-005 names.
   container with a `StandInServer`, a key outside the Keystore, a `StandInGoogle`, a clock set by hand and a real
   database in a folder; `AppRootTest` and `PlannerScreensTest` drive the screens with it as a person would, and
   check the log and what is left in the phone's files.
+- The app asks for several things at once, so the stand-in server answers on several threads: what a stand-in
+  writes while answering must bear that (`StandInServer.calls`). `LivingPlanner.holdUp` keeps a request waiting
+  so that a test can act while it is on its way.
 - A screen test that changes something uses `LivingPlanner`, a stand-in server that keeps what it is sent, and
   waits for what it then checks (`waitFor` a text, `waitUntil` a state of the server): the app answers a tap on
   threads of its own. The test's phone is switched off by the `SwitchedOffAfterwards` rule, after the screen is
