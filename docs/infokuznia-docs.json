@@ -102,6 +102,18 @@
    "id": "97aefc60-e07d-4248-9324-9c994d2da5d8",
    "sha256": "8348982bd294bf2b2ec7c9c509852e792be82c963c1e798b49a2275bfbc3c814",
    "commit": "3c937a8"
+  },
+  "docs/specs/S04-reading-the-mail.md": {
+   "publicId": "WP-DOC-12",
+   "id": "8f8b9b00-2f5f-4d46-9609-aa87121e7b56",
+   "sha256": "0ab015085fb229859b3152aa048b081d7ec8bf18237de1b969abc48c21fde592",
+   "commit": "d94a758"
+  },
+  "docs/decisions.md#D-007": {
+   "publicId": "WP-DOC-13",
+   "id": "b711a3fa-cbdd-4441-bf67-be7713458763",
+   "sha256": "a723271755880f421c8abdeae803f1c2a7ba2062b3aac8e53da0f4f68a0b9af3",
+   "commit": "d94a758"
   }
  }
 }
