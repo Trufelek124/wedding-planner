@@ -12,6 +12,8 @@ import io.ktor.http.headersOf
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Stands in for the planner's server in tests. Each "METHOD /path" gets its own answer; a route the
@@ -36,6 +38,10 @@ class StandInServer {
     var down = false
 
     val engine = MockEngine { request ->
+        // The app asks for several things at once and gives the others up when one fails. A request that was given
+        // up may only get here later, on a thread of its own, when the test has long gone on: it is not counted
+        // as asked, or it turns up in a list of calls a test has just emptied.
+        currentCoroutineContext().ensureActive()
         val route = "${request.method.value} ${request.url.encodedPath}"
         calls += Call(
             route, request.headers[HttpHeaders.Authorization], request.headers[HttpHeaders.Origin], String(request.body.toByteArray()),

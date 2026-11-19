@@ -131,7 +131,8 @@ class SendLaterTest {
         val asked = manager.getWorkInfosForUniqueWork(SendWorker.NAME).get().filter { it.state == WorkInfo.State.ENQUEUED }
         assertEquals(1, asked.size)
         assertEquals(NetworkType.CONNECTED, asked.single().constraints.requiredNetworkType)
-        assertTrue(server.calls.isEmpty())
+        // Named, so that a failure says what was asked for.
+        assertEquals(emptyList<String>(), server.calls.map { it.route })
 
         // The connection is back.
         server.json("PUT /api/entries/t2/status", rings(status = "DONE", version = 1))
