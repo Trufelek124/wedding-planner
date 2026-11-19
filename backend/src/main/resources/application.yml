@@ -74,6 +74,19 @@ app:
     # false: the server never looks by itself (tests call the look themselves). Nothing runs while the import is off.
     sync-automatic: ${MAIL_SYNC_ENABLED:true}
 
+  reading:
+    # Reading the mail with the AI service (S04, D-007). It is on only when a key is given and the rest is valid;
+    # otherwise the server starts as before, makes no client of the service and asks it nothing. The key is a secret
+    # like the others: never in the repository, a response or the log.
+    api-key: ${APP_AI_API_KEY:}
+    # Empty: the SDK's own address. Settable for tests, which point it at a stand-in; the key goes to this address.
+    base-url:
+    # The models, written exactly so and never with a date added.
+    triage-model: ${APP_AI_TRIAGE_MODEL:claude-haiku-5-5}
+    extraction-model: ${APP_AI_EXTRACTION_MODEL:claude-opus-5-5}
+    # How long one call, answer included, may take. Extraction thinks before it writes.
+    request-timeout: 5m
+
 server:
   port: 8080
   # The app runs behind a proxy that terminates TLS.
@@ -100,6 +113,11 @@ logging:
     org.apache.tomcat.util.http.parser.Cookie: INFO
     # At TRACE the SQL layer prints the value of every statement parameter: addresses, names, hashes.
     org.springframework.jdbc.core.StatementCreatorUtils: INFO
+    # The AI service's SDK and its HTTP client can print the requests and answers they carry: a message's words, and the
+    # key. They stay at INFO whatever the rest is set to, and the SDK's own logging is not switched on.
+    com.anthropic: INFO
+    okhttp3: INFO
+    okio: INFO
 
 management:
   endpoints:

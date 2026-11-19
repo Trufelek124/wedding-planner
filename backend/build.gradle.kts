@@ -36,6 +36,8 @@ dependencies {
     // and a parser for the fetched page. Neither runs scripts or fetches anything by itself.
     implementation("org.apache.httpcomponents.client5:httpclient5")
     implementation("org.jsoup:jsoup:1.24.1")
+    // The AI service for reading the mail (S04, D-007): its own Java SDK. Made only when a key is given.
+    implementation("com.anthropic:anthropic-java:3.3.0")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 
