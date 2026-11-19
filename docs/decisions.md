@@ -574,3 +574,46 @@ push to `main`, and a job on the server pulls the newest image every ten minutes
 - Publishing depends on GitHub Actions being available and allowed for the repository. When they are not, the
   script publishes.
 
+## D-011 — PDF documents of wedding mail are read, as text the server takes out of them
+
+**Date:** 2026-11-19 · **Task:** WP-TS-91 · **Decided by:** the owner asked for it · **Applies to:** reading the mail (S04)
+
+### Context
+
+S01 left attachments out of the first version: "a PDF invoice is seen only through the e-mail's own text". On
+the first day with real mail the owner found what that costs. A venue's mail mentioned the deposit; the offer
+attached to it held the second and third payment with their days, and nothing of that was proposed. The owner
+asked for attachments to be read — and only where the planner is quite sure that the mail concerns the wedding.
+
+### What was compared
+
+| Question | Chosen | The alternative, and why not |
+|---|---|---|
+| How a PDF is read | **The server takes the text out** and sends it with the message | Sending the file to the AI service to read as pages: it reads scans and tables better, but then a quotation cannot be checked against anything the server holds, every page costs far more, and a whole file leaves the server instead of its words |
+| Which attachments | **PDFs**: up to three per message, 10 MB and fifty pages each, 40,000 characters in all | Everything: pictures and spreadsheets need other readers, and each is a new kind of file from strangers for the server to open |
+| When | **Triage said yes and was at least 80 in 100 sure** (a setting) | Every message about the wedding, also the doubtful ones: the owner's condition, and the reason for it — a document is more of somebody's mail than its text is |
+| What a payment found in a document becomes | **A suggestion that waits**, like every payment (D-008) | Added by itself: money in the plan that nobody looked at, now from a file anybody can attach |
+| Mail read before this | **Read once more for its documents**, by itself, telling the model what was already proposed | Leaving it: the venue's offer that prompted this would stay unread. Reading everything again from the start: paid twice, and proposed twice |
+| Opening files from strangers | Text only, nothing run or fetched; limits on size, pages and time; **one try per message** | No guard: a file made to exhaust the server would do so again at every round |
+
+### Decision
+
+1. **The text of PDF documents is read with a message** that triage called a "yes" with at least 80 in 100.
+2. **The server takes the text out**; the file is neither kept nor sent. A passage quoted from a document is
+   checked against that text like one from the mail.
+3. **Limits**: three documents, 10 MB and fifty pages each, 40,000 characters in all, a few seconds each; what
+   does not fit or cannot be read is left out and the message is read without it.
+4. **Up to eight proposals** from a message with documents; payments still wait for a person.
+5. **A message's documents are tried once**, and messages read before this are read once more for theirs.
+
+### What it costs, and what would change the decision
+
+- **A scanned offer is not read**: a PDF that is pictures of pages has no text to take out. If that turns out to
+  be how vendors send things, the next step is to let the AI service read such a file as pages — for those
+  files only, with the quotation then unchecked and said to be.
+- The server now opens files that anybody can send. The library that does it reads and does not run, and the
+  limits bound what one file can cost; a file that stops the server is not opened a second time.
+- More is sent to the AI service per message: an offer of five pages is roughly as much text again as a long
+  thread. The estimate of D-007 holds per message without documents; the e-mail page shows what it comes to.
+- Word files, spreadsheets and pictures stay unread. Each would be a decision like this one.
+

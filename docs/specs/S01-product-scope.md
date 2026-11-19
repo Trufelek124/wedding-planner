@@ -133,7 +133,8 @@ messages also sender, subject, date and the short passage behind the entry. Full
 **What leaves the server.** The sender, subject and beginning of *every* message go to the Anthropic API for triage;
 the full text only for wedding messages. The owner confirmed this scope (§14, question 4).
 
-**Not in v1:** attachments (a PDF invoice is seen only through the e-mail's own text), Outlook, sending mail.
+**Not in v1:** attachments other than PDF documents (D-011: the text of a PDF that comes with a message about
+the wedding is read; a picture or a spreadsheet is not), Outlook, sending mail.
 The mail source is built as a replaceable part so Outlook or plain IMAP can be added.
 
 **To verify when this is built:** Google treats read access to Gmail as a restricted permission. For two private
@@ -223,7 +224,7 @@ E-mail import comes last because it writes into every other part.
 
 ## 13. Not in the first version
 
-Public RSVP page, seating plan, sending invitations or e-mail, e-mail attachments, Outlook, iOS, more than one wedding,
+Public RSVP page, seating plan, sending invitations or e-mail, e-mail attachments other than PDF documents, Outlook, iOS, more than one wedding,
 helpers with their own accounts, AI-ranked priorities, phone notifications for due dates.
 
 ## 14. Questions answered by the owner (2026-11-17)

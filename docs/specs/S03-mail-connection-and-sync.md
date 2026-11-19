@@ -35,7 +35,8 @@ nothing else — it cannot send, change or delete anything; from the moment you 
 few minutes, and at earlier mail only when you ask for it on this page; of a message that does not concern the
 wedding it keeps only that it was looked at; and
 the sender, the subject and the beginning of every message are sent to the AI service that decides whether it
-concerns the wedding, a message that does in full, attachments never (S04 section 3) — or, on a server where
+concerns the wedding, a message that does in full, and of a message it is sure about also the text of its PDF
+documents — no other attachment (S04 section 3) — or, on a server where
 reading is not set up, that nothing is sent yet and what will be. Google will show
 a warning that the app is not verified (D-006); the page says so beforehand, so that nobody is surprised.
 

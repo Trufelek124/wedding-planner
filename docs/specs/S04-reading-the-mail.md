@@ -41,9 +41,20 @@ things that make the proposals usable; both are listed here so that they are a d
 | Triage, for every message | The sender's name and address, the subject, when it arrived, and the beginning of its text: the first 1,500 characters. |
 | Extraction, for a message that concerns the wedding | The same, the full text of the message, and the text of the earlier messages of its thread — up to 60,000 characters in all; what is beyond is left out, and the model is told that it was. |
 | Also with extraction | **Today's date and the wedding's date** (so that "two weeks before the wedding" can become a day), and **the titles of what was already proposed from the same thread** (so that a reply is not proposed a second time). |
+| With extraction, when triage was at least 80 in 100 sure that the message concerns the wedding | **The text of the message's PDF documents** (D-011): of up to three documents, none larger than 10 MB, the first fifty pages of each, up to 40,000 characters in all. An offer or a contract usually says there what the mail only mentions: the further payments and their days. |
 
-Not sent: attachments (S01), the planner's tasks, vendors, guests, categories or budget, anything about the owners
-beyond what the mail itself says.
+Not sent: an attachment that is not a PDF; a PDF that holds pictures of pages and no text; anything of an
+attachment of a message that triage was not that sure of, or called a "no" (also one that is read on because the
+"no" was unsure); the planner's tasks, vendors, guests, categories or budget; anything about the owners beyond
+what the mail itself says.
+
+### Messages that were read before their documents could be
+
+A message that concerned the wedding and was read before the planner could read documents is **read once more,
+for its documents only**: the same message with their text, with what it already proposed told to the model so
+that nothing is proposed twice. What comes of it are further suggestions from the same message. It happens by
+itself, once per message, under the same limits as all reading; a message without a PDF costs one look at
+Gmail and nothing else.
 
 ## 4. What the two steps answer
 
@@ -51,7 +62,8 @@ beyond what the mail itself says.
   and how sure it is. A wedding newsletter, an advertisement and somebody else's wedding are "no". **A "no" that
   is less sure than 60 in 100** (a setting) is read on as if it were a "yes": missing a message that concerns the
   wedding is worse than paying for one extraction that proposes nothing.
-- **Extraction** answers with at most **five** proposals. Each has a kind (task, payment, step of the plan,
+- **Extraction** answers with at most **five** proposals — **eight** when documents were read with the message,
+  since an offer often names several payments. Each has a kind (task, payment, step of the plan,
   vendor), a title in the language of the message, and what applies of: notes, a first day, a day it is due, an
   amount as the mail writes it with the kind of payment, a category by name, a vendor by name with what
   contact details the message gives, how sure it is (0–100), and **the passage** it rests on, quoted from the
@@ -66,16 +78,21 @@ A message is written by anybody, and the models read it. So:
   waits in the inbox for a person. Nothing existing is ever changed by this step.
 - **The answer has a fixed shape**, asked for as such and checked again by the server: the kinds, the lengths,
   an amount that is a whole number and not negative, days that are real days.
-- **The passage must stand in the message.** A proposal whose passage is not found in the text that was sent
-  (compared without regard to line breaks and spacing) is dropped: the person deciding must be able to rely on
-  the quotation being the mail's own words.
+- **The passage must stand in the message.** A proposal whose passage is not found in the text that was sent —
+  the message, its thread, or a document that was read with it — (compared without regard to line breaks and
+  spacing) is dropped: the person deciding must be able to rely on the quotation being the mail's own words.
+- **A document is read by the server, not opened.** The server takes the text out of the PDF itself; nothing in
+  the file is run, followed or fetched, and the file is not kept. What the text says is somebody else's words
+  like the mail's, set apart in the request in the same way. A document that cannot be read — locked, damaged,
+  too large — is left out and the message is read without it. Reading one message's documents is tried once: if
+  the server stops while it does, that message is read without them the next time.
 - **Names are matched by the server, not by the model**: a vendor is linked when the sender's address is a
   vendor's address, or the proposed name is exactly a vendor's name; a category when the proposed name is
   exactly one of the planner's. Otherwise the name stays what S02 calls a name the planner does not have yet.
   A vendor the planner already has — by its name, by the address the message gives for it, or because it is the
   sender introducing itself — is not proposed again; a known sender introducing somebody else is.
-- **At most five proposals from one message.** An answer with more is not used at all, and the message is marked
-  as one that could not be read: a mail that floods is not a mail to act on.
+- **At most five proposals from one message, eight with its documents.** An answer with more is not used at all,
+  and the message is marked as one that could not be read: a mail that floods is not a mail to act on.
 - **Fifty new suggestions from one mailbox in a day, and its reading goes on the next day.** The message that
   reaches the limit is still handled whole; nothing is lost, the other mailbox is read on, and nobody can fill
   the inbox by sending a thousand mails.
@@ -88,7 +105,8 @@ A message is written by anybody, and the models read it. So:
 ## 6. What is kept
 
 - With the note of a message: its verdict — not about the wedding, about the wedding (and how many proposals it
-  made), or could not be read (and which of a fixed set of reasons) — and when. **Nothing of its content.**
+  made), or could not be read (and which of a fixed set of reasons) — and when; and whether its documents were
+  looked at. **Nothing of its content, and nothing of a document.**
 - In a suggestion (S02): the sender, the subject, when it arrived, whose inbox, the passage, the link to Gmail.
 - What the AI service was asked and what it answered is **not kept**, and not logged. The log says that a
   message was read, by which step, what it came to, and how many tokens it took — never which message, who
@@ -104,6 +122,7 @@ A message is written by anybody, and the models read it. So:
 | The AI service does not accept the server's key, the account has no credit, or it does not know the model that is set | The reading stops and the e-mail page says so. It starts again when the server is started with a key that works. |
 | The model declines a message, or answers in a shape the server cannot use | The message's verdict is "could not be read". It is not tried again. |
 | A message is too large to fetch, or has no text | "Could not be read." |
+| A document cannot be fetched or read | The message is read without it. |
 | Gmail no longer has the message | "Could not be read." |
 | Gmail refuses or the permission is gone | As in S03: the mailbox is put off, or has to be connected again. |
 
@@ -144,6 +163,7 @@ A setting that is not valid turns the reading off, and the log names the setting
 | What | Where |
 |---|---|
 | Adding by itself at the threshold, with undo | S05, WP-US-22 |
+| Attachments that are not PDFs (pictures, Word, spreadsheets), and PDFs that are pictures of pages | Not read; D-011 says what would change that |
 | A later message updating an earlier entry | WP-US-22, a task of its own |
-| Attachments, other mail providers | Not in the first version (S01 section 13) |
+| Other mail providers | Not in the first version (S01 section 13) |
 | Cheaper reading through the service's batch interface | D-007 says when to reconsider |

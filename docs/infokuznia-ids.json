@@ -726,6 +726,18 @@
    "publicId": "WP-TS-90",
    "id": "eaf159ca-dba4-41dd-988a-8fa433e6481f",
    "title": "The image is published at every push to main, and the server takes the newest by itself"
+  },
+  "EP7-S2-T8": {
+   "type": "task",
+   "publicId": "WP-TS-91",
+   "id": "9bc8d8d4-d20b-4670-a387-da5ad8dc6cb1",
+   "title": "Spec and decision: PDF documents of wedding mail are read"
+  },
+  "EP7-S2-T9": {
+   "type": "task",
+   "publicId": "WP-TS-92",
+   "id": "30a6167c-ad7c-4252-b63f-3579f7042628",
+   "title": "Backend and web: the reading takes the text of a wedding message's PDF documents into account"
   }
  }
 }

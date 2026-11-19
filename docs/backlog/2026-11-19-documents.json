@@ -1,0 +1,38 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP7-S2-T8",
+   "story": "EP7-S2",
+   "title": "Spec and decision: PDF documents of wedding mail are read",
+   "description": "On the first day with real mail a venue's message mentioned the deposit while the offer attached to it held the second and third payment with their days; nothing of those was proposed, because attachments were left out of the first version. The owner asked for attachments to be read, and only where the planner is quite sure that the mail concerns the wedding. S04 says what is read (the text of up to three PDF documents, taken out by the server, when triage said yes with at least 80 in 100), what is not, the limits, that a quotation from a document is checked like one from the mail, and that messages read before are read once more for their documents. D-011 records why, and that payments found there still wait for a person (D-008). S01 and S03 follow. Done when the documents are committed and mirrored.",
+   "dependsOn": [],
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "documentation"
+   ]
+  },
+  {
+   "key": "EP7-S2-T9",
+   "story": "EP7-S2",
+   "title": "Backend and web: the reading takes the text of a wedding message's PDF documents into account",
+   "description": "As S04 and D-011 say. The mail module hands out a message's PDF attachments when the reader asks for them and never otherwise. The reading asks only when triage said yes with at least the share that is set (80 to begin with), takes the text out of each PDF on the server within limits of size, pages, characters and time, sends it with the message set apart like the mail's own words, checks quotations against it, allows eight proposals where documents were read, and tries one message's documents once. Messages that concerned the wedding and were read before are read once more for their documents, telling the model what was already proposed. Nothing of a document is kept or logged. The web's e-mail page says what is true about attachments. Done when the backend's tests cover it against stand-ins with PDFs made by the tests themselves, the web's tests cover the changed words, and the gate passes.",
+   "dependsOn": [
+    "EP7-S2-T8"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "react"
+   ]
+  }
+ ]
+}
