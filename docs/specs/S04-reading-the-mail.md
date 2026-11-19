@@ -131,7 +131,11 @@ A setting that is not valid turns the reading off, and the log names the setting
 - **A fixed set of sample messages** in Polish, Ukrainian and English — invented, with what triage should answer
   and what extraction should propose — and a tool that runs the two steps over it with the real AI service and
   reports how often each was right and what the run cost. It is not part of the gate: **no test ever calls the
-  real AI service**, and a run costs money. It is run when the owner says so, with the owner's key.
+  real AI service**, and a run costs money. It is run when the owner says so, with the owner's key:
+  `docs/deployment.md`, "Measuring it before switching it on". The set is twenty messages in each language under
+  `backend/src/test/resources/mailreading/samples/`; among them messages whose point comes after the beginning,
+  a day given only relative to the wedding, an amount in another currency, a reply whose amount stands in an
+  earlier message, and messages that try to instruct the reader.
 - When there is a server: an API key of the Anthropic account in the server's environment, with a spending limit
   set on the account itself as a second brake; then the e-mail page shows the reading going on and what it costs.
 

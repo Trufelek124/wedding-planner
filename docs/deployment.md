@@ -173,6 +173,37 @@ What to expect, and what to do:
 
 Nothing of this has run against the real service yet: the first days are worth watching on the page.
 
+### Measuring it before switching it on
+
+The repository holds sixty invented messages — twenty each in Polish, Ukrainian and English — with what the two
+steps should answer, and a tool that runs the steps over them **with the real AI service** and says how often
+each was right and what it cost. It is not part of the gate and no session runs it: a run costs money and is the
+owner's to order. On a machine with the repository and JDK 25:
+
+```
+cd backend
+./gradlew measureReading -PdryRun=yes
+APP_AI_API_KEY=… ./gradlew measureReading -PspendMoney=yes
+```
+
+- The first line asks nothing of the service: it counts the calls (about a hundred) and guesses the cost from
+  the length of the texts — between one and two US dollars for the whole set at D-007's prices.
+- The second is the run. Without the key in the environment **and** `-PspendMoney=yes` it calls nothing and
+  says what it needs. `-Ponly=pl` (or `uk`, `en`, or several with commas) takes some languages,
+  `-Psteps=triage` only the first step, `-Plimit=5` the first five messages of each language.
+- The models and prices are the server's settings (`APP_AI_TRIAGE_MODEL` and the others), read from the
+  environment, with the same starting values.
+- The report is printed and written to `backend/build/reports/reading-measure.md`: per language, how many
+  messages about the wedding triage found (the misses, by sample), what extraction found of what was expected and
+  whether the day, the amount and the kind of payment were right, whether a message that tries to instruct got
+  anything through, and the cost — also per thousand messages and for a first look over five thousand. It holds
+  sample names and numbers, no text of a message, and never the key.
+
+What to do with it: if triage misses wedding mail, or days and amounts come out wrong, say so before the
+mailboxes are read — the instructions of the two steps (`backend/src/main/resources/mailreading/`) and
+`MAIL_READING_TRIAGE_SURE` are the first things to change, and the run can be repeated. The numbers replace the
+estimate in D-007.
+
 ## Behind the proxy
 
 - The proxy must pass `X-Forwarded-Proto` and `X-Forwarded-Host`. The backend then knows it is reached over

@@ -77,3 +77,28 @@ tasks.register<Test>("updateApiContract") {
     systemProperty("api.contract.update", "true")
     outputs.upToDateWhen { false }
 }
+
+// Measures the two AI steps of reading the mail over the invented sample set (S04 section 10, WP-TS-78).
+// It calls the REAL AI service and a call costs money, so nothing depends on it: not check, test, build or the gate.
+// Without APP_AI_API_KEY in the environment and -PspendMoney=yes it calls nothing and says what it needs.
+//   APP_AI_API_KEY=... ./gradlew measureReading -PspendMoney=yes [-Ponly=pl,uk,en] [-Psteps=triage|both] [-Plimit=N]
+//   ./gradlew measureReading -PdryRun=yes     (counts the calls and estimates the cost; calls nothing)
+// The key is only read from the environment. The service's address is not an option here (tests set it by a system property).
+tasks.register<JavaExec>("measureReading") {
+    group = "reading"
+    description = "Runs triage and extraction over the sample messages against the REAL AI service (costs money; needs a key and -PspendMoney=yes)."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "io.github.trufelek124.weddingplanner.mailreading.internal.MeasureReading"
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+    outputs.upToDateWhen { false }
+    val options = mapOf(
+        "spendMoney" to "--spend-money",
+        "dryRun" to "--dry-run",
+        "only" to "--only",
+        "steps" to "--steps",
+        "limit" to "--limit",
+    )
+    options.forEach { (property, flag) ->
+        (findProperty(property) as String?)?.let { args("$flag=$it") }
+    }
+}

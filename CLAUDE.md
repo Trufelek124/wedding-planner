@@ -92,14 +92,16 @@ closing comment quotes its summary lines and its exit code.
 - A list tells the form where to return to (`state={{ back }}`), filters included.
 - The suggestions inbox (`src/suggestions/`, S02) shows what the e-mail import proposes. Everything that came out of
   a mail is plain text, never markup or a link made from it; "Open the e-mail" is drawn only for an `https`
-  address. A decision is sent once; `already-decided` overwrites nothing and says what was decided and by whom.
+  address, and only on a suggestion from your own inbox (the other owner's mail cannot be opened by you). A decision is sent once; `already-decided` overwrites nothing and says what was decided and by whom.
   "Change and accept" sends every value of the proposal, because the server makes what is sent and nothing else.
   How many wait is asked once in `Shell` and shared with Home and the pages (`WaitingContext`).
 - The e-mail import page (`src/mail/`, S03) is at `/mail`, the address the server sends the browser back to after
   Google. It sends the browser on only to an `https` address at `accounts.google.com` (`googleAddress`), says what
   happened once and takes the parameter out of the address, never shows the partner's address, and asks on the
   page before disconnecting. It has no entry in the top bar: it is reached from the suggestions inbox and, while
-  the mail is not connected, from Home.
+  the mail is not connected, from Home. Its part "Reading your mail" (S04 section 8) says the reading's state in
+  words, never by its name, the numbers of both mailboxes together, and the estimated cost in US dollars
+  (`dollars()` in `src/mail/mailApi.ts`, from whole cents — `money()` is for the wedding's currency).
 - The top bar is one row from 64rem up. Below that the name and the signed-in block share a row and the entries
   are one row that moves sideways, with the entry of the page that is shown brought into view; the entries stay a
   plain list of links at every width, with no menu button.
@@ -309,6 +311,13 @@ uses another only through the types in that module's own package, and never in a
     that is not accepted stops it until the server is started again.
   - `reading_usage` counts calls and tokens per day, step and model, and nothing of a message. **Nothing of a
     message, an answer or the key is kept or logged**; of an exception only its kind.
+  - What the e-mail page says of the reading, `mail` asks through an interface of its own that this module
+    implements (`mail.ReadingReport`, as `vendors` does with `VendorUse`): `mail` cannot use `mailreading`.
+  - How good the two steps are is measured, not tested: sixty invented messages in Polish, Ukrainian and English
+    (`backend/src/test/resources/mailreading/samples/`) and `./gradlew measureReading`, which runs the steps over
+    them **against the real service** and costs money. Nothing depends on that task, it needs the key and
+    `-PspendMoney=yes`, and it is the owner's to run — a session runs at most `-PdryRun=yes`. A change to the
+    instructions or to what a step answers is a reason to tell the owner to measure again.
   - It is off without `APP_AI_API_KEY`: no client of the service is made. Tests use `StandInAnthropic` and the
     mail tests' `StandInGoogle`. **No test, and nothing a session runs, ever calls the real AI service.**
 
