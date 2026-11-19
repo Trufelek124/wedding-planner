@@ -690,6 +690,12 @@
    "publicId": "WP-TS-84",
    "id": "89d36f34-ae8d-4b2b-af70-902986c9e607",
    "title": "Backend: a later message of a thread changes the entry an earlier one produced"
+  },
+  "EP3-S2-T6": {
+   "type": "task",
+   "publicId": "WP-TS-85",
+   "id": "3d0a06cd-9f7d-402e-8df8-8cae2bc00572",
+   "title": "Deployment: the compose file hands the e-mail import's and the reading's settings to the container"
   }
  }
 }

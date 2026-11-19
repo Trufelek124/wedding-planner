@@ -41,6 +41,29 @@ services:
       GOOGLE_OAUTH_WEB_CLIENT_ID: ${GOOGLE_OAUTH_WEB_CLIENT_ID:-}
       ALLOWED_EMAILS: ${ALLOWED_EMAILS}
       DEV_LOGIN_ENABLED: ${DEV_LOGIN_ENABLED:-false}
+      # The e-mail import: off until all three are given, together with the client id above.
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-}
+      APP_MAIL_TOKEN_KEY: ${APP_MAIL_TOKEN_KEY:-}
+      # Reading the mail with the AI service: off until the key is given.
+      APP_AI_API_KEY: ${APP_AI_API_KEY:-}
+      # What follows has a starting value in the server itself. A name without a value is handed on only when
+      # .env sets it: an empty value here would take the place of the starting value and switch the feature off.
+      MAIL_SYNC_INTERVAL:
+      MAIL_SYNC_ENABLED:
+      MAIL_READING_INTERVAL:
+      MAIL_READING_ENABLED:
+      MAIL_READING_TRIAGE_SURE:
+      MAIL_READING_MONTHLY_LIMIT_USD:
+      MAIL_READING_DAILY_MESSAGES:
+      MAIL_READING_DAILY_SUGGESTIONS:
+      APP_AI_TRIAGE_MODEL:
+      APP_AI_EXTRACTION_MODEL:
+      APP_AI_TRIAGE_PRICE_IN:
+      APP_AI_TRIAGE_PRICE_OUT:
+      APP_AI_EXTRACTION_PRICE_IN:
+      APP_AI_EXTRACTION_PRICE_OUT:
+      PREVIEWS_ENABLED:
     ports:
       - "127.0.0.1:8080:8080"
     volumes:

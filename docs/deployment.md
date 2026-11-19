@@ -72,12 +72,16 @@ The planner is at `http://localhost:8080` once `docker ps` shows the app as `hea
 | Health | `GET /actuator/health` answers 200 only while the database can be reached, and 503 within five seconds when it cannot. The image carries a health check that asks exactly that. |
 | Logs | Standard output. People appear by id only, never by name or address. |
 | Memory | The Java heap takes 60 % of the container's memory limit (`JAVA_TOOL_OPTIONS`). 1 GB is plenty for two people. |
-| Goes out to | `www.googleapis.com`, for Google's signing keys at sign-in. Any public web address, to fetch the title and preview picture of a link someone saved; never an address inside the server's own network (decision D-003). The Anthropic API and Gmail join with epic 7. |
+| Goes out to | `www.googleapis.com`, for Google's signing keys at sign-in. Any public web address, to fetch the title and preview picture of a link someone saved; never an address inside the server's own network (decision D-003). With the e-mail import set up: `oauth2.googleapis.com` and `gmail.googleapis.com`. With reading set up: `api.anthropic.com`. |
 
 ## Settings
 
 Everything that differs between installations is an environment variable. `deploy/env.example` lists the ones an
-installation has to fill in, without values.
+installation has to fill in, without values, and the optional ones behind a `#`. `deploy/compose.yaml` hands all
+of them to the container: the four that switch the e-mail import and the reading on arrive empty while `.env`
+does not give them, which is "off"; an optional one is handed on only when `.env` sets it, so that the server's
+own starting value holds otherwise. A server's own compose file has to do the same — one written before the
+e-mail import existed passes none of them.
 
 | Variable | Needed | What it is |
 |---|---|---|
@@ -422,6 +426,10 @@ On 2026-11-18 the image with the pictures of inspirations was run the same way: 
 the API ended up on the volume, owned by 10001, with the root file system read-only; they came back byte for byte
 and were refused without sign-in. The pictures were then packed with the backup command above, deleted, unpacked
 again with the restore command, served again, and a new one could still be added.
+
+On 2026-11-19 the environment block of `deploy/compose.yaml` was run in a container that prints what it is given:
+without the e-mail import's values in `.env` the four switches arrive empty and no optional setting arrives at
+all; with them, and two optional ones, exactly those arrive.
 
 Not done yet: a run of the publishing script on the owner's Mac that pushes to the real registry; the server
 pulling from it; the nightly backup on the server and a restore from one of its files; and the owner rolling

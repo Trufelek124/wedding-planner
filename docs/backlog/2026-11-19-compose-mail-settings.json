@@ -1,0 +1,20 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP3-S2-T6",
+   "story": "EP3-S2",
+   "title": "Deployment: the compose file hands the e-mail import's and the reading's settings to the container",
+   "description": "deploy/compose.yaml, the pattern for the server's own entry, passes the database, the token secret, the allowed addresses and the Google client id to the container and nothing of what came with epic 7: the Google client's secret, the planner's public address, the key for the mailboxes' tokens, the key for the AI service, and the optional settings of the sync and the reading. With that file the e-mail import and the reading could never be switched on from .env. The compose file passes them - the four that switch a feature on as empty when they are not given, the optional ones only when .env sets them, so that an empty value never replaces the server's own starting value - and deploy/env.example lists them without values. docs/deployment.md says so. Done when 'docker compose config' shows the container's environment as expected with and without the values, and the gate's last run stands for the code, which does not move.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "docker"
+   ]
+  }
+ ]
+}
