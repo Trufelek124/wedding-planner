@@ -78,7 +78,7 @@ function WhatIsNext({ home, categories, onChanged }: { home: Home; categories: C
       )}
       {nothingToDo ? (
         <p className="empty">
-          Nothing is waiting for you. What has to happen goes into the <Link to="/plan">plan</Link>; single things to do go
+          No task is waiting for you. What has to happen goes into the <Link to="/plan">plan</Link>; single things to do go
           under <Link to="/tasks">tasks</Link>.
         </p>
       ) : (

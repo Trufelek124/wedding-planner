@@ -111,7 +111,7 @@ describe('the home page', () => {
     planningServer([])
     open()
 
-    expect(await screen.findByText(/Nothing is waiting for you/)).toBeInTheDocument()
+    expect(await screen.findByText(/No task is waiting for you/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'plan' })).toHaveAttribute('href', '/plan')
     expect(screen.getByRole('link', { name: 'tasks' })).toHaveAttribute('href', '/tasks')
     expect(screen.queryByRole('region', { name: 'Next' })).not.toBeInTheDocument()

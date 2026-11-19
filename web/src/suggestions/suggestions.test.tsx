@@ -664,7 +664,7 @@ describe('home and the way around', () => {
     open('/')
 
     await screen.findByRole('heading', { name: 'Anna & Piotr' })
-    await screen.findByText(/Nothing is waiting for you/)
+    await screen.findByText(/No task is waiting for you/)
     expect(within(screen.getByRole('main')).queryByText(/suggestion/i)).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Suggestions' })).toHaveAttribute('href', '/suggestions')
   })

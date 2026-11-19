@@ -441,14 +441,14 @@ describe('money on the home page', () => {
     const glance = within(await screen.findByRole('region', { name: 'Budget' }))
     expect(glance.getByText(/still/).closest('p')).toHaveTextContent('7,000.00 zł more than the 20,000.00 zł budget.')
     // Nothing waits in the plan; the money is shown all the same.
-    expect(screen.getByText(/Nothing is waiting for you\./)).toBeInTheDocument()
+    expect(screen.getByText(/No task is waiting for you\./)).toBeInTheDocument()
   })
 
   it('says nothing about money while there is none in the planner', async () => {
     planningServer([], { 'GET /api/home': home() })
     open('/')
 
-    expect(await screen.findByText(/Nothing is waiting for you\./)).toBeInTheDocument()
+    expect(await screen.findByText(/No task is waiting for you\./)).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Budget' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Next payments' })).not.toBeInTheDocument()
   })
