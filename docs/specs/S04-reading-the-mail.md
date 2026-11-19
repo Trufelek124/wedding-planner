@@ -24,6 +24,10 @@ noted ──▶ fetched from Gmail ──▶ triage ──┬─ not about the w
   and a message with a verdict is never fetched or sent anywhere again, also after a restart.
 - A message is handled whole or not at all: if the server stops in the middle, the message is still "not read
   yet" and is done again. Doing it again proposes nothing twice (S02's source key).
+- **One letter in both mailboxes is read once.** A mail that went to both owners is two messages for Google and
+  one letter: both copies carry the identifier its sender gave it. The copy that is reached second is not sent
+  anywhere — it gets the verdict "a copy of one that was read" — and proposes nothing. What was proposed stands
+  under the inbox of the copy that was read.
 - The newest messages are read first, a few at a time, so that the first days after connecting bring what is
   current before what is three months old.
 - A message that cannot be fetched for now is left as it is and tried again later, at growing intervals; the
@@ -40,7 +44,7 @@ things that make the proposals usable; both are listed here so that they are a d
 |---|---|
 | Triage, for every message | The sender's name and address, the subject, when it arrived, and the beginning of its text: the first 1,500 characters. |
 | Extraction, for a message that concerns the wedding | The same, the full text of the message, and the text of the earlier messages of its thread — up to 60,000 characters in all; what is beyond is left out, and the model is told that it was. |
-| Also with extraction | **Today's date and the wedding's date** (so that "two weeks before the wedding" can become a day), and **the titles of what was already proposed from the same thread** (so that a reply is not proposed a second time). |
+| Also with extraction | **Today's date and the wedding's date** (so that "two weeks before the wedding" can become a day), and **what was already proposed** — from the same thread, and lately from any mail of the wedding (the last thirty proposals of the last thirty days, each with its kind, title, day and amount) — so that a reply, a forwarded copy or a second mail about the same thing is not proposed again. |
 | With extraction, when triage was at least 80 in 100 sure that the message concerns the wedding | **The text of the message's PDF documents** (D-011): of up to three documents, none larger than 10 MB, the first fifty pages of each, up to 40,000 characters in all. An offer or a contract usually says there what the mail only mentions: the further payments and their days. |
 
 Not sent: an attachment that is not a PDF; a PDF that holds pictures of pages and no text; anything of an
@@ -105,8 +109,10 @@ A message is written by anybody, and the models read it. So:
 ## 6. What is kept
 
 - With the note of a message: its verdict — not about the wedding, about the wedding (and how many proposals it
-  made), or could not be read (and which of a fixed set of reasons) — and when; and whether its documents were
-  looked at. **Nothing of its content, and nothing of a document.**
+  made), a copy of one that was read, or could not be read (and which of a fixed set of reasons) — and when;
+  whether its documents were looked at; and, so that a copy can be recognised, **a key worked out from the
+  identifier the letter's sender gave it** — a one-way hash that says nothing and cannot be turned back.
+  **Nothing of its content, and nothing of a document.**
 - In a suggestion (S02): the sender, the subject, when it arrived, whose inbox, the passage, the link to Gmail.
 - What the AI service was asked and what it answered is **not kept**, and not logged. The log says that a
   message was read, by which step, what it came to, and how many tokens it took — never which message, who

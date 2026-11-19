@@ -1,0 +1,20 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP7-S2-T10",
+   "story": "EP7-S2",
+   "title": "Backend: one letter in both mailboxes is read once, and what was proposed lately is not proposed again",
+   "description": "With both owners' mailboxes connected the owner found the same tasks proposed twice: a mail that went to both is two messages for Google, each was read, and a proposal's key names the mailbox. As S04 now says: a letter is known by the identifier its sender gave it (the Message-ID header), kept with the note of a read message only as a one-way hash; a copy that is reached second gets the verdict 'a copy of one that was read' without anything being asked of the AI service, and proposes nothing. And for forwarded copies and second mails about the same thing: extraction is told what was already proposed lately from any mail of the wedding (the last thirty proposals of the last thirty days, with kind, title, day and amount), beside what came from the same thread. Done when the backend's tests cover both against the stand-ins and the gate passes.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java"
+   ]
+  }
+ ]
+}

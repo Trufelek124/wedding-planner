@@ -738,6 +738,12 @@
    "publicId": "WP-TS-92",
    "id": "30a6167c-ad7c-4252-b63f-3579f7042628",
    "title": "Backend and web: the reading takes the text of a wedding message's PDF documents into account"
+  },
+  "EP7-S2-T10": {
+   "type": "task",
+   "publicId": "WP-TS-93",
+   "id": "4127ecbe-e317-4827-9528-766391571801",
+   "title": "Backend: one letter in both mailboxes is read once, and what was proposed lately is not proposed again"
   }
  }
 }

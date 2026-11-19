@@ -69,8 +69,9 @@ page is drawn, in a script's reach, or in the log.
 | Where the sync stands | To notice what is new | Google's own marker for the mailbox |
 | For every message noted: Google's identifier of the message and of its thread, when it was noted, and whether it has been read by the import yet | So that no message is handled twice, also after a restart | **Nothing of the message itself**: no sender, no subject, no text |
 
-What is kept *about* a message once it is read — the verdict, and for wedding messages the sender, the subject, the
-date and the passage — is S02's and WP-US-21's.
+What is kept *about* a message once it is read — the verdict, a key that lets a copy of the same letter in the
+other mailbox be recognised (a one-way hash of the identifier its sender gave it), and for wedding messages the
+sender, the subject, the date and the passage — is S02's and S04's (section 6).
 
 ## 5. Keeping up
 
