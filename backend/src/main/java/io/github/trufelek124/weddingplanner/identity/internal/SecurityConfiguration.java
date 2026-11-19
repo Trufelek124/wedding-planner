@@ -23,8 +23,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @EnableConfigurationProperties(IdentityProperties.class)
 class SecurityConfiguration implements WebMvcConfigurer {
 
-    /** API paths that answer without a sign-in. Adding one is a security decision: keep the list short. */
-    static final String[] PUBLIC_API = {"/api/auth/**", "/api/app-info"};
+    /**
+     * API paths that answer without a sign-in. Adding one is a security decision: keep the list short.
+     * The mail connection's return address is where Google sends a browser back, which carries no access token:
+     * that exact path (no wildcard) and nothing else of the mail module.
+     */
+    static final String[] PUBLIC_API = {"/api/auth/**", "/api/app-info", "/api/mail/gmail/return"};
 
     /**
      * What a page of the web app may load and where it may send data: itself, plus exactly what

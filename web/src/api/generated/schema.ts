@@ -452,6 +452,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where the e-mail import stands
+         * @description Whether the import is set up on this server, the caller's own connection with the mailbox's address, and the partner's connection without it. Nothing is asked of Google.
+         */
+        get: operations["state"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mail/gmail/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Starts connecting a Gmail mailbox
+         * @description Makes a ticket that is good for ten minutes, once, in this browser (it is bound to it by a cookie that is sent with this answer), and answers with Google's address to send the browser to. Google asks for read-only access to Gmail and nothing else, and sends the browser back to the server, which ends on the web app's e-mail page. Answers mail-not-set-up while the import is off.
+         */
+        post: operations["connect"];
+        /**
+         * Disconnects the caller's mailbox
+         * @description Asks Google to withdraw the permission (if Google cannot be reached, the rest still happens) and removes the caller's own connection with its token. Disconnecting again changes nothing. The partner's connection is never touched.
+         */
+        delete: operations["disconnect"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mail/gmail/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where Google sends the browser back to
+         * @description Answers without a sign-in and always with a redirect to the web app's e-mail page: `connected=yes` when the mailbox was connected, `refused` when the person said no at Google, `failed` for everything else. It accepts nothing but a ticket the server issued, once, in time, from the browser it was issued to. Not for clients of the API: only browsers coming from Google.
+         */
+        get: operations["back"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me": {
         parameters: {
             query?: never;
@@ -1097,6 +1161,42 @@ export interface components {
              */
             version: number;
         };
+        /** @description The caller's own connection to their mailbox. */
+        MailConnection: {
+            /** @description The connected mailbox, shown to its owner only. Null when nothing was ever connected. */
+            address: string | null;
+            /**
+             * Format: date-time
+             * @description When it was connected.
+             */
+            connectedAt: string | null;
+            /**
+             * Format: date-time
+             * @description When the server last looked at the mailbox.
+             */
+            lastLookAt: string | null;
+            /**
+             * Format: int32
+             * @description How many messages the server has noted; 0 until the sync exists.
+             */
+            messagesNoted: number;
+            /** @enum {string} */
+            state: "NOT_CONNECTED" | "CONNECTED" | "NEEDS_RECONNECTING";
+        };
+        /** @description Where to send the browser to ask Google for the permission. */
+        MailConnectionStart: {
+            /** @description Google's address, made for this attempt only. Go there at once; it works once. */
+            authorizationUrl: string;
+        };
+        /** @description Whether the e-mail import works on this server, and where each owner's connection stands. While it is not set up both connections read NOT_CONNECTED: there is nothing to connect. */
+        MailState: {
+            /** @description The partner's connection, without their address. */
+            partner: components["schemas"]["PartnersMailConnection"];
+            /** @description False when the server was not given what the import needs. */
+            setUp: boolean;
+            /** @description The caller's own connection. */
+            yours: components["schemas"]["MailConnection"];
+        };
         /** @description The signed-in person. */
         Me: {
             displayName: string;
@@ -1259,6 +1359,18 @@ export interface components {
             /** @description A web address; https:// is put in front of one that has no scheme. May be empty. */
             website: string;
         };
+        /** @description The partner's connection: whether there is one, never which mailbox. */
+        PartnersMailConnection: {
+            /** @description False until the partner has signed in for the first time: there is nobody to connect yet. */
+            joined: boolean;
+            /**
+             * Format: date-time
+             * @description When the server last looked.
+             */
+            lastLookAt: string | null;
+            /** @enum {string} */
+            state: "NOT_CONNECTED" | "CONNECTED" | "NEEDS_RECONNECTING";
+        };
         /** @description A picture of an inspiration. Its bytes are at /api/inspirations/{inspirationId}/pictures/{id}. */
         Picture: {
             /** @description image/jpeg, image/png, image/gif or image/webp, worked out from the file itself. */
@@ -1306,7 +1418,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:already-decided" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:already-decided" | "urn:wedding-planner:problem:mail-not-set-up" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -3103,6 +3215,118 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Inspiration"];
                 };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    state: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailState"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailConnectionStart"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    back: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description To the e-mail page, whatever happened. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Any error. */
             default: {

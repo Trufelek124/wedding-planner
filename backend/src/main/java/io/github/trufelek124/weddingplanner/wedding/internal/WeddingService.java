@@ -87,7 +87,8 @@ class WeddingService implements Weddings {
                 seat.mine().id(),
                 ZoneId.of(seat.wedding().timeZone()),
                 seat.wedding().weddingDate(),
-                seat.members().stream().map(MemberRow::id).toList());
+                seat.members().stream().map(MemberRow::id).toList(),
+                seat.members().stream().filter(member -> member.userId() != null).map(MemberRow::id).toList());
     }
 
     @Override

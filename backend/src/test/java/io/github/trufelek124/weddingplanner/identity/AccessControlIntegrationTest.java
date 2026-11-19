@@ -29,7 +29,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 class AccessControlIntegrationTest extends PostgresIntegrationTest {
 
     /** The API paths that answer without a sign-in. A new entry here is a security decision. */
-    private static final List<String> PUBLIC = List.of("/api/auth/", "/api/app-info");
+    private static final List<String> PUBLIC = List.of("/api/auth/", "/api/app-info", "/api/mail/gmail/return");
 
     @Value("${local.server.port}")
     int port;

@@ -86,6 +86,9 @@ installation has to fill in, without values.
 | `APP_JWT_SECRET` | yes | Signs the access tokens. At least 32 characters, random. Changing it signs everyone out. |
 | `ALLOWED_EMAILS` | yes | The addresses that may sign in, separated by commas: the two owners. Empty means nobody. |
 | `GOOGLE_OAUTH_WEB_CLIENT_ID` | for Google sign-in | The client id of the Google OAuth web client (WP-TS-14). Empty means nobody can sign in with Google. |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | for the e-mail import | The secret of the same Google client. Never in the repository, never in a log. |
+| `APP_PUBLIC_URL` | for the e-mail import | The planner's own address as people reach it, `https://…` without a path. Google sends the browser back to `<this>/api/mail/gmail/return`. |
+| `APP_MAIL_TOKEN_KEY` | for the e-mail import | 32 random bytes, base64 (`openssl rand -base64 32`): the key the mailboxes' tokens are encrypted with. It is deliberately not in the database: a copy of the database alone opens nobody's mail. **Keep it with the backups' secrets, not with the backups.** Losing or changing it means both owners connect their mail again. |
 | `DEV_LOGIN_ENABLED` | no, default `false` | Signing in as an allowed address without Google. **Never `true` on a server others can reach.** |
 | `PREVIEWS_ENABLED` | no, default `true` | `false`: the server never goes out to fetch a preview for a saved link. Links are kept without one. |
 | `API_DOCS_ENABLED` | no, default `false` | Serves the API description at `/v3/api-docs`. For building clients, not for production. |
@@ -94,6 +97,35 @@ installation has to fill in, without values.
 | `JAVA_TOOL_OPTIONS` | set in the image | Java's own options; replace it to change the heap share. |
 
 No time zone setting is needed: every date is read in the wedding's own time zone, and logs are in UTC.
+
+## The e-mail import
+
+The import (S03) is **off unless the server has all four**: `GOOGLE_OAUTH_WEB_CLIENT_ID`,
+`GOOGLE_OAUTH_CLIENT_SECRET`, `APP_PUBLIC_URL` and `APP_MAIL_TOKEN_KEY`. With one missing or not valid the server
+starts as before, says once in its log which one (the name, never a value), and the web's e-mail page says the
+import is not set up. Nothing is asked of Google.
+
+What the owner does once, in the Google project that already holds the sign-in client (D-006 says why):
+
+1. **Switch the Gmail API on** for the project (APIs and services → Library → Gmail API).
+2. **Add the return address** to the web client's authorised redirect addresses:
+   `<APP_PUBLIC_URL>/api/mail/gmail/return`, letter for letter.
+3. **Add the scope** `https://www.googleapis.com/auth/gmail.readonly` to the consent screen's scopes. No other
+   Gmail scope: the planner only reads.
+4. **Set the consent screen's publishing status to "In production"** and leave the app unverified. Left in
+   "Testing", every connection ends after seven days. Google will show "Google hasn't verified this app" when a
+   mailbox is connected: go on through "Advanced". The planner's page says so beforehand.
+5. Copy the client's **secret** into the server's environment file, make the **key** with
+   `openssl rand -base64 32`, set the public address, and start the server again.
+6. On the web, each owner opens **E-mail import** and connects their mailbox. Check again after more than a
+   week that both are still connected. If Google refuses, or the connection keeps ending, the route does not
+   hold for these accounts: say so — the fallback is recorded in D-006.
+
+To withdraw the planner's access without the planner: Google account → Security → Third-party access.
+Disconnecting on the planner's page withdraws it as well and removes the token from the server.
+
+At a log level below INFO the web server and the database layer would print request lines, cookies and
+statement values. The loggers that do are held at INFO in the server's own settings; leave them there.
 
 ## Behind the proxy
 

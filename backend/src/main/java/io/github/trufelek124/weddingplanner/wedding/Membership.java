@@ -12,5 +12,7 @@ import java.util.UUID;
  * @param memberId the caller's own member
  * @param weddingDate null until the couple has fixed the day
  * @param memberIds both members of the wedding, in the order of the setup
+ * @param joinedMemberIds the members who have signed in: the other place stays empty until that person does
  */
-public record Membership(UUID weddingId, UUID memberId, ZoneId timeZone, LocalDate weddingDate, List<UUID> memberIds) {}
+public record Membership(
+        UUID weddingId, UUID memberId, ZoneId timeZone, LocalDate weddingDate, List<UUID> memberIds, List<UUID> joinedMemberIds) {}

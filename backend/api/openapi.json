@@ -917,6 +917,66 @@
         "required" : [ "boardId", "note", "planItemId", "tags", "title", "url", "vendorId", "version" ],
         "type" : "object"
       },
+      "MailConnection" : {
+        "description" : "The caller's own connection to their mailbox.",
+        "properties" : {
+          "address" : {
+            "description" : "The connected mailbox, shown to its owner only. Null when nothing was ever connected.",
+            "type" : [ "string", "null" ]
+          },
+          "connectedAt" : {
+            "description" : "When it was connected.",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "lastLookAt" : {
+            "description" : "When the server last looked at the mailbox.",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "messagesNoted" : {
+            "description" : "How many messages the server has noted; 0 until the sync exists.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "state" : {
+            "enum" : [ "NOT_CONNECTED", "CONNECTED", "NEEDS_RECONNECTING" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "address", "connectedAt", "lastLookAt", "messagesNoted", "state" ],
+        "type" : "object"
+      },
+      "MailConnectionStart" : {
+        "description" : "Where to send the browser to ask Google for the permission.",
+        "properties" : {
+          "authorizationUrl" : {
+            "description" : "Google's address, made for this attempt only. Go there at once; it works once.",
+            "type" : "string"
+          }
+        },
+        "required" : [ "authorizationUrl" ],
+        "type" : "object"
+      },
+      "MailState" : {
+        "description" : "Whether the e-mail import works on this server, and where each owner's connection stands. While it is not set up both connections read NOT_CONNECTED: there is nothing to connect.",
+        "properties" : {
+          "partner" : {
+            "$ref" : "#/components/schemas/PartnersMailConnection",
+            "description" : "The partner's connection, without their address."
+          },
+          "setUp" : {
+            "description" : "False when the server was not given what the import needs.",
+            "type" : "boolean"
+          },
+          "yours" : {
+            "$ref" : "#/components/schemas/MailConnection",
+            "description" : "The caller's own connection."
+          }
+        },
+        "required" : [ "partner", "setUp", "yours" ],
+        "type" : "object"
+      },
       "Me" : {
         "description" : "The signed-in person.",
         "properties" : {
@@ -1220,6 +1280,26 @@
         "required" : [ "address", "agreedPrice", "categoryId", "contactPerson", "email", "name", "notes", "phone", "status", "website" ],
         "type" : "object"
       },
+      "PartnersMailConnection" : {
+        "description" : "The partner's connection: whether there is one, never which mailbox.",
+        "properties" : {
+          "joined" : {
+            "description" : "False until the partner has signed in for the first time: there is nobody to connect yet.",
+            "type" : "boolean"
+          },
+          "lastLookAt" : {
+            "description" : "When the server last looked.",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "state" : {
+            "enum" : [ "NOT_CONNECTED", "CONNECTED", "NEEDS_RECONNECTING" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "joined", "lastLookAt", "state" ],
+        "type" : "object"
+      },
       "Picture" : {
         "description" : "A picture of an inspiration. Its bytes are at /api/inspirations/{inspirationId}/pictures/{id}.",
         "properties" : {
@@ -1305,9 +1385,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:already-decided", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:already-decided", "urn:wedding-planner:problem:mail-not-set-up", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "ALREADY_DECIDED", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "ALREADY_DECIDED", "MAIL_NOT_SET_UP", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -3731,6 +3811,110 @@
           }
         },
         "tags" : [ "picture-controller" ]
+      }
+    },
+    "/api/mail" : {
+      "get" : {
+        "description" : "Whether the import is set up on this server, the caller's own connection with the mailbox's address, and the partner's connection without it. Nothing is asked of Google.",
+        "operationId" : "state",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MailState"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Where the e-mail import stands",
+        "tags" : [ "mail-controller" ]
+      }
+    },
+    "/api/mail/gmail/connection" : {
+      "delete" : {
+        "description" : "Asks Google to withdraw the permission (if Google cannot be reached, the rest still happens) and removes the caller's own connection with its token. Disconnecting again changes nothing. The partner's connection is never touched.",
+        "operationId" : "disconnect",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Disconnects the caller's mailbox",
+        "tags" : [ "mail-controller" ]
+      },
+      "post" : {
+        "description" : "Makes a ticket that is good for ten minutes, once, in this browser (it is bound to it by a cookie that is sent with this answer), and answers with Google's address to send the browser to. Google asks for read-only access to Gmail and nothing else, and sends the browser back to the server, which ends on the web app's e-mail page. Answers mail-not-set-up while the import is off.",
+        "operationId" : "connect",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MailConnectionStart"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Starts connecting a Gmail mailbox",
+        "tags" : [ "mail-controller" ]
+      }
+    },
+    "/api/mail/gmail/return" : {
+      "get" : {
+        "description" : "Answers without a sign-in and always with a redirect to the web app's e-mail page: `connected=yes` when the mailbox was connected, `refused` when the person said no at Google, `failed` for everything else. It accepts nothing but a ticket the server issued, once, in time, from the browser it was issued to. Not for clients of the API: only browsers coming from Google.",
+        "operationId" : "back",
+        "responses" : {
+          "303" : {
+            "description" : "To the e-mail page, whatever happened."
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Where Google sends the browser back to",
+        "tags" : [ "gmail-return-controller" ]
       }
     },
     "/api/me" : {

@@ -36,6 +36,8 @@ public enum ProblemCode {
     VENDOR_IN_USE(HttpStatus.CONFLICT, "vendor-in-use", "Something still points to this vendor"),
     /** A suggestion was decided the other way first: show what was decided, and by whom. */
     ALREADY_DECIDED(HttpStatus.CONFLICT, "already-decided", "This suggestion has already been decided"),
+    /** The e-mail import is off on this server: it was not given everything it needs. Nothing is asked of Google. */
+    MAIL_NOT_SET_UP(HttpStatus.CONFLICT, "mail-not-set-up", "The e-mail import is not set up on this server"),
     /** What was sent is larger than the server takes; a picture, for instance. */
     UPLOAD_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "upload-too-large", "That is too large to upload"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "method-not-allowed", "Method not allowed"),

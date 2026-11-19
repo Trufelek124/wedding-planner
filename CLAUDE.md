@@ -232,7 +232,7 @@ first uses it, at the version D-005 names.
 
 ## The backend's modules
 
-`api`, `appinfo`, `webapp`, `identity`, `wedding`, `vendors`, `planning`, `inspirations`, `guests`, `suggestions`. A module
+`api`, `appinfo`, `webapp`, `identity`, `wedding`, `vendors`, `planning`, `inspirations`, `guests`, `suggestions`, `mail`. A module
 uses another only through the types in that module's own package, and never in a circle (`ModularityTest`).
 
 - `planning` and `inspirations` use `vendors` (`Vendors.exists`), not the other way round. What the register needs
@@ -250,6 +250,19 @@ uses another only through the types in that module's own package, and never in a
   other one is `already-decided`, and a refused acceptance leaves nothing behind. A suggestion holds parts of
   someone's mail: nothing of it is logged, tests use made-up mail, and its link can only be an `https` address at
   `mail.google.com` (checked in the code and by the table).
+
+- `mail` (S03, D-006) connects an owner's Gmail and keeps the key to it. Its rules are security rules:
+  - `GET /api/mail/gmail/return` is the one path of the feature that answers without a sign-in. It trusts nothing
+    but a ticket the server issued — known by its hash, in time, used once, from the browser it was issued to —
+    and always redirects to one fixed page. Nothing in a request may change where it goes.
+  - The scope is `gmail.readonly` and nothing else, when asking and when checking what Google granted.
+  - A token rests only sealed (`TokenVault`: AES-256-GCM, a key from outside the database, bound to the owner's
+    row). The client's secret, a code, a state, a cookie's value, a token, the key and a mailbox's address never
+    reach a log, a response, an exception's message or a `toString()`; the loggers that would print request lines,
+    cookies and statement values are held at INFO in `application.yml`.
+  - The import is off unless all its settings are there and valid (`MailSetup`); off, it asks nothing of Google.
+  - It goes out only to Google's configured addresses, with short limits and no redirects followed.
+  - Tests use `StandInGoogle`. **No test ever calls the real Google.**
 
 ## Changing the API
 
