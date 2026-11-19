@@ -48,7 +48,7 @@ beyond what the mail itself says.
   and how sure it is. A wedding newsletter, an advertisement and somebody else's wedding are "no".
 - **Extraction** answers with at most **five** proposals. Each has a kind (task, payment, step of the plan,
   vendor), a title in the language of the message, and what applies of: notes, a first day, a day it is due, an
-  amount in the wedding's currency with the kind of payment, a category by name, a vendor by name with what
+  amount as the mail writes it with the kind of payment, a category by name, a vendor by name with what
   contact details the message gives, how sure it is (0–100), and **the passage** it rests on, quoted from the
   message word for word. A message that concerns the wedding but asks for nothing proposes nothing.
 
@@ -67,8 +67,13 @@ A message is written by anybody, and the models read it. So:
 - **Names are matched by the server, not by the model**: a vendor is linked when the sender's address is a
   vendor's address, or the proposed name is exactly a vendor's name; a category when the proposed name is
   exactly one of the planner's. Otherwise the name stays what S02 calls a name the planner does not have yet.
-- **At most five proposals from one message and fifty from one mailbox in a day.** Beyond that the message is
-  marked as one that could not be read, and nothing of it is proposed: a mail that floods is not a mail to act on.
+- **At most five proposals from one message.** An answer with more is not used at all, and the message is marked
+  as one that could not be read: a mail that floods is not a mail to act on.
+- **At most fifty new suggestions from one mailbox in a day.** When that is reached, the reading of that mailbox
+  goes on the next day; nothing is lost, and nobody can fill the inbox by sending a thousand mails.
+- **Money is not worked out by the model.** It answers the amount as the mail writes it, with its currency. The
+  server turns it into the planner's whole numbers when the currency is the wedding's; an amount in another
+  currency is left out of the proposal and said in its notes.
 - What becomes of a proposal is S02's: it is shown as plain text with the sender and the passage, and it waits.
 
 ## 6. What is kept
