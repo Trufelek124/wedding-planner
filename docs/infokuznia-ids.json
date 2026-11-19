@@ -492,6 +492,36 @@
    "publicId": "WP-TS-53",
    "id": "a434d1a0-cc6a-4dbe-a1ac-6b1a6d11f03a",
    "title": "An inspiration sent twice is added once: the client may choose a new inspiration's id"
+  },
+  "EP4-S4": {
+   "type": "story",
+   "publicId": "WP-US-23",
+   "id": "75d07092-4426-4cb3-8c1a-dddf4a70937c",
+   "title": "Android: budget, vendors and guests"
+  },
+  "EP4-S4-T1": {
+   "type": "task",
+   "publicId": "WP-TS-54",
+   "id": "3b94a9e8-bc64-4746-85ea-06fda7165d16",
+   "title": "Android: the budget, and a place for what is not Home, the plan or the tasks"
+  },
+  "EP4-S4-T2": {
+   "type": "task",
+   "publicId": "WP-TS-55",
+   "id": "ed85e42f-01f8-4462-8a55-487e837c85a8",
+   "title": "Android: the vendors, with their contact details and money"
+  },
+  "EP4-S4-T3": {
+   "type": "task",
+   "publicId": "WP-TS-56",
+   "id": "50f6c6bb-423e-4473-825f-cedf69bc7e80",
+   "title": "Android: the guests and the head count"
+  },
+  "EP4-S4-T4": {
+   "type": "task",
+   "publicId": "WP-TS-57",
+   "id": "7a874db7-cf7a-47e3-9ba6-fed31b6a1775",
+   "title": "Android: change a guest's status, also without a connection"
   }
  }
 }

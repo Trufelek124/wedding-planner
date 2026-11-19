@@ -1,0 +1,117 @@
+{
+ "projectCode": "WP",
+ "stories": [
+  {
+   "key": "EP4-S4",
+   "epic": "EP4",
+   "title": "Android: budget, vendors and guests",
+   "description": "The money, the vendors and the guest list on the phone: readable like the rest of the planner, and a guest's answer recorded on the spot.",
+   "goal": "Both owners have the budget, the vendors' details and the guest list with them, at a vendor's desk or on the phone with a relative.",
+   "rationale": "The scope says that everything the web shows is readable on the phone and that a guest's status can be changed there (S01 section 4). Home, the plan and the tasks are there; these three were not.",
+   "expectedBehavior": "The phone shows the budget with its categories, the vendors with their contact details and money, and the guests with the head count, with the same facts as the web. What was loaded last stays readable without a connection. A guest's status can be changed, also without a connection.",
+   "priority": "HIGH",
+   "rank": 40,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "The budget, the vendors and the guests are readable on the phone with the same facts as on the web.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "What was loaded last stays readable without a connection and shows when it was loaded.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "A guest's status can be changed on the phone; a change made without a connection is sent when the connection returns.",
+     "source": "docs/specs/S01-product-scope.md section 4"
+    },
+    {
+     "text": "Signing out removes the vendors' and the guests' details from the phone, and nothing of them is written to the log.",
+     "source": "CLAUDE.md, Signing in and who may call what"
+    }
+   ]
+  }
+ ],
+ "tasks": [
+  {
+   "key": "EP4-S4-T1",
+   "story": "EP4-S4",
+   "title": "Android: the budget, and a place for what is not Home, the plan or the tasks",
+   "description": "A fourth place in the bar at the bottom leads to the budget, and later to the vendors and the guests. The budget shows what the couple means to spend, what is planned, committed and paid, and every category against its plan, with what is over said in words. It is loaded and kept with the rest of the planner and readable without a connection. Done when the story's criteria 1 and 2 are covered for the budget by tests on the JVM and the screen was looked at as a rendered picture.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  },
+  {
+   "key": "EP4-S4-T2",
+   "story": "EP4-S4",
+   "title": "Android: the vendors, with their contact details and money",
+   "description": "The list of vendors with status, category and money, narrowed down by status; and each vendor with its contact details, what is agreed, paid and still to pay, and the plan items, tasks and payments that concern it. A phone number, an address and a website open in the phone's own apps. The details are kept with the rest of the planner, readable without a connection, removed at sign-out and never written to the log. Done when the story's criteria 1, 2 and 4 are covered for the vendors by tests on the JVM and the screens were looked at as rendered pictures.",
+   "dependsOn": [
+    "EP4-S4-T1"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  },
+  {
+   "key": "EP4-S4-T3",
+   "story": "EP4-S4",
+   "title": "Android: the guests and the head count",
+   "description": "The guest list by household, each guest with status, side and who comes along, narrowed down by status; and the head count as the server counts it, status by status and side by side. Kept with the rest of the planner, readable without a connection, removed at sign-out and never written to the log. Done when the story's criteria 1, 2 and 4 are covered for the guests by tests on the JVM and the screen was looked at as a rendered picture.",
+   "dependsOn": [
+    "EP4-S4-T1"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  },
+  {
+   "key": "EP4-S4-T4",
+   "story": "EP4-S4",
+   "title": "Android: change a guest's status, also without a connection",
+   "description": "A guest's status is changed from the guest list. The change shows at once, is kept when there is no connection, shown as waiting and sent when the connection returns; it survives the app being closed. Done when the story's criterion 3 is covered by tests on the JVM.",
+   "dependsOn": [
+    "EP4-S4-T3"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  }
+ ]
+}
