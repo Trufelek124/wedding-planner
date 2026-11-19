@@ -1,0 +1,94 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP7-S3-T7",
+   "story": "EP7-S3",
+   "title": "Spec and decision: suggestions added by themselves, and undo",
+   "description": "S01 wants a proposal the import is sure enough of to be added at once, marked as coming from e-mail, with one-action undo. Before it is built: a spec that says which proposals are added by themselves, what added, kept and undone mean, where the owners see it and how they set the threshold; and a decision on what may be added without a person. Done when docs/specs/S05-added-by-itself.md and D-008 are committed and mirrored.",
+   "dependsOn": [],
+   "type": "ARCHITECTURE",
+   "mandatory": true,
+   "requiredRoles": [
+    "ARCHITECT"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S3-T8",
+   "story": "EP7-S3",
+   "title": "Backend: a proposal that is sure enough is added by itself, and can be kept or undone",
+   "description": "As S05 says: a task or a step of the plan at or above the wedding's threshold is made when it is handed in, in the name of the owner whose inbox it came from; a payment and a vendor always wait. The suggestion is 'added by itself' until a person keeps it (accepted) or undoes it (the entry removed, rejected); undo is refused once the entry is no longer what was added; after thirty days it counts as kept. The threshold is a setting of the wedding, 50 to 100 or never. Every entry a suggestion made says so and which. The API description and the web's generated types follow. Done when the backend's tests cover S05 sections 2 to 4, 6 and 8 and the gate passes.",
+   "dependsOn": [
+    "EP7-S3-T7",
+    "EP7-S3-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S3-T9",
+   "story": "EP7-S3",
+   "title": "Web: what was added by itself, with undo and keep; the threshold; where an entry comes from",
+   "description": "The inbox shows what was added by itself with Undo and Keep; the navigation and Home say how many were added and not looked at, beside how many wait; the e-mail page has the threshold and 'never'; a task or step that a suggestion made says 'From e-mail' and leads to its source. Done when the web's tests cover S05 sections 5 and 6 and the pages were looked at as rendered pictures.",
+   "dependsOn": [
+    "EP7-S3-T8"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ]
+  },
+  {
+   "key": "EP7-S3-T10",
+   "story": "EP7-S3",
+   "title": "Android: what was added by itself, with undo and keep, also without a connection",
+   "description": "The phone's inbox shows what was added by itself with Undo and Keep, sent later like the other decisions when there is no connection; Home and More say how many; a task that a suggestion made says 'From e-mail' and leads to its source. Done when tests on the JVM cover S05 section 5 for the phone and the screens were looked at as rendered pictures.",
+   "dependsOn": [
+    "EP7-S3-T8"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  },
+  {
+   "key": "EP7-S3-T11",
+   "story": "EP7-S3",
+   "title": "Backend: a later message of a thread changes the entry an earlier one produced",
+   "description": "S01 section 6, 'Match': a message in a thread that already produced an entry updates that entry instead of adding a second one. Needs its own spec first: what may be changed in an entry a person has since touched, how the change is shown and undone, and what the extraction is asked. Split off from the task on adding by itself.",
+   "dependsOn": [
+    "EP7-S3-T8"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  }
+ ]
+}

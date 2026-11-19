@@ -660,6 +660,36 @@
    "publicId": "WP-TS-79",
    "id": "5b2f8372-79ed-48c8-81c0-f2d82bbe600d",
    "title": "Owner: give the server a key for the AI service, with a spending limit on the account"
+  },
+  "EP7-S3-T7": {
+   "type": "task",
+   "publicId": "WP-TS-80",
+   "id": "4a3fb64b-5f46-4f28-8199-93fff31b151d",
+   "title": "Spec and decision: suggestions added by themselves, and undo"
+  },
+  "EP7-S3-T8": {
+   "type": "task",
+   "publicId": "WP-TS-81",
+   "id": "fefac689-cd37-4653-be8e-7011ac1ca519",
+   "title": "Backend: a proposal that is sure enough is added by itself, and can be kept or undone"
+  },
+  "EP7-S3-T9": {
+   "type": "task",
+   "publicId": "WP-TS-82",
+   "id": "7c326593-c836-4f66-848d-45f92daf7290",
+   "title": "Web: what was added by itself, with undo and keep; the threshold; where an entry comes from"
+  },
+  "EP7-S3-T10": {
+   "type": "task",
+   "publicId": "WP-TS-83",
+   "id": "12cad55d-05e8-4a5e-a38e-9f586e22980f",
+   "title": "Android: what was added by itself, with undo and keep, also without a connection"
+  },
+  "EP7-S3-T11": {
+   "type": "task",
+   "publicId": "WP-TS-84",
+   "id": "89d36f34-ae8d-4b2b-af70-902986c9e607",
+   "title": "Backend: a later message of a thread changes the entry an earlier one produced"
   }
  }
 }

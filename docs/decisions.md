@@ -447,3 +447,42 @@ than anything else; the monthly limit starts at 20 USD for that reason.
   provides a key. If triage misses wedding mail, the larger model or more of the message is the first thing to try.
 - With these models the instructions are short; the service's cache for repeated instructions is not relied on.
 - If the first look costs several times the estimate, the batch interface is the next step.
+
+## D-008 — Added by itself: tasks and steps only, never money or a new vendor; undo rejects
+
+**Date:** 2026-11-19 · **Task:** WP-TS-80 · **Applies to:** suggestions added by themselves (S05, WP-US-22)
+
+### Context
+
+S01 section 6 says that a proposal the import is sure enough of is added at once, marked as coming from e-mail,
+with one-action undo, and that the threshold starts at 0.85. It leaves open what "added" may include and what
+undo does. A proposal comes out of a mail that anybody can write (S04 section 5); everything else in the import
+ends in front of a person. Adding by itself is the one place where it does not.
+
+### What was compared
+
+| Question | Chosen | The alternative, and why not |
+|---|---|---|
+| What may be added without a person | **Tasks and steps of the plan** | Payments too: a mail made to look like a vendor's invoice would put "pay 5,000 by Friday" into the plan and into the budget's sums, and a plan is trusted because it is the couple's own. Vendors too: a new party with contact details nobody checked |
+| What undo does | **Removes the entry and rejects the suggestion**, in one action | Putting the suggestion back to wait: the wrong entry would need a second action to be gone for good, and the inbox would fill with what was already looked at |
+| Undo after the entry was changed | **Refused**; the entry is then the couple's own and is changed or removed like any other | Removing it anyway: somebody's later work would vanish with one tap on a list |
+| What "kept" means | A person's **accept**, optional; after thirty days an entry nobody undid counts as kept | Requiring it: the point of adding by itself is that nobody has to do anything |
+| Where the threshold lives | **One setting for the wedding**, 50 to 100 or never, on the e-mail page | One per owner: two answers to "did the planner add this" for one plan |
+| How an entry knows where it came from | The entry holds **that a suggestion made it, and which** — for accepted ones as well | A flag "from e-mail" without the source: the mark would lead nowhere |
+
+### Decision
+
+1. **Only a task or a step of the plan is ever added by itself.** A payment and a vendor always wait.
+2. **At or above the threshold** (85 to begin with; 50–100 or never), and only when the planner would take the
+   proposal as it is.
+3. **Undo removes the entry and rejects the suggestion; keep accepts it.** Both are a person's decisions and
+   stand. Undo is refused once the entry is no longer what was added.
+4. **Every entry a suggestion made says so and leads to its source**, whoever or whatever accepted it.
+
+### What it costs, and what would change the decision
+
+- A payment the import is certain of still needs one tap. That is the price of never having money in the plan
+  that nobody looked at. The owner can ask for payments to be included; the reasons above then need an answer —
+  for example only from senders that are already vendors of the planner.
+- How often the import is sure and wrong is not known: nothing has run against the AI service. The sample set
+  (S04 section 10) measures it; until then 85 is S01's starting value, not a finding.
