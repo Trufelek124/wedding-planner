@@ -582,6 +582,12 @@
    "publicId": "WP-TS-66",
    "id": "07ea3a01-8038-49b8-9f8d-4ca88dc10fa1",
    "title": "Backend: adding by itself at the threshold, with undo, and a later message updating an earlier entry"
+  },
+  "EP2-S5-T2": {
+   "type": "task",
+   "publicId": "WP-TS-67",
+   "id": "32b31584-5753-448d-8e08-0a458c4ac054",
+   "title": "Web: the top bar holds eight entries on wide and narrow screens"
   }
  }
 }

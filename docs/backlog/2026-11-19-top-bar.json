@@ -1,0 +1,21 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP2-S5-T2",
+   "story": "EP2-S5",
+   "title": "Web: the top bar holds eight entries on wide and narrow screens",
+   "description": "With Suggestions the top bar has eight entries. At 1100 px the signed-in block falls to a second row, and at a phone's width the entries take three rows before the page begins. On a wide screen the bar is one row; on a narrow one the entries stay one row that can be moved sideways, with the page that is shown in view, and the signed-in block takes little room. Nothing is hidden from the keyboard or a screen reader, and how many suggestions wait stays visible. Done when the bar was looked at as rendered pictures at several widths in light and dark, and the web's gate passes.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ]
+  }
+ ]
+}
