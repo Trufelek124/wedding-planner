@@ -24,9 +24,49 @@ step() {
     echo FAILED
     echo "----- last lines of: $* (full output: $log)"
     grep -v '^Picked up JAVA_TOOL_OPTIONS' "$log" | tail -40
+    # The end of the output seldom says which test it was, and the full output is gone with the machine
+    # where the gate runs by itself: the tests that failed are named, with the first line of why.
+    if [ "$name" = "tests" ]; then
+      failed_in "$(results_of "$part")"
+    fi
     echo "gate: FAILED at $part / $name"
     exit 1
   fi
+}
+
+# results_of <part>: where that part's test run leaves its results (JUnit XML), as a pattern.
+results_of() {
+  case "$1" in
+    backend) echo "$ROOT/backend/build/test-results/test/*.xml" ;;
+    web) echo "$ROOT/web/node_modules/.tmp/gate-junit.xml" ;;
+    android) echo "$ROOT/android/app/build/test-results/testDebugUnitTest/*.xml" ;;
+  esac
+}
+
+# failed_in <glob of JUnit XML files>: the tests in those results that failed, at most thirty.
+failed_in() {
+  python3 - "$@" <<'PY'
+import glob, sys
+import xml.etree.ElementTree as ET
+found = []
+for pattern in sys.argv[1:]:
+    for path in sorted(glob.glob(pattern)):
+        try:
+            root = ET.parse(path).getroot()
+        except ET.ParseError:
+            continue
+        for case in root.iter("testcase"):
+            for why in list(case.findall("failure")) + list(case.findall("error")):
+                first = " ".join((why.get("message") or why.text or "").split())[:300]
+                where = case.get("classname", "")
+                # A Java class is named without its package; a file of the web's tests keeps its path.
+                where = where if "/" in where else where.rsplit(".", 1)[-1]
+                found.append(f"  {where} > {case.get('name', '')}\n      {first}")
+                break
+if found:
+    print(f"----- the tests that failed ({len(found)}):")
+    print("\n".join(found[:30]))
+PY
 }
 
 # tests_in <glob of JUnit XML files>: how many tests those result files hold.
