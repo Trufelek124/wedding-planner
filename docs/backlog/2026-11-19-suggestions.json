@@ -1,0 +1,111 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP7-S3-T1",
+   "story": "EP7-S3",
+   "title": "Spec: what a suggestion is, what becomes of it, and how the clients ask for it",
+   "description": "S01 says what the e-mail import proposes and that a proposal below the threshold waits for accept, edit or reject. Before anything is built a spec says what a suggestion holds, its life from waiting to accepted or rejected, what accepting makes, what of a mail is kept and who sees it, why nothing in it is trusted, the API, and how the phone shows and decides it. It also says what is left for later tasks. Done when docs/specs/S02-suggestions.md is committed and mirrored.",
+   "dependsOn": [],
+   "type": "ARCHITECTURE",
+   "mandatory": true,
+   "requiredRoles": [
+    "ARCHITECT"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S3-T2",
+   "story": "EP7-S3",
+   "title": "Backend: suggestions are kept, listed, accepted and rejected",
+   "description": "A module of its own keeps the suggestions as S02 describes them, lists those that wait, accepts one as proposed or with the person's changes (making a task, a task with an amount, a step of the plan or a vendor through the planning and vendors modules) and rejects one. A decision stands: the same one again changes nothing, the other one is refused as already decided. The import will hand suggestions in through an interface of the module; there is no call that adds one. Nothing of a suggestion is logged. The API description and the web's generated types follow. Done when the backend's tests cover S02 sections 3 to 6 and the gate passes.",
+   "dependsOn": [
+    "EP7-S3-T1"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S3-T3",
+   "story": "EP7-S3",
+   "title": "Android: the suggestions inbox, kept on the phone",
+   "description": "The phone loads the suggestions that wait with the rest of the planner and keeps them. Home says how many wait and leads to the inbox; More has a row for it. A card says what is proposed, where it comes from, the passage it rests on and how sure the import is, and opens the message in Gmail. Readable without a connection; removed at sign-out; nothing of it in the log. Done when S02 section 7 is covered for reading by tests on the JVM and the screens were looked at as rendered pictures.",
+   "dependsOn": [
+    "EP7-S3-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  },
+  {
+   "key": "EP7-S3-T4",
+   "story": "EP7-S3",
+   "title": "Android: accept and reject a suggestion, also without a connection",
+   "description": "Accept and Reject take effect on the phone at once and are sent when the server can be reached, by the app or by the background worker; the decision survives the app being closed and can be taken back until it is sent. If the other owner decided first the phone says so and lets go of its own decision; if the server does not take an acceptance the phone says so and points to the web. Done when S02 section 7 is covered for deciding by tests on the JVM.",
+   "dependsOn": [
+    "EP7-S3-T3"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  },
+  {
+   "key": "EP7-S3-T5",
+   "story": "EP7-S3",
+   "title": "Web: the suggestions inbox, with changing a proposal before accepting it",
+   "description": "The inbox on the web: the suggestions that wait with what they propose, where they come from and the passage; accept as proposed, accept after changing the proposal on a form, reject; Home says how many wait. Done when the story's criteria for the web are covered by the web's tests and the gate passes.",
+   "dependsOn": [
+    "EP7-S3-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ]
+  },
+  {
+   "key": "EP7-S3-T6",
+   "story": "EP7-S3",
+   "title": "Backend: adding by itself at the threshold, with undo, and a later message updating an earlier entry",
+   "description": "A proposal at or above the threshold (0.85 to start with, changed in Settings) is added at once, marked as coming from e-mail, and can be undone in one action; a later message of the same thread updates the entry the earlier one produced instead of adding a second. Whether a payment may ever be added without a person is decided first and recorded. Needs triage and extraction (WP-US-21) to exist. Done when the story's criteria 1, 3 and 5 are covered by the backend's tests.",
+   "dependsOn": [
+    "EP7-S3-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  }
+ ]
+}
