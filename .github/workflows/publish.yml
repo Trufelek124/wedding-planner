@@ -42,9 +42,17 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
+          # What the build downloads is kept from run to run: Maven Central now and then answers a
+          # machine of GitHub's with "too many requests", and a run that asks for nothing is not refused.
+          cache: gradle
+          cache-dependency-path: |
+            backend/*.gradle.kts
+            backend/gradle/wrapper/gradle-wrapper.properties
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
       # The same checks the publishing script runs: the two parts the image is built from.
       - name: The gate, for the backend and the web app
         run: scripts/gate.sh backend web
@@ -65,16 +73,26 @@ jobs:
         with:
           persist-credentials: false
       - name: Build for linux/arm64
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           image="ghcr.io/${GITHUB_REPOSITORY,,}"
-          docker build \
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          # The layers that hold what the build downloads (npm's packages, Gradle's libraries) are kept in
+          # the registry under a tag of their own, so that a build whose dependencies did not change asks
+          # neither npm nor Maven Central for anything.
+          docker buildx create --name publisher --use >/dev/null
+          docker buildx build \
             --platform linux/arm64 \
             --build-arg "REVISION=$GITHUB_SHA" \
             --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --cache-from "type=registry,ref=$image:build-cache" \
+            --cache-to "type=registry,ref=$image:build-cache,mode=max" \
             --tag "$image:$GITHUB_SHA" \
             --tag "$image:latest" \
+            --load \
             .
           # Never push an image that does not say which commit it is, or that is for another machine.
           labelled=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image:$GITHUB_SHA")
@@ -83,11 +101,8 @@ jobs:
           [ "$built_for" = "linux/arm64" ] || { echo "The image is for $built_for, not for linux/arm64." >&2; exit 1; }
           echo "image=$image" >> "$GITHUB_ENV"
       - name: Push, under the commit and as latest
-        env:
-          REGISTRY_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           docker push "$image:$GITHUB_SHA"
           docker push "$image:latest"
           docker logout ghcr.io
