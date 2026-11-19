@@ -147,10 +147,17 @@ first uses it, at the version D-005 names.
 - The bar at the bottom has four places: Home, Plan, Tasks and More. What has no place of its own is a row in More
   (`planner/MoreContent.kt`) and an entry in `BEHIND_MORE` in `PlannerScreens.kt`, which gives it its title (the
   name of the vendor or guest it shows), the arrow back at the top, and keeps More chosen below. The budget, the
-  vendors and the guests are only shown on the phone; they are set on the web (S01 §4).
+  vendors and the guests are only shown on the phone and are set on the web; the one thing that can be changed is a
+  guest's status (S01 §4).
+- A guest's status chosen on the phone waits in a table of its own (`waiting_guest_status`, one row per guest; a
+  further choice replaces it) and is sent by `sync()` after the tasks and before the shares. The server takes it
+  whatever version it has, so there is no "changed meanwhile" here: only "the guest is gone" and "not taken", which
+  the guests screen says with the guest's name. A choice made while the first is on its way is a change of what
+  the server is about to have and is kept (`onTheWay`), also when it goes back to what the copy says.
 - How many people come is the server's count (`Planner.guestCounts`), never added up on the phone, and a copy
   without one shows none. A list is narrowed down by status with `StatusChips`; the guest list comes before the
-  head count's breakdown, because finding a guest is what the screen is mostly opened for.
+  head count's breakdown, because finding a guest is what the screen is mostly opened for. While a status chosen
+  on the phone is not sent, the head count says that it is as it was loaded.
 - A phone number, an e-mail address, an address and a website open in the phone's own apps through
   `planner/Contact.kt`, and only through it. What the server holds was typed by a person: each way builds one fixed
   kind of intent, a number is dialled and never called, and a website opens only as `http` or `https` — anything

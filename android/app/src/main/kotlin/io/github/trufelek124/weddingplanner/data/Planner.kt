@@ -113,8 +113,23 @@ class Guest(
     val phone: String,
     val email: String,
     val notes: String,
+    /** Set while a status chosen on this phone has not reached the server; [status] is then the one chosen. */
+    val waiting: Waiting? = null,
 ) {
     override fun toString(): String = "Guest[id=$id]"
+
+    /** The same guest with the status that was chosen on the phone and where that stands. */
+    fun chosen(status: GuestStatus, waiting: Waiting): Guest = Guest(
+        id, name, status, sideMemberId, householdId, plusOne, children, heads, dietaryNeeds, needsAccommodation, phone, email, notes, waiting,
+    )
+}
+
+/**
+ * A guest's status chosen on the phone that cannot be sent as it is: the guest is gone from the server
+ * ([gone]), or the server did not take it. Not a data class: it holds a guest's name.
+ */
+class GuestTrouble(val guestId: String, val name: String, val gone: Boolean) {
+    override fun toString(): String = "GuestTrouble[guestId=$guestId]"
 }
 
 /** A household guests are invited with. */
@@ -244,6 +259,8 @@ class Planner(
     val households: List<Household> = emptyList(),
     /** Null while the head count was not loaded: a copy made by an older version of the app has none. */
     val guestCounts: GuestCounts? = null,
+    /** Statuses chosen on the phone that the server did not take, or whose guest it no longer has. */
+    val guestTroubles: List<GuestTrouble> = emptyList(),
 ) {
     private val byId = entries.associateBy { it.id }
 
@@ -266,10 +283,13 @@ class Planner(
     fun memberName(id: String): String? = members.firstOrNull { it.id == id }?.displayName
 
     /** How many changes made on this phone are on their way to the server. */
-    val waiting: Int get() = entries.count { it.waiting == Waiting.TO_BE_SENT }
+    val waiting: Int get() = entries.count { it.waiting == Waiting.TO_BE_SENT } + guests.count { it.waiting == Waiting.TO_BE_SENT }
+
+    /** How many guests show a status chosen on this phone that the server does not have: the head count does not know of them. */
+    val guestsChanged: Int get() = guests.count { it.waiting != null }
 
     /** How many changes exist only on this phone, those that could not be sent included: what a sign-out would lose. */
-    val unsent: Int get() = entries.count { it.waiting != null } + gone.size + shares.size
+    val unsent: Int get() = entries.count { it.waiting != null } + gone.size + shares.size + guestsChanged + guestTroubles.count { it.gone }
 
     /** "Anna & Marek": the members who do it, in the wedding's order; null when nobody is named. */
     fun peopleOf(entry: Entry): String? =

@@ -11,6 +11,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -63,6 +64,9 @@ class PlannerRepository(
 
     /** Held for every piece of writing to the database, never while waiting for the server. */
     private val writing = Mutex()
+
+    /** The guests whose waiting status is being sent just now, by id: a choice made meanwhile is then not taken for a return to what was. */
+    private val onTheWay: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /** Held while talking to the server, so that sending and loading take turns. */
     private val talking = Mutex()
@@ -160,6 +164,35 @@ class PlannerRepository(
         }
     }
 
+    // ---------------------------------------------------------------- changing a guest's status
+
+    /**
+     * Chooses a guest's status. Shown at once; sent with the next [sync]. One choice waits per guest and a
+     * further one replaces it. Choosing the status the server's copy has takes the waiting choice away,
+     * unless that one is on its way just now: then the new choice is a change of what the server is about to have.
+     * The head count is not touched: it is the server's.
+     */
+    suspend fun setGuestStatus(guestId: String, status: GuestStatus) = written {
+        if (status == GuestStatus.OTHER) {
+            return@written
+        }
+        val guest = dao.guest(guestId) ?: return@written
+        val waiting = dao.guestStatusOf(guestId)
+        when {
+            waiting == null -> if (guest.status != status.name) dao.putGuestStatus(GuestStatusRow(guestId, status.name, guest.name))
+            // The guest has to be looked at first: see [letGoOfGuestChange].
+            waiting.trouble == Trouble.GONE -> Unit
+            waiting.status == status.name && waiting.trouble == null -> Unit
+            guest.status == status.name && guestId !in onTheWay -> dao.deleteGuestStatus(guestId)
+            else -> dao.putGuestStatus(waiting.copy(status = status.name, revision = waiting.revision + 1, trouble = null))
+        }
+    }
+
+    /** Gives up the status that waits for this guest: what the server has stands. */
+    suspend fun letGoOfGuestChange(guestId: String) = written {
+        dao.guestStatusOf(guestId)?.let { dao.deleteGuestStatus(guestId) }
+    }
+
     // ---------------------------------------------------------------- sharing to the planner
 
     /**
@@ -250,7 +283,8 @@ class PlannerRepository(
     val quiet: Boolean get() = !talking.isLocked && !writing.isLocked
 
     /** How many changes are waiting to be sent, not counting those the person has to look at first. */
-    suspend fun stillToSend(): Int = dao.changes().count { it.trouble == null } + dao.shares().count { it.trouble == null }
+    suspend fun stillToSend(): Int =
+        dao.changes().count { it.trouble == null } + dao.shares().count { it.trouble == null } + dao.guestStatuses().count { it.trouble == null }
 
     /** Gives up the change that waits for this task: what the server has stands. */
     suspend fun letGo(entryId: String) = written {
@@ -314,7 +348,58 @@ class PlannerRepository(
                 }
             }
         }
-        return sendShares(since)
+        val guests = sendGuestStatuses(since)
+        return if (guests == Sending.ALL_SENT) sendShares(since) else guests
+    }
+
+    /** Sends the statuses chosen for guests, one after the other. */
+    private suspend fun sendGuestStatuses(since: Int): Sending {
+        for (queued in dao.guestStatuses()) {
+            // Read and marked as on its way in one go: a choice made from here on is a change of what the server is about to have.
+            val change = writing.withLock {
+                dao.guestStatusOf(queued.guestId)?.takeIf { it.trouble == null }?.also { onTheWay += it.guestId }
+            } ?: continue
+            try {
+                val answer: GuestWire = api().send(HttpMethod.Put, "/api/guests/${change.guestId}/status", guestStatusBody(change))
+                guestStatusTaken(since, change, answer)
+            } catch (failure: ApiFailure) {
+                when {
+                    failure is ApiFailure.Unreachable -> return Sending.UNREACHABLE
+                    failure is ApiFailure.SignedOut -> return Sending.SIGNED_OUT
+                    // Removed on the web meanwhile.
+                    failure is ApiFailure.Problem && failure.status == 404 -> guestStatusTroubled(since, change, Trouble.GONE)
+                    failure is ApiFailure.Problem && failure.isOf(ApiFailure.BAD_REQUEST) -> guestStatusTroubled(since, change, Trouble.REFUSED)
+                    // Something is wrong on the server's side: the change waits and is tried again.
+                    else -> return Sending.FAILED
+                }
+            } finally {
+                onTheWay -= change.guestId
+            }
+        }
+        return Sending.ALL_SENT
+    }
+
+    /** The server took the status as it was read before sending; a choice made again meanwhile goes on waiting. */
+    private suspend fun guestStatusTaken(since: Int, sent: GuestStatusRow, answer: GuestWire) = written {
+        onTheWay -= sent.guestId
+        if (forgotten != since) {
+            return@written
+        }
+        dao.setGuestStatusCopy(sent.guestId, answer.status)
+        val now = dao.guestStatusOf(sent.guestId)
+        // Chosen again meanwhile, and not back to what the server now has: the rest is a change of that.
+        if (now != null && (now.revision == sent.revision || now.status == answer.status)) {
+            dao.deleteGuestStatus(sent.guestId)
+        }
+    }
+
+    private suspend fun guestStatusTroubled(since: Int, sent: GuestStatusRow, trouble: String) = written {
+        onTheWay -= sent.guestId
+        if (forgotten != since) {
+            return@written
+        }
+        // Chosen again meanwhile: that choice is a new one, and is sent in its turn.
+        dao.guestStatusOf(sent.guestId)?.takeIf { it.revision == sent.revision }?.let { dao.putGuestStatus(it.copy(trouble = trouble)) }
     }
 
     /** The server took the change as it was read before sending; what was changed again meanwhile goes on waiting. */
@@ -398,6 +483,7 @@ class PlannerRepository(
     suspend fun forget() {
         written {
             forgotten += 1
+            onTheWay.clear()
             dao.forget()
             withContext(Dispatchers.IO) {
                 shareFiles.deleteAll()
@@ -527,6 +613,22 @@ internal fun plannerOf(stored: Stored): Planner {
             else -> entries[there.id] = changed(there, fieldsOf(bodyOf(change)), waiting, refusalsOf(change))
         }
     }
+    val guestTroubles = mutableListOf<GuestTrouble>()
+    val chosen = stored.guestStatuses.associateBy { it.guestId }
+    val guests = stored.guests.map { row ->
+        val guest = guestOf(row)
+        val change = chosen[row.id]
+        when {
+            change == null || change.trouble == Trouble.GONE -> guest
+            else -> {
+                if (change.trouble == Trouble.REFUSED) guestTroubles += GuestTrouble(row.id, change.name, gone = false)
+                guest.chosen(GuestStatus.entries.firstOrNull { it.name == change.status } ?: GuestStatus.OTHER, if (change.trouble == Trouble.REFUSED) Waiting.REFUSED else Waiting.TO_BE_SENT)
+            }
+        }
+    }
+    // A guest the server no longer has, or one it cannot be told about: the choice can only be let go of.
+    val known = stored.guests.map { it.id }.toSet()
+    stored.guestStatuses.filter { it.trouble == Trouble.GONE || it.guestId !in known }.forEach { guestTroubles += GuestTrouble(it.guestId, it.name, gone = true) }
     // What was just added on the phone stands first, where it is seen.
     val all = added + entries.values
     val byId = all.associateBy { it.id }
@@ -553,9 +655,10 @@ internal fun plannerOf(stored: Stored): Planner {
         budgetLines = stored.budgetLines.map { BudgetLine(it.categoryId, it.name, it.planned, it.committed, it.paid, it.payments) },
         uncategorised = BudgetRest(planner.uncategorisedCommitted, planner.uncategorisedPaid, planner.uncategorisedPayments),
         vendorList = stored.vendors.map(::vendorOf),
-        guests = stored.guests.map(::guestOf),
+        guests = guests,
         households = stored.households.map { Household(it.id, it.name) },
         guestCounts = countsOf(planner.guestCounts),
+        guestTroubles = guestTroubles,
     )
 }
 

@@ -111,6 +111,10 @@
     <string name="guest_email">E-mail</string>
     <string name="guest_no_contact">No phone number or e-mail address yet.</string>
     <string name="guest_notes">Notes</string>
+    <string name="guest_status">Status</string>
+    <string name="guest_change_gone">Your change to “%1$s” could not be sent: the guest no longer exists.</string>
+    <string name="guest_change_refused">The server did not take your change to “%1$s”.</string>
+    <string name="guest_change_let_go">Discard the change</string>
 
     <!-- The plan and the tasks -->
     <string name="filter_to_do">To do</string>

@@ -94,6 +94,9 @@ internal fun requestOf(change: ChangeRow): JsonObject = when (change.kind) {
     else -> bodyOf(change)
 }
 
+/** What is sent for a guest's status: only the status, as the API describes it. */
+internal fun guestStatusBody(change: GuestStatusRow): JsonObject = buildJsonObject { put("status", change.status) }
+
 internal fun statusOf(body: JsonObject): Status = Status.entries.firstOrNull { it.name == body.textOf("status") } ?: Status.NOT_STARTED
 
 internal fun refusalsOf(change: ChangeRow): Map<String, String> =

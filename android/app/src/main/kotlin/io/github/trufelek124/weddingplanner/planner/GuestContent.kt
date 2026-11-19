@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,10 +21,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.trufelek124.weddingplanner.R
 import io.github.trufelek124.weddingplanner.data.Guest
+import io.github.trufelek124.weddingplanner.data.GuestStatus
 import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.ui.QuietButton
 
@@ -32,10 +35,11 @@ import io.github.trufelek124.weddingplanner.ui.QuietButton
  * facts and words as the web's guests page; it is only shown here. A phone number and an e-mail address
  * open in the phone's own apps.
  *
+ * @param onChoose a status was chosen: that is the change, there is nothing to save
  * @param foot what stands under everything: when this was loaded
  */
 @Composable
-fun GuestContent(planner: Planner, guest: Guest, modifier: Modifier = Modifier, foot: @Composable () -> Unit = {}) {
+fun GuestContent(planner: Planner, guest: Guest, onChoose: (GuestStatus) -> Unit, modifier: Modifier = Modifier, foot: @Composable () -> Unit = {}) {
     val context = LocalContext.current
     // What was last pressed that no app on the phone could take; the next press that works takes it away.
     var noApp by remember { mutableStateOf(false) }
@@ -63,6 +67,7 @@ fun GuestContent(planner: Planner, guest: Guest, modifier: Modifier = Modifier, 
                 }
             }
         }
+        item(key = "status") { StatusChoice(guest, onChoose) }
         items(about, key = { it.key }) { row ->
             ContactLine(row, open)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -87,6 +92,25 @@ fun GuestContent(planner: Planner, guest: Guest, modifier: Modifier = Modifier, 
         item(key = "foot") { foot() }
     }
 }
+
+/**
+ * The five statuses, one of which is the guest's: choosing one is the change. A guest whose status this
+ * app does not know has none selected and can be given one of the five.
+ */
+@Composable
+private fun StatusChoice(guest: Guest, onChoose: (GuestStatus) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+        Text(stringResource(R.string.guest_status), style = MaterialTheme.typography.labelLarge, modifier = Modifier.semantics { heading() })
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (status in CHOOSABLE) {
+                FilterChip(selected = guest.status == status, onClick = { onChoose(status) }, label = { Text(guestStatusLabel(status)) })
+            }
+        }
+    }
+}
+
+/** What the phone can send: every status but the one a newer server may have and this app does not know. */
+private val CHOOSABLE = GuestStatus.entries.filter { it != GuestStatus.OTHER }
 
 /** A guest that is no longer in the copy: removed on the web meanwhile. */
 @Composable

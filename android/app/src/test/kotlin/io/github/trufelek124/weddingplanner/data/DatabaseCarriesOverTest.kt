@@ -197,4 +197,45 @@ class DatabaseCarriesOverTest {
             database.close()
         }
     }
+
+    @Test
+    fun `a guest of version 4 is still there, nothing waits for them, and a status can wait beside it`() = runBlocking {
+        val file = folder.root.resolve("planner.db")
+        aDatabaseOfVersion(4, file) { old ->
+            old.execSQL(
+                """INSERT INTO planner (id, loadedAt, weddingDate, currency, timeZone, daysLeft, today, budgetTotal, budgetPlanned, budgetCommitted,
+                   budgetPaid, overdueIds, nextIds, nextPaymentIds)
+                   VALUES (1, 1795093500000, '2027-06-19', 'PLN', 'Europe/Warsaw', 213, '2026-11-18', NULL, 0, 0, 0, '', '', '')""",
+            )
+            old.execSQL(
+                """INSERT INTO guest (id, position, name, status, sideMemberId, householdId, plusOne, children, heads, dietaryNeeds,
+                   needsAccommodation, phone, email, notes)
+                   VALUES ('g1', 0, 'Aunt Krystyna', 'INVITED', NULL, NULL, 1, 0, 2, '', 0, '', '', '')""",
+            )
+            old.execSQL(
+                """INSERT INTO waiting_change (entryId, kind, baseVersion, body, title, revision, trouble, refusals)
+                   VALUES ('t1', 'ADD', 0, '{"title":"Choose the rings"}', 'Choose the rings', 0, NULL, NULL)""",
+            )
+        }
+
+        val database = Room.databaseBuilder(context, PlannerDatabase::class.java, file.path).build()
+        try {
+            val stored = database.planner().stored()!!
+
+            assertEquals(listOf("Aunt Krystyna"), stored.guests.map { it.name })
+            assertEquals(1, stored.changes.size)
+            assertTrue(stored.guestStatuses.isEmpty())
+            assertTrue(plannerOf(stored).guestTroubles.isEmpty())
+            assertEquals(0, plannerOf(stored).guestsChanged)
+
+            database.planner().putGuestStatus(GuestStatusRow(guestId = "g1", status = "CONFIRMED", name = "Aunt Krystyna"))
+            val shown = plannerOf(database.planner().stored()!!)
+            assertEquals(GuestStatus.CONFIRMED, shown.guest("g1")!!.status)
+            assertEquals(Waiting.TO_BE_SENT, shown.guest("g1")!!.waiting)
+            // What waited before still waits.
+            assertEquals(1, database.planner().stored()!!.changes.size)
+        } finally {
+            database.close()
+        }
+    }
 }

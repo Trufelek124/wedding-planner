@@ -27,16 +27,19 @@ class LivingPlanner(
     private val vendors: List<String> = emptyList(),
     private val boards: List<String> = emptyList(),
     private val budget: String = StandIn.wholeBudget(),
-    private val guests: List<String> = emptyList(),
+    guests: List<String> = emptyList(),
     private val households: List<String> = emptyList(),
-    private val guestCounts: String = StandIn.guestCounts(),
     private val today: String = "2026-11-18",
 ) {
 
     /** What the server has, by id, in the order of its list. */
     val entries = LinkedHashMap<String, JsonObject>()
 
+    /** The guests the server has, by id, in the order of its list. */
+    val guests = LinkedHashMap<String, JsonObject>()
+
     init {
+        guests.forEach { guest -> Json.parseToJsonElement(guest).jsonObject.let { this.guests[it.getValue("id").jsonPrimitive.content] = it } }
         entries.forEach(::put)
         server.json("GET /api/wedding", StandIn.wedding())
         // Whatever fixed answers were named before give way: from here on the planner answers for itself.
@@ -50,6 +53,27 @@ class LivingPlanner(
         entries[read.getValue("id").jsonPrimitive.content] = read
     }
 
+    /** Someone removes a guest on the web. */
+    fun removeGuest(id: String) {
+        guests.remove(id)
+    }
+
+    fun guestStatusOf(id: String): String? = guests[id]?.getValue("status")?.jsonPrimitive?.content
+
+    fun guestVersionOf(id: String): Int? = guests[id]?.getValue("version")?.jsonPrimitive?.int
+
+    /** The head count as the server works it out from the guests it has. */
+    private fun counted(): String = StandIn.guestCounts(
+        guests.values.map {
+            StandIn.Counted(
+                status = it.getValue("status").jsonPrimitive.content,
+                sideMemberId = it.getValue("sideMemberId").let { side -> if (side == JsonNull) null else side.jsonPrimitive.content },
+                plusOne = it.getValue("plusOne").jsonPrimitive.content.toBoolean(),
+                children = it.getValue("children").jsonPrimitive.int,
+            )
+        },
+    )
+
     fun titleOf(id: String): String? = entries[id]?.getValue("title")?.jsonPrimitive?.content
 
     fun statusOf(id: String): String? = entries[id]?.getValue("status")?.jsonPrimitive?.content
@@ -58,7 +82,11 @@ class LivingPlanner(
 
     private fun list(entries: Collection<JsonObject>): String = entries.joinToString(",", "[", "]")
 
+    /** Called with every request before it is answered: a test holds an answer up here to change something while it is on its way. */
+    var holdUp: (suspend (HttpRequestData) -> Unit)? = null
+
     private suspend fun MockRequestHandleScope.answer(request: HttpRequestData): HttpResponseData? {
+        holdUp?.invoke(request)
         val path = request.url.encodedPath
         val method = request.method.value
         val id = path.removePrefix("/api/entries/").removeSuffix("/status")
@@ -68,9 +96,16 @@ class LivingPlanner(
             method == "GET" && path == "/api/vendors" -> respondJson(vendors.joinToString(",", "[", "]"))
             method == "GET" && path == "/api/boards" -> respondJson(boards.joinToString(",", "[", "]"))
             method == "GET" && path == "/api/budget" -> respondJson(budget)
-            method == "GET" && path == "/api/guests" -> respondJson(guests.joinToString(",", "[", "]"))
+            method == "GET" && path == "/api/guests" -> respondJson(guests.values.joinToString(",", "[", "]"))
+            method == "PUT" && path.startsWith("/api/guests/") && path.endsWith("/status") -> {
+                val kept = guests[path.removePrefix("/api/guests/").removeSuffix("/status")] ?: return respondProblem(404, "not-found")
+                val status = Json.parseToJsonElement(String(request.body.toByteArray())).jsonObject.getValue("status")
+                val now = JsonObject(kept + ("status" to status) + ("version" to JsonPrimitive(kept.getValue("version").jsonPrimitive.int + 1)))
+                guests[kept.getValue("id").jsonPrimitive.content] = now
+                respondJson(now.toString())
+            }
             method == "GET" && path == "/api/households" -> respondJson(households.joinToString(",", "[", "]"))
-            method == "GET" && path == "/api/guests/counts" -> respondJson(guestCounts)
+            method == "GET" && path == "/api/guests/counts" -> respondJson(counted())
             method == "GET" && path == "/api/home" -> {
                 val toDo = entries.values.filter(::open)
                 val payments = toDo.filter { it.getValue("amount") != JsonNull }

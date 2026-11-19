@@ -194,6 +194,29 @@ data class ShareRow(
     val trouble: String? = null,
 )
 
+/**
+ * A guest's status changed on the phone that the server does not have yet. Like a waiting change it
+ * exists nowhere else until it is sent. At most one per guest: a further choice replaces it. Not a
+ * data class: it holds a guest's name, which is not to be printed.
+ */
+@Entity(tableName = "waiting_guest_status")
+class GuestStatusRow(
+    @PrimaryKey val guestId: String,
+    /** The status that was chosen, by its name. */
+    val status: String,
+    /** The guest's name when the status was chosen, to name the guest should they be gone from the server. */
+    val name: String,
+    /** Counts the times a further choice replaced this one, to notice one that arrives while this is being sent. */
+    val revision: Int = 0,
+    /** Why the server did not take it: GONE or REFUSED. Null while it waits to be sent. */
+    val trouble: String? = null,
+) {
+    fun copy(status: String = this.status, revision: Int = this.revision, trouble: String? = this.trouble): GuestStatusRow =
+        GuestStatusRow(guestId, status, name, revision, trouble)
+
+    override fun toString(): String = "GuestStatusRow[guestId=$guestId]"
+}
+
 /** Everything the phone holds, read as it was at one moment: the last load, and what waits to be sent. */
 class Stored(
     val planner: PlannerRow,
@@ -207,4 +230,5 @@ class Stored(
     val budgetLines: List<BudgetLineRow> = emptyList(),
     val guests: List<GuestRow> = emptyList(),
     val households: List<HouseholdRow> = emptyList(),
+    val guestStatuses: List<GuestStatusRow> = emptyList(),
 )

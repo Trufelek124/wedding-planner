@@ -2,6 +2,7 @@ package io.github.trufelek124.weddingplanner.data
 
 import io.github.trufelek124.weddingplanner.api.model.EntryChange
 import io.github.trufelek124.weddingplanner.api.model.EntryStatusChange
+import io.github.trufelek124.weddingplanner.api.model.GuestStatusChange
 import io.github.trufelek124.weddingplanner.api.model.NewEntry
 import io.github.trufelek124.weddingplanner.api.model.NewInspiration
 import java.time.LocalDate
@@ -83,6 +84,17 @@ class ChangesAgreeWithTheContractTest {
             val tick = ChangeRow(entryId = id, kind = ChangeKind.STATUS, baseVersion = 1, body = statusBody(status).toString(), title = "Call the florist")
             assertEquals(status.name, strict.decodeFromJsonElement<EntryStatusChange>(requestOf(tick)).status.value)
         }
+    }
+
+    @Test
+    fun `a guest's status is a GuestStatusChange of the contract, for every status the phone can send`() {
+        for (status in GuestStatus.entries.filter { it != GuestStatus.OTHER }) {
+            val chosen = GuestStatusRow(guestId = id, status = status.name, name = "Aunt Krystyna")
+            val read = strict.decodeFromJsonElement<GuestStatusChange>(guestStatusBody(chosen))
+            assertEquals(status.name, read.status.value)
+        }
+        // The contract has exactly the five the phone offers: a sixth would be one it cannot choose.
+        assertEquals(GuestStatus.entries.filter { it != GuestStatus.OTHER }.map { it.name }, GuestStatusChange.Status.entries.map { it.value })
     }
 
     @Test

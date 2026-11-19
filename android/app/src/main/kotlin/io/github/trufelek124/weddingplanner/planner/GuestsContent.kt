@@ -22,9 +22,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,7 +39,7 @@ import io.github.trufelek124.weddingplanner.data.Planner
 /**
  * Who is invited, who is coming, and how many people that makes: the head count as the server counts
  * it, then the guests by household, narrowed down by status. The same facts and words as the web's
- * guests page; it is only shown here, guests are added and changed in the web app.
+ * guests page. Guests are added and changed in the web app; here only a guest's status can be chosen, on their own screen.
  *
  * @param onOpen leads to one guest
  * @param foot what stands under everything: when this was loaded
@@ -55,7 +57,7 @@ fun GuestsContent(planner: Planner, onOpen: (Guest) -> Unit, modifier: Modifier 
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
         // The head count stays whole whatever is chosen below; a copy that has none shows none.
         if (counts != null) {
-            item(key = "head-count") { HeadCountLead(counts) }
+            item(key = "head-count") { HeadCountLead(counts, headCountAsLoaded(planner.guestsChanged)) }
         }
         if (all.isEmpty()) {
             item(key = "empty") { NothingHere(stringResource(R.string.guests_empty)) }
@@ -93,7 +95,7 @@ fun GuestsContent(planner: Planner, onOpen: (Guest) -> Unit, modifier: Modifier 
 
 /** The head count in a few lines: who is confirmed and what they are made of, and everyone on the list. */
 @Composable
-private fun HeadCountLead(counts: GuestCounts) {
+private fun HeadCountLead(counts: GuestCounts, note: String?) {
     val lead = headCountLead(counts)
     Column(modifier = Modifier.padding(bottom = 8.dp)) {
         GroupTitle(stringResource(R.string.guests_head_count))
@@ -101,6 +103,14 @@ private fun HeadCountLead(counts: GuestCounts) {
             Text(lead, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 4.dp))
         }
         Text(headCountEveryone(counts), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 2.dp))
+        if (note != null) {
+            Text(
+                note,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp).semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
     }
 }
 

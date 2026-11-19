@@ -7,6 +7,7 @@ import io.github.trufelek124.weddingplanner.data.HeadCount
 import io.github.trufelek124.weddingplanner.data.Household
 import io.github.trufelek124.weddingplanner.data.SideCount
 import io.github.trufelek124.weddingplanner.data.StatusCount
+import io.github.trufelek124.weddingplanner.data.Waiting
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -212,5 +213,25 @@ class GuestWordsTest {
         assertEquals("Confirmed: 5 people. Anna 3, Other 0, both sides 2.", headLineInWords(lines[0]))
         assertEquals("On the list: 8 people. Anna 3, Other 2, both sides 3.", headLineInWords(lines.last()))
         assertEquals("Invited: 1 person.", headLineInWords(HeadLine("Invited", 1, emptyList())))
+    }
+
+    @Test
+    fun `a status that waits is said in words on the guest's line, and a refused one is not saved`() {
+        assertNull(guestWaitingInWords(null))
+        assertEquals("Waiting to be sent", guestWaitingInWords(Waiting.TO_BE_SENT))
+        assertEquals("Not saved: the server did not take it", guestWaitingInWords(Waiting.REFUSED))
+
+        val waiting = guest().chosen(GuestStatus.DECLINED, Waiting.TO_BE_SENT)
+        assertEquals(listOf("Waiting to be sent", "Declined"), guestFacts(waiting, null).map { it.text }.take(2))
+        assertEquals("Aunt Krystyna. Waiting to be sent. Declined", guestLineInWords(waiting, null))
+        // A guest nothing waits for reads as before.
+        assertEquals("Aunt Krystyna. Confirmed", guestLineInWords(guest(), null))
+    }
+
+    @Test
+    fun `under the head count the phone says that it is as it was loaded and how many changes are not sent`() {
+        assertNull(headCountAsLoaded(0))
+        assertEquals("The head count is as it was loaded: 1 change is not sent yet.", headCountAsLoaded(1))
+        assertEquals("The head count is as it was loaded: 3 changes are not sent yet.", headCountAsLoaded(3))
     }
 }

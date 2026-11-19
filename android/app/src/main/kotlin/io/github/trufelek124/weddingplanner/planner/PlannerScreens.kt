@@ -53,6 +53,8 @@ import androidx.navigation.navArgument
 import io.github.trufelek124.weddingplanner.R
 import io.github.trufelek124.weddingplanner.data.Entry
 import io.github.trufelek124.weddingplanner.data.Gone
+import io.github.trufelek124.weddingplanner.data.GuestStatus
+import io.github.trufelek124.weddingplanner.data.GuestTrouble
 import io.github.trufelek124.weddingplanner.data.Kind
 import io.github.trufelek124.weddingplanner.data.Load
 import io.github.trufelek124.weddingplanner.data.Planner
@@ -111,6 +113,8 @@ class Changes(
     val edit: (taskId: String, TaskFields) -> Unit,
     val letGo: (taskId: String) -> Unit,
     val letGoOfShare: (shareId: String) -> Unit = {},
+    val setGuestStatus: (guestId: String, GuestStatus) -> Unit = { _, _ -> },
+    val letGoOfGuestChange: (guestId: String) -> Unit = {},
 )
 
 /**
@@ -309,6 +313,11 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                 for (share in planner.shares.filter { it.trouble != null }) {
                     NotSaved(share, onDiscard = { changes.letGoOfShare(share.id) })
                 }
+                if (route == GUESTS || route == GUEST_ROUTE) {
+                    for (trouble in planner.guestTroubles) {
+                        GuestChangeNotSent(trouble, onLetGo = { changes.letGoOfGuestChange(trouble.guestId) })
+                    }
+                }
             }
             PullToRefreshBox(isRefreshing = ui.loading && !onTheForm, onRefresh = onLoad, modifier = Modifier.weight(1f)) {
                 val loaded: @Composable () -> Unit = { LoadedOn(loadedOn) }
@@ -362,7 +371,7 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                             // Removed in the web app and loaded again since.
                             GuestGone(onBack = { navigation.popBackStack() })
                         } else {
-                            GuestContent(planner, guest, foot = loaded)
+                            GuestContent(planner, guest, onChoose = { changes.setGuestStatus(guest.id, it) }, foot = loaded)
                         }
                     }
                     composable(
@@ -440,6 +449,14 @@ private fun Notice(text: String, action: @Composable () -> Unit = {}) {
 private fun NoLongerThere(gone: Gone, onOk: () -> Unit) {
     Notice(stringResource(R.string.change_gone, gone.title)) {
         QuietButton(stringResource(R.string.change_gone_ok), onClick = onOk)
+    }
+}
+
+/** A status chosen for a guest that the server could not take: the guest is named, and the choice can only be let go of. */
+@Composable
+private fun GuestChangeNotSent(trouble: GuestTrouble, onLetGo: () -> Unit) {
+    Notice(stringResource(if (trouble.gone) R.string.guest_change_gone else R.string.guest_change_refused, trouble.name)) {
+        QuietButton(stringResource(if (trouble.gone) R.string.change_gone_ok else R.string.guest_change_let_go), onClick = onLetGo)
     }
 }
 

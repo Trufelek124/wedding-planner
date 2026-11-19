@@ -18,7 +18,7 @@ abstract class PlannerDao {
     @Transaction
     open suspend fun stored(): Stored? {
         val planner = planner() ?: return null
-        return Stored(planner, entries(), categories(), vendors(), members(), changes(), boards(), shares(), budgetLines(), guests(), households())
+        return Stored(planner, entries(), categories(), vendors(), members(), changes(), boards(), shares(), budgetLines(), guests(), households(), guestStatuses())
     }
 
     /** Puts a new load in the place of the last one, all of it or nothing. The changes waiting to be sent stay. */
@@ -42,6 +42,7 @@ abstract class PlannerDao {
         forgetTheCopy()
         deleteChanges()
         deleteShares()
+        deleteGuestStatuses()
     }
 
     @Transaction
@@ -163,6 +164,28 @@ abstract class PlannerDao {
     @Query("DELETE FROM guest")
     abstract suspend fun deleteGuests()
 
+    @Query("SELECT * FROM guest WHERE id = :id")
+    abstract suspend fun guest(id: String): GuestRow?
+
+    /** The server's word on a guest's status: what its answer to a change said. */
+    @Query("UPDATE guest SET status = :status WHERE id = :id")
+    abstract suspend fun setGuestStatusCopy(id: String, status: String)
+
+    @Query("SELECT * FROM waiting_guest_status ORDER BY guestId")
+    abstract suspend fun guestStatuses(): List<GuestStatusRow>
+
+    @Query("SELECT * FROM waiting_guest_status WHERE guestId = :guestId")
+    abstract suspend fun guestStatusOf(guestId: String): GuestStatusRow?
+
+    @Upsert
+    abstract suspend fun putGuestStatus(change: GuestStatusRow)
+
+    @Query("DELETE FROM waiting_guest_status WHERE guestId = :guestId")
+    abstract suspend fun deleteGuestStatus(guestId: String)
+
+    @Query("DELETE FROM waiting_guest_status")
+    abstract suspend fun deleteGuestStatuses()
+
     @Query("SELECT * FROM household ORDER BY position")
     abstract suspend fun households(): List<HouseholdRow>
 
@@ -200,11 +223,11 @@ abstract class PlannerDao {
 @Database(
     entities = [
         PlannerRow::class, EntryRow::class, CategoryRow::class, VendorRow::class, MemberRow::class, ChangeRow::class, BoardRow::class,
-        ShareRow::class, BudgetLineRow::class, GuestRow::class, HouseholdRow::class,
+        ShareRow::class, BudgetLineRow::class, GuestRow::class, HouseholdRow::class, GuestStatusRow::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5)],
 )
 abstract class PlannerDatabase : RoomDatabase() {
 

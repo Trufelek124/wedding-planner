@@ -5,6 +5,7 @@ import io.github.trufelek124.weddingplanner.data.GuestCounts
 import io.github.trufelek124.weddingplanner.data.GuestStatus
 import io.github.trufelek124.weddingplanner.data.HeadCount
 import io.github.trufelek124.weddingplanner.data.Household
+import io.github.trufelek124.weddingplanner.data.Waiting
 
 /*
  * How the guests read on the phone: the same words as the web's guests page
@@ -97,9 +98,27 @@ fun whatComesAlong(guest: Guest, withDietary: Boolean = true): List<String> = li
     guest.dietaryNeeds.takeIf { withDietary && it.isNotEmpty() },
 )
 
+/** Where a status chosen on this phone stands, for the guest's line; null when nothing waits. */
+fun guestWaitingInWords(waiting: Waiting?): String? = when (waiting) {
+    Waiting.TO_BE_SENT -> waitingInWords(waiting)
+    Waiting.REFUSED -> "Not saved: the server did not take it"
+    // Only a task is ever changed on another device.
+    Waiting.CHANGED_MEANWHILE, null -> null
+}
+
+/**
+ * What stands under the head count while a status chosen on the phone has not reached the server: the count is the
+ * server's and is not worked out here. Null where nothing waits.
+ */
+fun headCountAsLoaded(changes: Int): String? = when {
+    changes <= 0 -> null
+    changes == 1 -> "The head count is as it was loaded: 1 change is not sent yet."
+    else -> "The head count is as it was loaded: $changes changes are not sent yet."
+}
+
 /** What a line of the list says of a guest, after the name: the status, how many people, the side, and what comes along. */
 fun guestFacts(guest: Guest, side: String?, withDietary: Boolean = true): List<Fact> =
-    listOfNotNull(Fact(guestStatusLabel(guest.status))) +
+    listOfNotNull(guestWaitingInWords(guest.waiting)?.let { Fact(it, strong = true) }, Fact(guestStatusLabel(guest.status))) +
         listOfNotNull(Fact(people(guest.heads), strong = true).takeIf { guest.heads > 1 }, side?.let { Fact(it) }) +
         whatComesAlong(guest, withDietary).map { Fact(it) }
 

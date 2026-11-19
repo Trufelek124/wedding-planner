@@ -3,6 +3,7 @@ package io.github.trufelek124.weddingplanner.planner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.trufelek124.weddingplanner.data.Entry
+import io.github.trufelek124.weddingplanner.data.GuestStatus
 import io.github.trufelek124.weddingplanner.data.Load
 import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.data.PlannerRepository
@@ -69,6 +70,14 @@ class PlannerViewModel(
     fun add(fields: TaskFields) = change { repository.add(fields) }
 
     fun edit(taskId: String, fields: TaskFields) = change { repository.edit(taskId, fields) }
+
+    /** Chooses a guest's status. */
+    fun setGuestStatus(guestId: String, status: GuestStatus) = change { repository.setGuestStatus(guestId, status) }
+
+    /** Gives up a guest's status that could not be sent: what the server has stands. */
+    fun letGoOfGuestChange(guestId: String) {
+        viewModelScope.launch { repository.letGoOfGuestChange(guestId) }
+    }
 
     /** Gives up a change that could not be sent: what the server has stands. */
     fun letGo(taskId: String) {
