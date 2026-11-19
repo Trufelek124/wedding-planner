@@ -3,9 +3,12 @@ package io.github.trufelek124.weddingplanner.suggestions.internal;
 import io.github.trufelek124.weddingplanner.api.ApiException;
 import io.github.trufelek124.weddingplanner.api.FieldProblem;
 import io.github.trufelek124.weddingplanner.api.ProblemCode;
+import io.github.trufelek124.weddingplanner.planning.EntryToAdd;
+import io.github.trufelek124.weddingplanner.planning.PlanEntries;
 import io.github.trufelek124.weddingplanner.suggestions.Proposal;
 import io.github.trufelek124.weddingplanner.suggestions.Suggestions;
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionRepository.SuggestionRow;
+import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionSettingsRepository.Settings;
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.Kind;
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.PaymentKind;
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.State;
@@ -18,10 +21,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Where what the import proposes comes in: checked, and kept as waiting. */
+/** Where what the import proposes comes in: checked, kept as waiting, or added by itself when it is sure enough. */
 @Component
 class SuggestionIntake implements Suggestions {
 
@@ -40,14 +48,30 @@ class SuggestionIntake implements Suggestions {
 
     private static final Pattern SPACE_OR_CONTROL = Pattern.compile("[\\s\\p{Cntrl}\\\\]");
 
+    private static final Logger log = LoggerFactory.getLogger(SuggestionIntake.class);
+
     private final SuggestionRepository suggestions;
+    private final SuggestionSettingsRepository settings;
+    private final PlanEntries entries;
     private final Weddings weddings;
     private final Clock clock;
+    private final TransactionTemplate asideFromTheRest;
 
-    SuggestionIntake(SuggestionRepository suggestions, Weddings weddings, Clock clock) {
+    SuggestionIntake(
+            SuggestionRepository suggestions,
+            SuggestionSettingsRepository settings,
+            PlanEntries entries,
+            Weddings weddings,
+            Clock clock,
+            PlatformTransactionManager transactions) {
         this.suggestions = suggestions;
+        this.settings = settings;
+        this.entries = entries;
         this.weddings = weddings;
         this.clock = clock;
+        // A savepoint: an entry that the planner refuses is taken back without taking the hand-in with it.
+        this.asideFromTheRest = new TransactionTemplate(transactions);
+        this.asideFromTheRest.setPropagationBehavior(TransactionDefinition.PROPAGATION_NESTED);
     }
 
     @Override
@@ -55,8 +79,34 @@ class SuggestionIntake implements Suggestions {
     public UUID handIn(Proposal proposal) {
         SuggestionRow row = checked(proposal);
         // A concurrent hand-in of the same key waits on the unique key and then finds this one kept.
-        suggestions.insert(proposal.weddingId(), row);
-        return suggestions.idOfSource(proposal.weddingId(), row.sourceKey()).orElseThrow();
+        if (!suggestions.insert(proposal.weddingId(), row)) {
+            return suggestions.idOfSource(proposal.weddingId(), row.sourceKey()).orElseThrow();
+        }
+        addByItselfIfSure(proposal.weddingId(), row);
+        return row.id();
+    }
+
+    /**
+     * S05 and D-008: only a task or a step of the plan, never anything that names money, when the import is at least as
+     * sure as the wedding asks, and only as the planner takes it. The suggestion and the entry come into being together
+     * or the suggestion waits and nothing was made.
+     */
+    private void addByItselfIfSure(UUID weddingId, SuggestionRow row) {
+        boolean tasksAndStepsOnly = (row.kind() == Kind.TASK || row.kind() == Kind.PLAN_ITEM) && row.amount() == null;
+        Settings wanted = settings.of(weddingId);
+        if (!tasksAndStepsOnly || !wanted.addsByItself() || row.confidence() < wanted.threshold()) {
+            return;
+        }
+        EntryToAdd entry = SuggestionEntries.entry(row.kind(), SuggestionEntries.asProposed(row), row.id());
+        UUID entryId;
+        try {
+            entryId = asideFromTheRest.execute(status -> entries.addEntryFor(weddingId, row.inboxMemberId(), entry));
+        } catch (ApiException refused) {
+            // The planner would not take it as it is: it waits for a person, who can change it.
+            return;
+        }
+        suggestions.markAdded(weddingId, row.id(), entryId);
+        log.info("Suggestion {} ({}) was added by itself for the inbox of member {}", row.id(), row.kind(), row.inboxMemberId());
     }
 
     @Override

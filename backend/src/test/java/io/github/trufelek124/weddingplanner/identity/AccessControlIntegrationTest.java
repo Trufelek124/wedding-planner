@@ -56,6 +56,10 @@ class AccessControlIntegrationTest extends PostgresIntegrationTest {
             }
         }
         assertThat(checked).as("the protected endpoints that were checked").contains("GET /api/me");
+        // What added by itself brought (S05): none of it is public.
+        assertThat(checked).contains(
+                "GET /api/suggestions/{id}", "POST /api/suggestions/{id}/keep", "POST /api/suggestions/{id}/undo",
+                "GET /api/suggestions/settings", "PUT /api/suggestions/settings");
     }
 
     @Test

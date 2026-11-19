@@ -140,7 +140,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_5"];
-        put: operations["change_4"];
+        put: operations["change_5"];
         post?: never;
         delete?: never;
         options?: never;
@@ -204,7 +204,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_4"];
-        put: operations["change_3"];
+        put: operations["change_4"];
         post?: never;
         delete: operations["delete_4"];
         options?: never;
@@ -300,7 +300,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_3"];
-        put: operations["change_2"];
+        put: operations["change_3"];
         post?: never;
         delete: operations["delete_3"];
         options?: never;
@@ -412,7 +412,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_2"];
-        put: operations["change_1"];
+        put: operations["change_2"];
         post?: never;
         delete: operations["delete_1"];
         options?: never;
@@ -548,6 +548,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/suggestions/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How sure the import has to be
+         * @description Whether the e-mail import adds tasks and steps of the plan by itself, and at what confidence. The same for both owners. Payments and vendors always wait.
+         */
+        get: operations["settings"];
+        /**
+         * Changes how sure the import has to be
+         * @description Applies to what is handed in from then on: nothing that waits is added and nothing that was added is undone. A threshold outside 50 to 100 is refused with a message next to the field.
+         */
+        put: operations["change_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/suggestions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One suggestion
+         * @description A suggestion of the caller's wedding, as the list gives it. It is where an entry's fromSuggestionId leads. Unknown: not-found.
+         */
+        get: operations["get_6"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/suggestions/{id}/accept": {
         parameters: {
             query?: never;
@@ -568,6 +612,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/suggestions/{id}/keep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keeps what was added by itself
+         * @description Accepts a suggestion that was added by itself, in the caller's name; nothing else changes. Keeping again, or an accepted one, answers it as it is. One that was undone, rejected or is decided otherwise answers already-decided; one that still waits is a bad request.
+         */
+        post: operations["keep"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/suggestions/{id}/reject": {
         parameters: {
             query?: never;
@@ -582,6 +646,26 @@ export interface paths {
          * @description Makes nothing. Rejecting again answers the same; a suggestion that was accepted answers already-decided.
          */
         post: operations["reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/suggestions/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undoes what was added by itself
+         * @description Removes the entry that was added and rejects the suggestion, in one action; undoing again answers the same. When the entry is no longer what was added (changed, ticked off, something hangs on it or depends on it, or it is gone) it stays, the suggestion counts as kept by the caller, and the answer is entry-changed. A suggestion that was kept or accepted, also by the thirty days passing, answers already-decided; one that still waits is a bad request.
+         */
+        post: operations["undo"];
         delete?: never;
         options?: never;
         head?: never;
@@ -825,6 +909,11 @@ export interface components {
              * @description The day a task is due, or the day a plan item ends; null while not scheduled.
              */
             dueDate: string | null;
+            /**
+             * Format: uuid
+             * @description The suggestion of the e-mail import that made this entry, whether it was added by itself or accepted by a person (GET /api/suggestions/{id}); null for an entry made by hand. Editing never changes it, and no request can set it.
+             */
+            fromSuggestionId: string | null;
             /** Format: uuid */
             id: string;
             /** @enum {string} */
@@ -1468,7 +1557,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:already-decided" | "urn:wedding-planner:problem:mail-not-set-up" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:already-decided" | "urn:wedding-planner:problem:entry-changed" | "urn:wedding-planner:problem:mail-not-set-up" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -1503,11 +1592,14 @@ export interface components {
             confidence: number;
             /** Format: date-time */
             createdAt: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When it was decided; for one that counts as kept after thirty days, the moment that came to be. null while it waits or is ADDED.
+             */
             decidedAt: string | null;
             /**
              * Format: uuid
-             * @description The member whose request decided it; null while it waits.
+             * @description The member whose request decided it; null while it waits, while it is ADDED, and when ACCEPTED because thirty days passed: nobody decided it.
              */
             decidedBy: string | null;
             /** Format: date */
@@ -1526,7 +1618,7 @@ export interface components {
             kind: "TASK" | "PAYMENT" | "PLAN_ITEM" | "VENDOR";
             /**
              * Format: uuid
-             * @description The task, payment or plan item that accepting made.
+             * @description The task, payment or plan item that accepting made, or that was added by itself; null once it was undone.
              */
             madeEntryId: string | null;
             /**
@@ -1555,8 +1647,11 @@ export interface components {
              * @description A plan item's first day.
              */
             startDate: string | null;
-            /** @enum {string} */
-            state: "WAITING" | "ACCEPTED" | "REJECTED";
+            /**
+             * @description WAITING for a person; ADDED when the import was sure enough and the task or step is already in the plan (nobody has decided it: keep or undo it; after thirty days it is answered as ACCEPTED, with nobody as decidedBy); ACCEPTED or REJECTED once decided.
+             * @enum {string}
+             */
+            state: "WAITING" | "ADDED" | "ACCEPTED" | "REJECTED";
             /** @description May be empty. */
             subject: string;
             /** @description What is proposed; for a vendor, its name. */
@@ -1609,6 +1704,22 @@ export interface components {
             vendorPhone: string | null;
             /** @description A vendor's website. */
             vendorWebsite: string | null;
+        };
+        /** @description How sure the e-mail import has to be before it adds a task or a step of the plan by itself. One setting for the wedding: both owners see and change the same. Payments and vendors always wait. */
+        SuggestionSettings: {
+            /** @description False: nothing is added by itself, everything waits. The threshold is kept for when it is switched on again. */
+            addsByItself: boolean;
+            /**
+             * Format: int32
+             * @description From 50 to 100: the least confidence, as a percentage, at which it adds by itself.
+             */
+            threshold: number;
+        };
+        /** @description The settings as they should be from now on. Applies to what is handed in from then on: nothing that waits is added and nothing that was added is undone. */
+        SuggestionSettingsChange: {
+            addsByItself: boolean;
+            /** Format: int32 */
+            threshold: number;
         };
         /** @description A tag in use and how many inspirations carry it. */
         TagCount: {
@@ -2115,7 +2226,7 @@ export interface operations {
             };
         };
     };
-    change_4: {
+    change_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -2387,7 +2498,7 @@ export interface operations {
             };
         };
     };
-    change_3: {
+    change_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -2721,7 +2832,7 @@ export interface operations {
             };
         };
     };
-    change_2: {
+    change_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -3108,7 +3219,7 @@ export interface operations {
             };
         };
     };
-    change_1: {
+    change_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -3421,8 +3532,8 @@ export interface operations {
     list_7: {
         parameters: {
             query?: {
-                /** @description Which suggestions: the ones that wait (the default), the accepted or the rejected ones, or ALL. */
-                state?: "WAITING" | "ACCEPTED" | "REJECTED" | "ALL";
+                /** @description Which suggestions: the ones that wait (the default), the ones added by themselves that nobody has kept or undone and that are younger than thirty days (ADDED), the accepted or the rejected ones, or ALL. One that was added by itself and is older than thirty days counts as accepted. */
+                state?: "WAITING" | "ADDED" | "ACCEPTED" | "REJECTED" | "ALL";
             };
             header?: never;
             path?: never;
@@ -3437,6 +3548,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Suggestion"][];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionSettings"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    change_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestionSettingsChange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionSettings"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_6: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
                 };
             };
             /** @description Any error. */
@@ -3485,7 +3689,69 @@ export interface operations {
             };
         };
     };
+    keep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    undo: {
         parameters: {
             query?: never;
             header?: never;

@@ -60,14 +60,19 @@ other one is refused as already decided.
   anybody keeps it — it only takes the entry off the list of things to look at.
 - **Undo is refused when the entry is no longer what was added**: somebody changed it, ticked it off, hung a
   task or a payment on it, or removed it. It is then theirs. The answer says so, and the suggestion counts as
-  kept; the entry is changed or removed like any other.
+  kept; the entry is changed or removed like any other. "No longer what was added" is exact: the entry was saved
+  at least once since, or is not "not started" any more, or a task or payment hangs on it, or it waits for
+  something or something waits for it, or an inspiration points to it.
 - Undoing does not touch anything else: not other entries, not what the same message proposed besides.
+- **Accept and reject are for what waits; keep and undo for what was added.** Asked of the other kind they are
+  refused: accept or reject of an added one as already decided — by nobody yet: keep it or undo it.
 
 ## 5. Where the owners see it
 
 - **The inbox** gets a part "Added by itself" beside what waits: each with what was added, where it comes from,
   the passage, and **Undo** and **Keep**. The newest first. It is not a list to work through: after thirty days
-  an entry that nobody undid counts as kept and leaves the list.
+  an entry that nobody undid counts as kept and leaves the list — it is then shown as accepted, by nobody, and
+  can no longer be undone; nothing has to run for that.
 - **Home and the navigation** say how many were added by themselves and have not been looked at, next to how
   many wait — two numbers, because they ask different things of a person.
 - **The entry itself** says "From e-mail" with the way to its source (section 3).
@@ -80,7 +85,7 @@ On the e-mail import page, for the wedding (both owners see and change the same 
 
 - **The threshold**, 50 to 100, to begin with 85: "Add tasks and steps by themselves when the import is at
   least this sure."
-- **Never**: nothing is added by itself; everything waits.
+- **Never**: nothing is added by itself; everything waits. The number is kept for when it is switched on again.
 
 A change applies to what is proposed from then on. It does not add what already waits, and it does not undo
 what was already added.
@@ -99,14 +104,19 @@ propose (S04), and a mark on the entry that cannot be missed.
 
 | Call | What it does |
 |---|---|
-| `GET /api/suggestions?state=ADDED` | Those added by themselves that nobody has kept or undone, the newest first |
-| `POST /api/suggestions/{id}/keep` | Keeps it: accepted |
-| `POST /api/suggestions/{id}/undo` | Removes the entry and rejects it; refused with `entry-changed` when the entry is no longer what was added |
+| `GET /api/suggestions?state=ADDED` | Those added by themselves that nobody has kept or undone, the newest first. `state=ALL` includes them; without `state` only what waits is answered, as before |
+| `POST /api/suggestions/{id}/keep` | Keeps it: accepted, by the caller |
+| `POST /api/suggestions/{id}/undo` | Removes the entry and rejects it; refused with `entry-changed` (409) when the entry is no longer what was added — the suggestion then counts as kept |
 | `GET /api/suggestions/{id}` | One suggestion — what an entry's "From e-mail" leads to |
-| `GET /api/suggestions/settings`, `PUT …` | The threshold, or never |
+| `GET /api/suggestions/settings`, `PUT …` | `addsByItself` and `threshold` (50 to 100); to begin with on, at 85 |
 
-An entry's answer gains where it comes from: nothing, or the suggestion that made it. Every field is always
-present; an older phone app ignores the new one.
+A suggestion's `state` gains `ADDED`; while it is, nobody has decided (`decidedBy` and `decidedAt` are empty), and
+`madeEntryId` is the entry that was added. After thirty days it is answered as `ACCEPTED` with nobody as the one
+who decided.
+
+An entry's answer gains `fromSuggestionId`: nothing, or the suggestion that made it — added by itself, or
+accepted by a person. No request can set it. Every field is always present; an older phone app ignores the new
+one and never asks for what was added.
 
 ## 9. Open, and where it is tracked
 

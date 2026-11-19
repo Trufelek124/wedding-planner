@@ -36,6 +36,11 @@ public enum ProblemCode {
     VENDOR_IN_USE(HttpStatus.CONFLICT, "vendor-in-use", "Something still points to this vendor"),
     /** A suggestion was decided the other way first: show what was decided, and by whom. */
     ALREADY_DECIDED(HttpStatus.CONFLICT, "already-decided", "This suggestion has already been decided"),
+    /**
+     * Undo was asked for an entry that a suggestion added by itself, and the entry is no longer what was added: it
+     * stays, and the suggestion counts as kept.
+     */
+    ENTRY_CHANGED(HttpStatus.CONFLICT, "entry-changed", "The entry was changed after it was added"),
     /** The e-mail import is off on this server: it was not given everything it needs. Nothing is asked of Google. */
     MAIL_NOT_SET_UP(HttpStatus.CONFLICT, "mail-not-set-up", "The e-mail import is not set up on this server"),
     /** What was sent is larger than the server takes; a picture, for instance. */

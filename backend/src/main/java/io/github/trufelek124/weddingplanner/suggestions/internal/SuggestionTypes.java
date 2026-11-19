@@ -19,6 +19,8 @@ final class SuggestionTypes {
 
     enum State {
         WAITING,
+        /** Made at once, because the import was sure enough (S05): nobody has decided it yet. */
+        ADDED,
         ACCEPTED,
         REJECTED
     }
@@ -26,6 +28,8 @@ final class SuggestionTypes {
     /** Which suggestions a list shows. */
     enum Which {
         WAITING,
+        /** Added by themselves, and neither kept nor undone nor older than thirty days. */
+        ADDED,
         ACCEPTED,
         REJECTED,
         ALL

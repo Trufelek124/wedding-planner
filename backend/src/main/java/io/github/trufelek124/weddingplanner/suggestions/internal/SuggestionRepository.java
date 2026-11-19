@@ -62,6 +62,14 @@ class SuggestionRepository {
                     inboxMemberId, link, passage, confidence, decidedBy, decidedAt, madeEntryId, madeVendorId, createdAt);
         }
 
+        /** The same suggestion as it stands in this state, decided by this member (or by nobody) at this moment. */
+        SuggestionRow decided(State to, UUID by, Instant at) {
+            return new SuggestionRow(
+                    id, sourceKey, kind, to, title, notes, startDate, dueDate, amount, paymentKind, categoryId, vendorId,
+                    vendorName, vendorEmail, vendorPhone, vendorWebsite, senderName, senderAddress, subject, receivedAt,
+                    inboxMemberId, mailLink, passage, confidence, by, at, madeEntryId, madeVendorId, createdAt);
+        }
+
         @Override
         public String toString() {
             return "SuggestionRow[id=" + id + ", kind=" + kind + ", state=" + state + "]";
@@ -103,11 +111,21 @@ class SuggestionRepository {
                 .optional();
     }
 
-    /** The newest message first. */
-    List<SuggestionRow> list(UUID weddingId, Which which) {
-        String where = " WHERE wedding_id = ?" + (which == Which.ALL ? "" : " AND state = ?");
-        var statement = jdbc.sql(SELECT + where + " ORDER BY received_at DESC, id");
-        return (which == Which.ALL ? statement.params(weddingId) : statement.params(weddingId, which.name()))
+    /**
+     * The newest message first. A suggestion that was added by itself and came into being at or before {@code keptBefore}
+     * counts as accepted (S05): it is told apart here, in the question, and nowhere is it written down.
+     */
+    List<SuggestionRow> list(UUID weddingId, Which which, Instant keptBefore) {
+        String where = switch (which) {
+            case ALL -> "";
+            case WAITING -> " AND state = 'WAITING'";
+            case REJECTED -> " AND state = 'REJECTED'";
+            case ADDED -> " AND state = 'ADDED' AND created_at > :keptBefore";
+            case ACCEPTED -> " AND (state = 'ACCEPTED' OR (state = 'ADDED' AND created_at <= :keptBefore))";
+        };
+        return jdbc.sql(SELECT + " WHERE wedding_id = :wedding" + where + " ORDER BY received_at DESC, id")
+                .param("wedding", weddingId)
+                .param("keptBefore", at(keptBefore))
                 .query(SuggestionRepository::row)
                 .list();
     }
@@ -191,6 +209,38 @@ class SuggestionRepository {
                 .update();
         if (changed != 1) {
             throw new IllegalStateException("A suggestion that was not waiting was decided");
+        }
+    }
+
+    /** Says that the entry was made: only a suggestion that still waits (and was just handed in) can be added. */
+    void markAdded(UUID weddingId, UUID id, UUID entryId) {
+        int changed = jdbc.sql("UPDATE suggestion SET state = 'ADDED', made_entry_id = ? WHERE wedding_id = ? AND id = ? AND state = 'WAITING'")
+                .params(entryId, weddingId, id)
+                .update();
+        if (changed != 1) {
+            throw new IllegalStateException("A suggestion that was not waiting was added");
+        }
+    }
+
+    /**
+     * Keeps (ACCEPTED, the entry stays named) or undoes (REJECTED, no entry) a suggestion that was added by itself.
+     * Only one that is still added can be settled.
+     */
+    void settleAdded(UUID weddingId, UUID id, State state, UUID memberId, Instant now, UUID madeEntryId) {
+        int changed = jdbc.sql("""
+                UPDATE suggestion
+                SET state = :state, decided_by = :member, decided_at = :now, made_entry_id = :entry
+                WHERE wedding_id = :wedding AND id = :id AND state = 'ADDED'
+                """)
+                .param("state", state.name())
+                .param("member", memberId)
+                .param("now", at(now))
+                .param("entry", madeEntryId)
+                .param("wedding", weddingId)
+                .param("id", id)
+                .update();
+        if (changed != 1) {
+            throw new IllegalStateException("A suggestion that was not added was settled");
         }
     }
 

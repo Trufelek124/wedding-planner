@@ -10,6 +10,8 @@ import java.util.UUID;
  * @param startDate a plan item's first day; a task has none
  * @param dueDate the day a task is due, or the day a plan item ends
  * @param amount with one, a task is a payment: in the smallest unit of the currency
+ * @param fromSuggestionId the suggestion that made this entry, kept with it so that it can be traced back; null for one
+ *     made by hand
  */
 public record EntryToAdd(
         Kind kind,
@@ -20,7 +22,8 @@ public record EntryToAdd(
         LocalDate dueDate,
         UUID vendorId,
         Long amount,
-        PaymentKind paymentKind) {
+        PaymentKind paymentKind,
+        UUID fromSuggestionId) {
 
     public enum Kind {
         PLAN_ITEM,

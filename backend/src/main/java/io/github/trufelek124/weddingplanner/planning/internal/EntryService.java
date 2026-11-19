@@ -4,6 +4,8 @@ import io.github.trufelek124.weddingplanner.api.ApiException;
 import io.github.trufelek124.weddingplanner.api.FieldProblem;
 import io.github.trufelek124.weddingplanner.api.ProblemCode;
 import io.github.trufelek124.weddingplanner.identity.UserId;
+import io.github.trufelek124.weddingplanner.planning.EntryUse;
+import io.github.trufelek124.weddingplanner.planning.PlanEntries.Removal;
 import io.github.trufelek124.weddingplanner.planning.internal.EntryRepository.EntryRow;
 import io.github.trufelek124.weddingplanner.planning.internal.EntryRepository.Filter;
 import io.github.trufelek124.weddingplanner.planning.internal.PlanningDtos.EntryChange;
@@ -42,6 +44,7 @@ class EntryService {
     private final DependencyRepository dependencies;
     private final Vendors vendors;
     private final Weddings weddings;
+    private final List<EntryUse> uses;
     private final Clock clock;
 
     EntryService(
@@ -50,12 +53,14 @@ class EntryService {
             DependencyRepository dependencies,
             Vendors vendors,
             Weddings weddings,
+            List<EntryUse> uses,
             Clock clock) {
         this.entries = entries;
         this.categories = categories;
         this.dependencies = dependencies;
         this.vendors = vendors;
         this.weddings = weddings;
+        this.uses = uses;
         this.clock = clock;
     }
 
@@ -90,13 +95,24 @@ class EntryService {
      */
     @Transactional
     EntryView create(UserId user, NewEntry request) {
-        Membership membership = weddings.membershipOf(user);
+        return create(weddings.membershipOf(user), request, null);
+    }
+
+    /**
+     * The same for a member of the wedding, and the way an entry gets to say which suggestion made it: no request
+     * of a person can carry that, only another module's own adding.
+     */
+    @Transactional
+    EntryView create(Membership membership, NewEntry request, UUID fromSuggestionId) {
         if (request.id() != null && entries.find(membership.weddingId(), request.id()).isPresent()) {
             return shown(membership, request.id());
         }
         Instant now = clock.instant();
         UUID id = request.id() != null ? request.id() : UUID.randomUUID();
         EntryRow entry = checked(membership, id, request.kind(), request, null, now);
+        if (fromSuggestionId != null) {
+            entry = entry.madeBy(fromSuggestionId);
+        }
         entries.insert(membership.weddingId(), membership.memberId(), entry);
         return shown(membership, entry.id());
     }
@@ -121,7 +137,7 @@ class EntryService {
                 before.dueDate(), status, completedAt(status, before, now), before.priorityMode(), before.priority(),
                 before.parentId(), before.vendorId(), before.amount(), before.paymentKind(),
                 paidOn(before.amount(), status, null, before, today(membership)), before.assigneeIds(), before.taskCount(),
-                before.version(), before.createdAt(), now);
+                before.version(), before.createdAt(), now, before.fromSuggestionId());
         save(membership, after, before.version(), now);
         return shown(membership, id);
     }
@@ -153,7 +169,7 @@ class EntryService {
                     before.priorityMode(), before.priority(), to == Kind.PLAN_ITEM ? null : before.parentId(),
                     before.vendorId(), before.amount(), before.paymentKind(), before.paidOn(), before.assigneeIds(),
                     before.taskCount(),
-                    before.version(), before.createdAt(), now);
+                    before.version(), before.createdAt(), now, before.fromSuggestionId());
             save(membership, after, before.version(), now);
             if (to == Kind.TASK) {
                 dependencies.removeAllOf(id);
@@ -183,6 +199,31 @@ class EntryService {
             }
         }
         entries.delete(weddingId, id);
+    }
+
+    /** The version an entry has when it is made: every save counts one more. */
+    private static final int VERSION_WHEN_MADE = 0;
+
+    /**
+     * Removes the entry that a suggestion made, when it is still as it was made. The row is held, so that nobody
+     * saves it or hangs something on it between the look and the removal.
+     */
+    @Transactional
+    Removal removeIfUntouched(UUID weddingId, UUID entryId, UUID suggestionId) {
+        EntryRow entry = entries.findForUpdate(weddingId, entryId).orElse(null);
+        if (entry == null || !suggestionId.equals(entry.fromSuggestionId())) {
+            return Removal.GONE;
+        }
+        boolean untouched = entry.version() == VERSION_WHEN_MADE
+                && entry.status() == Status.NOT_STARTED
+                && entry.taskCount() == 0
+                && !dependencies.anyOf(entryId)
+                && uses.stream().noneMatch(use -> use.pointsTo(weddingId, entryId));
+        if (!untouched) {
+            return Removal.CHANGED;
+        }
+        entries.delete(weddingId, entryId);
+        return Removal.REMOVED;
     }
 
     // ------------------------------------------------------------ dependencies
@@ -397,7 +438,7 @@ class EntryService {
                 chosen, request.parentId(), request.vendorId(), request.amount(), request.paymentKind(),
                 paidOn(request.amount(), request.status(), request.paidOn(), before, today), assignees,
                 before == null ? 0 : before.taskCount(), before == null ? 0 : before.version(),
-                before == null ? now : before.createdAt(), now);
+                before == null ? now : before.createdAt(), now, before == null ? null : before.fromSuggestionId());
     }
 
     /**

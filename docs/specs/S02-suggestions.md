@@ -49,6 +49,8 @@ waiting ──accept──▶ accepted   (an entry or a vendor now exists)
   proposed again.
 - There is no way back from a decision in this step. A tap on the wrong button is caught on the device, before it
   is sent (section 6).
+- S05 adds a fourth place a suggestion can stand in — **added by itself**, with keep and undo — and says that
+  every entry a suggestion made carries which one.
 
 ## 4. What is kept, and who sees it
 

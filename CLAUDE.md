@@ -258,6 +258,17 @@ uses another only through the types in that module's own package, and never in a
   other one is `already-decided`, and a refused acceptance leaves nothing behind. A suggestion holds parts of
   someone's mail: nothing of it is logged, tests use made-up mail, and its link can only be an `https` address at
   `mail.google.com` (checked in the code and by the table).
+- A proposal the import is sure enough of is **added by itself** (S05, D-008): at hand-in, only a task or a step of
+  the plan — **never a payment, never a vendor**; the table refuses anything else — at the wedding's threshold
+  (`suggestion_setting`, to begin with on at 85), and only as the planner takes it: the entry is made by
+  `PlanEntries.addEntryFor` in the name of the inbox's owner behind a savepoint, so a proposal the planner refuses
+  simply waits. The suggestion is `ADDED` until a person keeps it (accepted) or undoes it (the entry removed,
+  rejected). Undo removes the entry only through `PlanEntries.removeIfUntouched`, where "untouched" is the
+  planning module's to say (`EntryUse` lets another module say that something of its own points to an entry);
+  refused, the suggestion counts as kept and the answer is `entry-changed`, thrown only after "kept" is written.
+  After thirty days an added one is *answered* as accepted by nobody (`settled`): no job runs and nothing is
+  written. An entry carries which suggestion made it (`from_suggestion_id`, an identifier and nothing more);
+  no request can set it.
 
 - `mail` (S03, D-006) connects an owner's Gmail and keeps the key to it. Its rules are security rules:
   - `GET /api/mail/gmail/return` is the one path of the feature that answers without a sign-in. It trusts nothing

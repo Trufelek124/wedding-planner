@@ -163,7 +163,13 @@ final class PlanningDtos {
             @Schema(description = "Those of dependsOnIds that end after this entry is meant to begin.") List<UUID> conflictsWithIds,
             @Schema(description = "Send this back with a change; it tells whether someone else saved in between.") int version,
             Instant createdAt,
-            Instant updatedAt) {
+            Instant updatedAt,
+            @Schema(
+                            description = "The suggestion of the e-mail import that made this entry, whether it was added by itself "
+                                    + "or accepted by a person (GET /api/suggestions/{id}); null for an entry made by hand. "
+                                    + "Editing never changes it, and no request can set it.",
+                            nullable = true)
+                    UUID fromSuggestionId) {
 
         static EntryResponse of(EntryView view) {
             EntryRow row = view.entry();
@@ -173,7 +179,7 @@ final class PlanningDtos {
                     row.assigneeIds(), row.parentId(), row.vendorId(), row.amount(), row.paymentKind(), row.paidOn(),
                     row.taskCount(),
                     view.dependsOnIds(), view.conflictsWithIds(),
-                    row.version(), row.createdAt(), row.updatedAt());
+                    row.version(), row.createdAt(), row.updatedAt(), row.fromSuggestionId());
         }
     }
 

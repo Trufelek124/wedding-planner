@@ -36,6 +36,7 @@ object StandIn {
         taskCount: Int = 0,
         notes: String = "",
         version: Int = 0,
+        fromSuggestionId: String? = null,
         more: String = "",
     ): String =
         """{"id":"$id","kind":"$kind","title":"$title","notes":"$notes","categoryId":${text(categoryId)},""" +
@@ -44,7 +45,8 @@ object StandIn {
             """"priorityMode":"$priorityMode","priority":"$priority","priorityReason":"$priorityReason",""" +
             """"parentId":${text(parentId)},"vendorId":${text(vendorId)},"amount":$amount,"paymentKind":${text(paymentKind)},""" +
             """"paidOn":${text(paidOn)},"assigneeIds":${list(assigneeIds)},"dependsOnIds":[],"conflictsWithIds":[],""" +
-            """"taskCount":$taskCount,"version":$version,"createdAt":"2026-11-01T10:00:00Z","updatedAt":"2026-11-02T10:00:00Z"""" +
+            """"taskCount":$taskCount,"version":$version,"fromSuggestionId":${text(fromSuggestionId)},""" +
+            """"createdAt":"2026-11-01T10:00:00Z","updatedAt":"2026-11-02T10:00:00Z"""" +
             (if (more.isEmpty()) "" else ",$more") + "}"
 
     fun wedding(date: String? = "2027-06-19", currency: String = "PLN", second: Boolean = true): String =

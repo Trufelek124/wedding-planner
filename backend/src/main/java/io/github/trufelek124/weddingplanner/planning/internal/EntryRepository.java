@@ -32,6 +32,7 @@ class EntryRepository {
      * @param vendorId the vendor the entry concerns, if any
      * @param amount for a payment: what it costs, in the smallest unit of the wedding's currency; null for any other entry
      * @param paidOn the day a payment was paid; null until it is done
+     * @param fromSuggestionId the suggestion that made the entry; null for one made by hand. Saving never changes it
      */
     record EntryRow(
             UUID id,
@@ -54,10 +55,19 @@ class EntryRepository {
             int taskCount,
             int version,
             Instant createdAt,
-            Instant updatedAt) {
+            Instant updatedAt,
+            UUID fromSuggestionId) {
 
         boolean isPayment() {
             return amount != null;
+        }
+
+        /** The same entry, said to have been made by this suggestion. */
+        EntryRow madeBy(UUID suggestionId) {
+            return new EntryRow(
+                    id, kind, title, notes, categoryId, startDate, dueDate, status, completedAt, priorityMode, priority,
+                    parentId, vendorId, amount, paymentKind, paidOn, assigneeIds, taskCount, version, createdAt, updatedAt,
+                    suggestionId);
         }
     }
 
@@ -84,7 +94,7 @@ class EntryRepository {
     private static final String SELECT = """
             SELECT e.id, e.kind, e.title, e.notes, e.category_id, e.start_date, e.due_date, e.status, e.completed_at,
                    e.priority_mode, e.priority, e.parent_id, e.vendor_id, e.amount, e.payment_kind, e.paid_on,
-                   e.version, e.created_at, e.updated_at,
+                   e.version, e.created_at, e.updated_at, e.from_suggestion_id,
                    (SELECT count(*) FROM entry task WHERE task.parent_id = e.id) AS task_count,
                    ARRAY(SELECT a.member_id FROM entry_assignee a WHERE a.entry_id = e.id) AS assignee_ids
             FROM entry e
@@ -98,6 +108,14 @@ class EntryRepository {
 
     Optional<EntryRow> find(UUID weddingId, UUID id) {
         return jdbc.sql(SELECT + " WHERE e.wedding_id = ? AND e.id = ?")
+                .params(weddingId, id)
+                .query(EntryRepository::row)
+                .optional();
+    }
+
+    /** Finds it and holds its row until the transaction ends: nobody saves it or hangs something on it meanwhile. */
+    Optional<EntryRow> findForUpdate(UUID weddingId, UUID id) {
+        return jdbc.sql(SELECT + " WHERE e.wedding_id = ? AND e.id = ? FOR UPDATE OF e")
                 .params(weddingId, id)
                 .query(EntryRepository::row)
                 .optional();
@@ -148,15 +166,16 @@ class EntryRepository {
         jdbc.sql("""
                 INSERT INTO entry (id, wedding_id, kind, title, notes, category_id, start_date, due_date, status,
                                    completed_at, priority_mode, priority, parent_id, vendor_id, amount, payment_kind,
-                                   paid_on, version, created_by, created_at, updated_at)
+                                   paid_on, version, created_by, created_at, updated_at, from_suggestion_id)
                 VALUES (:id, :wedding, :kind, :title, :notes, :category, :start, :due, :status,
                         :completed, :mode, :priority, :parent, :vendor, :amount, :paymentKind, :paidOn,
-                        0, :createdBy, :now, :now)
+                        0, :createdBy, :now, :now, :fromSuggestion)
                 """)
                 .params(fields(entry))
                 .param("id", entry.id())
                 .param("wedding", weddingId)
                 .param("createdBy", createdBy)
+                .param("fromSuggestion", entry.fromSuggestionId())
                 .param("now", at(entry.createdAt()))
                 .update();
         replaceAssignees(entry.id(), entry.assigneeIds());
@@ -278,7 +297,8 @@ class EntryRepository {
                 row.getInt("task_count"),
                 row.getInt("version"),
                 instant(row.getObject("created_at", OffsetDateTime.class)),
-                instant(row.getObject("updated_at", OffsetDateTime.class)));
+                instant(row.getObject("updated_at", OffsetDateTime.class)),
+                row.getObject("from_suggestion_id", UUID.class));
     }
 
     private static OffsetDateTime at(Instant instant) {

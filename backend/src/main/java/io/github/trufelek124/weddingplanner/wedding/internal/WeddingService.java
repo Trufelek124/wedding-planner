@@ -94,6 +94,23 @@ class WeddingService implements Weddings {
 
     @Override
     @Transactional
+    public Optional<Membership> membershipOfMember(UUID weddingId, UUID memberId) {
+        return repository.find()
+                .filter(wedding -> wedding.id().equals(weddingId))
+                .flatMap(wedding -> {
+                    List<MemberRow> members = repository.members(weddingId);
+                    return members.stream().filter(member -> member.id().equals(memberId)).findFirst().map(mine -> new Membership(
+                            wedding.id(),
+                            mine.id(),
+                            ZoneId.of(wedding.timeZone()),
+                            wedding.weddingDate(),
+                            members.stream().map(MemberRow::id).toList(),
+                            members.stream().filter(member -> member.userId() != null).map(MemberRow::id).toList()));
+                });
+    }
+
+    @Override
+    @Transactional
     public boolean hasMember(UUID weddingId, UUID memberId) {
         return repository.members(weddingId).stream().anyMatch(member -> member.id().equals(memberId));
     }

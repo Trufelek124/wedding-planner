@@ -111,6 +111,14 @@ class InspirationRepository {
         return counts;
     }
 
+    /** Whether any inspiration belongs to this plan item. */
+    boolean anyOnPlanItem(UUID weddingId, UUID planItemId) {
+        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM inspiration WHERE wedding_id = ? AND entry_id = ?)")
+                .params(weddingId, planItemId)
+                .query(Boolean.class)
+                .single();
+    }
+
     void insert(UUID weddingId, InspirationRow inspiration) {
         jdbc.sql("""
                 INSERT INTO inspiration (id, wedding_id, url, source, title, note, board_id, entry_id, vendor_id, version,

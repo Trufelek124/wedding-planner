@@ -13,6 +13,13 @@ public interface Weddings {
      */
     Membership membershipOf(UserId user);
 
+    /**
+     * The place of a member of the wedding, for a part of the server that works in a member's name without a
+     * signed-in person. Nobody takes a place here: a member who has never signed in is a member all the same.
+     * Empty when the wedding has no such member.
+     */
+    java.util.Optional<Membership> membershipOfMember(java.util.UUID weddingId, java.util.UUID memberId);
+
     /** Whether this member belongs to this wedding. */
     boolean hasMember(java.util.UUID weddingId, java.util.UUID memberId);
 

@@ -131,6 +131,7 @@ export function entry(overrides: Partial<Entry> = {}): Entry {
     taskCount: 0,
     dependsOnIds: [],
     conflictsWithIds: [],
+    fromSuggestionId: null,
     version: 0,
     createdAt: '2026-11-17T10:00:00Z',
     updatedAt: '2026-11-17T10:00:00Z',

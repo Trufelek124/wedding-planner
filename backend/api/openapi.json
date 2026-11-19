@@ -295,6 +295,11 @@
             "format" : "date",
             "type" : [ "string", "null" ]
           },
+          "fromSuggestionId" : {
+            "description" : "The suggestion of the e-mail import that made this entry, whether it was added by itself or accepted by a person (GET /api/suggestions/{id}); null for an entry made by hand. Editing never changes it, and no request can set it.",
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
           "id" : {
             "format" : "uuid",
             "type" : "string"
@@ -367,7 +372,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "amount", "assigneeIds", "categoryId", "completedAt", "conflictsWithIds", "createdAt", "dependsOnIds", "dueDate", "id", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "priorityReason", "startDate", "status", "taskCount", "title", "updatedAt", "vendorId", "version" ],
+        "required" : [ "amount", "assigneeIds", "categoryId", "completedAt", "conflictsWithIds", "createdAt", "dependsOnIds", "dueDate", "fromSuggestionId", "id", "kind", "notes", "paidOn", "parentId", "paymentKind", "priority", "priorityMode", "priorityReason", "startDate", "status", "taskCount", "title", "updatedAt", "vendorId", "version" ],
         "type" : "object"
       },
       "EntryChange" : {
@@ -1441,9 +1446,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:already-decided", "urn:wedding-planner:problem:mail-not-set-up", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:already-decided", "urn:wedding-planner:problem:entry-changed", "urn:wedding-planner:problem:mail-not-set-up", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "ALREADY_DECIDED", "MAIL_NOT_SET_UP", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "ALREADY_DECIDED", "ENTRY_CHANGED", "MAIL_NOT_SET_UP", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -1506,11 +1511,12 @@
             "type" : "string"
           },
           "decidedAt" : {
+            "description" : "When it was decided; for one that counts as kept after thirty days, the moment that came to be. null while it waits or is ADDED.",
             "format" : "date-time",
             "type" : [ "string", "null" ]
           },
           "decidedBy" : {
-            "description" : "The member whose request decided it; null while it waits.",
+            "description" : "The member whose request decided it; null while it waits, while it is ADDED, and when ACCEPTED because thirty days passed: nobody decided it.",
             "format" : "uuid",
             "type" : [ "string", "null" ]
           },
@@ -1533,7 +1539,7 @@
             "type" : "string"
           },
           "madeEntryId" : {
-            "description" : "The task, payment or plan item that accepting made.",
+            "description" : "The task, payment or plan item that accepting made, or that was added by itself; null once it was undone.",
             "format" : "uuid",
             "type" : [ "string", "null" ]
           },
@@ -1576,7 +1582,8 @@
             "type" : [ "string", "null" ]
           },
           "state" : {
-            "enum" : [ "WAITING", "ACCEPTED", "REJECTED" ],
+            "description" : "WAITING for a person; ADDED when the import was sure enough and the task or step is already in the plan (nobody has decided it: keep or undo it; after thirty days it is answered as ACCEPTED, with nobody as decidedBy); ACCEPTED or REJECTED once decided.",
+            "enum" : [ "WAITING", "ADDED", "ACCEPTED", "REJECTED" ],
             "type" : "string"
           },
           "subject" : {
@@ -1665,6 +1672,40 @@
           }
         },
         "required" : [ "amount", "categoryId", "dueDate", "notes", "paymentKind", "startDate", "title", "vendorEmail", "vendorId", "vendorName", "vendorPhone", "vendorWebsite" ],
+        "type" : "object"
+      },
+      "SuggestionSettings" : {
+        "description" : "How sure the e-mail import has to be before it adds a task or a step of the plan by itself. One setting for the wedding: both owners see and change the same. Payments and vendors always wait.",
+        "properties" : {
+          "addsByItself" : {
+            "description" : "False: nothing is added by itself, everything waits. The threshold is kept for when it is switched on again.",
+            "type" : "boolean"
+          },
+          "threshold" : {
+            "description" : "From 50 to 100: the least confidence, as a percentage, at which it adds by itself.",
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 50,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "addsByItself", "threshold" ],
+        "type" : "object"
+      },
+      "SuggestionSettingsChange" : {
+        "description" : "The settings as they should be from now on. Applies to what is handed in from then on: nothing that waits is added and nothing that was added is undone.",
+        "properties" : {
+          "addsByItself" : {
+            "type" : "boolean"
+          },
+          "threshold" : {
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 50,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "addsByItself", "threshold" ],
         "type" : "object"
       },
       "TagCount" : {
@@ -2342,7 +2383,7 @@
         "tags" : [ "budget-controller" ]
       },
       "put" : {
-        "operationId" : "change_4",
+        "operationId" : "change_5",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2763,7 +2804,7 @@
         "tags" : [ "entry-controller" ]
       },
       "put" : {
-        "operationId" : "change_3",
+        "operationId" : "change_4",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -3199,7 +3240,7 @@
         "tags" : [ "guest-controller" ]
       },
       "put" : {
-        "operationId" : "change_2",
+        "operationId" : "change_3",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -3668,7 +3709,7 @@
         "tags" : [ "inspiration-controller" ]
       },
       "put" : {
-        "operationId" : "change_1",
+        "operationId" : "change_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -4005,13 +4046,13 @@
       "get" : {
         "operationId" : "list_7",
         "parameters" : [ {
-          "description" : "Which suggestions: the ones that wait (the default), the accepted or the rejected ones, or ALL.",
+          "description" : "Which suggestions: the ones that wait (the default), the ones added by themselves that nobody has kept or undone and that are younger than thirty days (ADDED), the accepted or the rejected ones, or ALL. One that was added by itself and is older than thirty days counts as accepted.",
           "in" : "query",
           "name" : "state",
           "required" : false,
           "schema" : {
             "default" : "WAITING",
-            "enum" : [ "WAITING", "ACCEPTED", "REJECTED", "ALL" ],
+            "enum" : [ "WAITING", "ADDED", "ACCEPTED", "REJECTED", "ALL" ],
             "type" : "string"
           }
         } ],
@@ -4040,6 +4081,113 @@
             "description" : "Any error."
           }
         },
+        "tags" : [ "suggestion-controller" ]
+      }
+    },
+    "/api/suggestions/settings" : {
+      "get" : {
+        "description" : "Whether the e-mail import adds tasks and steps of the plan by itself, and at what confidence. The same for both owners. Payments and vendors always wait.",
+        "operationId" : "settings",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionSettings"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "How sure the import has to be",
+        "tags" : [ "suggestion-controller" ]
+      },
+      "put" : {
+        "description" : "Applies to what is handed in from then on: nothing that waits is added and nothing that was added is undone. A threshold outside 50 to 100 is refused with a message next to the field.",
+        "operationId" : "change_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SuggestionSettingsChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionSettings"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Changes how sure the import has to be",
+        "tags" : [ "suggestion-controller" ]
+      }
+    },
+    "/api/suggestions/{id}" : {
+      "get" : {
+        "description" : "A suggestion of the caller's wedding, as the list gives it. It is where an entry's fromSuggestionId leads. Unknown: not-found.",
+        "operationId" : "get_6",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Suggestion"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "One suggestion",
         "tags" : [ "suggestion-controller" ]
       }
     },
@@ -4091,6 +4239,45 @@
         "tags" : [ "suggestion-controller" ]
       }
     },
+    "/api/suggestions/{id}/keep" : {
+      "post" : {
+        "description" : "Accepts a suggestion that was added by itself, in the caller's name; nothing else changes. Keeping again, or an accepted one, answers it as it is. One that was undone, rejected or is decided otherwise answers already-decided; one that still waits is a bad request.",
+        "operationId" : "keep",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Suggestion"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Keeps what was added by itself",
+        "tags" : [ "suggestion-controller" ]
+      }
+    },
     "/api/suggestions/{id}/reject" : {
       "post" : {
         "description" : "Makes nothing. Rejecting again answers the same; a suggestion that was accepted answers already-decided.",
@@ -4127,6 +4314,45 @@
           }
         },
         "summary" : "Rejects a suggestion",
+        "tags" : [ "suggestion-controller" ]
+      }
+    },
+    "/api/suggestions/{id}/undo" : {
+      "post" : {
+        "description" : "Removes the entry that was added and rejects the suggestion, in one action; undoing again answers the same. When the entry is no longer what was added (changed, ticked off, something hangs on it or depends on it, or it is gone) it stays, the suggestion counts as kept by the caller, and the answer is entry-changed. A suggestion that was kept or accepted, also by the thirty days passing, answers already-decided; one that still waits is a bad request.",
+        "operationId" : "undo",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Suggestion"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Undoes what was added by itself",
         "tags" : [ "suggestion-controller" ]
       }
     },

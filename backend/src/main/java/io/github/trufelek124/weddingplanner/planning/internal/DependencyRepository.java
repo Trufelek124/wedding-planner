@@ -29,6 +29,14 @@ class DependencyRepository {
                 .list();
     }
 
+    /** Whether this entry waits for another one, or another waits for it. */
+    boolean anyOf(UUID entryId) {
+        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM entry_dependency WHERE entry_id = ? OR depends_on_id = ?)")
+                .params(entryId, entryId)
+                .query(Boolean.class)
+                .single();
+    }
+
     void add(UUID entryId, UUID dependsOnId) {
         jdbc.sql("INSERT INTO entry_dependency (entry_id, depends_on_id) VALUES (?, ?) ON CONFLICT DO NOTHING")
                 .params(entryId, dependsOnId)

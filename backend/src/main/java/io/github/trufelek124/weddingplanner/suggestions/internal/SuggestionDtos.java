@@ -5,6 +5,9 @@ import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.PaymentKind;
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.State;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -50,7 +53,11 @@ final class SuggestionDtos {
     record SuggestionResponse(
             UUID id,
             @Schema(description = "What accepting makes: a task, a task with an amount, a step of the plan or a vendor.") Kind kind,
-            State state,
+            @Schema(
+                            description = "WAITING for a person; ADDED when the import was sure enough and the task or step is "
+                                    + "already in the plan (nobody has decided it: keep or undo it; after thirty days it is "
+                                    + "answered as ACCEPTED, with nobody as decidedBy); ACCEPTED or REJECTED once decided.")
+                    State state,
             @Schema(description = "What is proposed; for a vendor, its name.") String title,
             String notes,
             @Schema(description = "A plan item's first day.", nullable = true) LocalDate startDate,
@@ -71,9 +78,21 @@ final class SuggestionDtos {
             @Schema(description = "Opens the message in Gmail: always an https address at mail.google.com.") String mailLink,
             @Schema(description = "The quotation the proposal rests on.") String passage,
             @Schema(description = "The import's confidence as a whole percentage, 0 to 100.") int confidence,
-            @Schema(description = "The member whose request decided it; null while it waits.", nullable = true) UUID decidedBy,
-            @Schema(nullable = true) Instant decidedAt,
-            @Schema(description = "The task, payment or plan item that accepting made.", nullable = true) UUID madeEntryId,
+            @Schema(
+                            description = "The member whose request decided it; null while it waits, while it is ADDED, and "
+                                    + "when ACCEPTED because thirty days passed: nobody decided it.",
+                            nullable = true)
+                    UUID decidedBy,
+            @Schema(
+                            description = "When it was decided; for one that counts as kept after thirty days, the moment "
+                                    + "that came to be. null while it waits or is ADDED.",
+                            nullable = true)
+                    Instant decidedAt,
+            @Schema(
+                            description = "The task, payment or plan item that accepting made, or that was added by itself; "
+                                    + "null once it was undone.",
+                            nullable = true)
+                    UUID madeEntryId,
             @Schema(description = "The vendor that accepting made.", nullable = true) UUID madeVendorId,
             Instant createdAt) {
 
@@ -91,4 +110,39 @@ final class SuggestionDtos {
             return "Suggestion[id=" + id + ", kind=" + kind + ", state=" + state + "]";
         }
     }
+
+    @Schema(
+            name = "SuggestionSettings",
+            description = "How sure the e-mail import has to be before it adds a task or a step of the plan by itself. "
+                    + "One setting for the wedding: both owners see and change the same. Payments and vendors always wait.")
+    record SettingsResponse(
+            @Schema(description = "False: nothing is added by itself, everything waits. The threshold is kept for when it is "
+                            + "switched on again.")
+                    boolean addsByItself,
+            @Schema(description = "From 50 to 100: the least confidence, as a percentage, at which it adds by itself.", minimum = "50", maximum = "100")
+                    int threshold) {
+
+        static SettingsResponse of(SuggestionSettingsRepository.Settings settings) {
+            return new SettingsResponse(settings.addsByItself(), settings.threshold());
+        }
+    }
+
+    @Schema(
+            name = "SuggestionSettingsChange",
+            description = "The settings as they should be from now on. Applies to what is handed in from then on: nothing "
+                    + "that waits is added and nothing that was added is undone.")
+    record SettingsChange(
+            @NotNull(message = "Say whether tasks and steps are added by themselves.") Boolean addsByItself,
+            @Schema(minimum = "50", maximum = "100")
+                    @NotNull(message = THRESHOLD_MESSAGE)
+                    @Min(value = 50, message = THRESHOLD_MESSAGE)
+                    @Max(value = 100, message = THRESHOLD_MESSAGE)
+                    Integer threshold) {
+
+        SuggestionSettingsRepository.Settings asSettings() {
+            return new SuggestionSettingsRepository.Settings(addsByItself, threshold);
+        }
+    }
+
+    static final String THRESHOLD_MESSAGE = "Choose a number from 50 to 100.";
 }
