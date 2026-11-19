@@ -47,8 +47,8 @@
   "docs/deployment.md": {
    "publicId": "WP-DOC-3",
    "id": "a3fa59cf-6b77-4714-a7c3-696dc073d3cc",
-   "sha256": "249a326b1f783c95a5d4be398c1c52cb2f663c85ae9b8aa0adbe1a6c0b2b0e7a",
-   "commit": "eaf6853"
+   "sha256": "663f6463c8ec14ceea6a117c9221b7704b87742f8ea84c82f9cc02f6e5c8fb02",
+   "commit": "486ec4c"
   },
   "docs/decisions.md#D-002": {
    "publicId": "WP-DOC-4",
