@@ -1,0 +1,21 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP4-S4-T5",
+   "story": "EP4-S4",
+   "title": "Android: Home in the bar leads Home from a screen that was opened from Home",
+   "description": "The budget opens from Home's glance at the money and the suggestions from Home's line about them. Pressing Home in the bar at the bottom from there put the same screen straight back: the navigation keeps what stood above Home and restored it. Pressing Home shows Home itself, whatever was opened from it; the other places keep what they showed, as before. Done when a test on the JVM shows it for the budget reached both ways and the gate passes.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  }
+ ]
+}

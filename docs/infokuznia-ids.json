@@ -618,6 +618,12 @@
    "publicId": "WP-TS-72",
    "id": "14b0f6a6-53e5-4742-b912-7d8170b89185",
    "title": "Owner: switch the Gmail API on, set the consent screen to production, give the server its secret and key, and connect both mailboxes"
+  },
+  "EP4-S4-T5": {
+   "type": "task",
+   "publicId": "WP-TS-73",
+   "id": "83d1db61-a46d-4acd-b4ea-03a07b499903",
+   "title": "Android: Home in the bar leads Home from a screen that was opened from Home"
   }
  }
 }
