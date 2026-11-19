@@ -25,6 +25,7 @@ export function Shell({ onSignOut }: { onSignOut: () => void }) {
   const { pathname } = useLocation()
   const arrival = useNavigationType()
   const shownPath = useRef(pathname)
+  const bar = useRef<HTMLUListElement>(null)
   // How many suggestions wait: shown beside the page's name, and read again by whatever decides one.
   const suggestions = useLoaded('waiting-suggestions', (signal) => listSuggestions('WAITING', signal))
   const waiting = useMemo(
@@ -47,6 +48,31 @@ export function Shell({ onSignOut }: { onSignOut: () => void }) {
     }
   }, [pathname, arrival])
 
+  // On a narrow screen the entries are one row that moves sideways: the entry of the shown page is brought into
+  // view whenever the page changes and when the window is first drawn. Only the row moves, never the page.
+  useEffect(() => {
+    bar.current?.querySelector('a[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'center' })
+  }, [pathname, waiting.count])
+
+  // The row fades at an edge that has more behind it, so that "more" is seen without a scroll bar.
+  useEffect(() => {
+    const row = bar.current
+    if (!row) {
+      return undefined
+    }
+    const mark = () => {
+      row.dataset.before = String(row.scrollLeft > 1)
+      row.dataset.after = String(row.scrollLeft + row.clientWidth < row.scrollWidth - 1)
+    }
+    mark()
+    row.addEventListener('scroll', mark, { passive: true })
+    window.addEventListener('resize', mark)
+    return () => {
+      row.removeEventListener('scroll', mark)
+      window.removeEventListener('resize', mark)
+    }
+  }, [])
+
   return (
     <>
       <header className="topbar">
@@ -55,7 +81,7 @@ export function Shell({ onSignOut }: { onSignOut: () => void }) {
           Wedding planner
         </div>
         <nav aria-label="Main">
-          <ul className="nav">
+          <ul className="nav" ref={bar}>
             {PAGES.map((page) => (
               <li key={page.to}>
                 <NavLink to={page.to} end={page.to === '/'}>
@@ -74,7 +100,12 @@ export function Shell({ onSignOut }: { onSignOut: () => void }) {
           </ul>
         </nav>
         <div className="topbar-user">
-          {you && <span className="muted">Signed in as {you.displayName}</span>}
+          {you && (
+            <span className="muted">
+              <span className="topbar-lead">Signed in as </span>
+              {you.displayName}
+            </span>
+          )}
           <button type="button" className="button button-quiet" onClick={onSignOut}>
             Sign out
           </button>

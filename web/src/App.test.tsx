@@ -52,7 +52,7 @@ describe('the planner, from a signed-out visitor to the home page', () => {
 
     expect(await screen.findByRole('heading', { name: 'Anna & Piotr' })).toBeInTheDocument()
     expect(screen.getByText('Saturday 19 June 2027')).toBeInTheDocument()
-    expect(screen.getByText('Signed in as Anna')).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toHaveTextContent('Signed in as Anna')
     await expect(server.requests('POST /api/wedding')[0]?.json()).resolves.toEqual({
       yourName: 'Anna',
       partnerName: 'Piotr',
