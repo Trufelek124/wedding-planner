@@ -143,9 +143,12 @@ abstract class RoundTestBase extends MailTestBase {
         google.mailbox(PIOTR_MAILBOX).write(id, "thread-" + id, daysAgo(2), JAN, subject, Mime.plain(text), "INBOX");
     }
 
-    /** What the mail module notes now: one look at every mailbox. */
+    /**
+     * What the mail module notes now: the owners ask to look back as far as they may, as they do on the e-mail page,
+     * and the sync looks once at every mailbox. Connecting notes nothing of what is in a mailbox (D-009).
+     */
     void note() {
-        NotingForTests.lookAtAll(context);
+        NotingForTests.lookBackAndLookAtAll(context);
     }
 
     /** The verdict kept for a message (the module's own table; only a word, a reason and a number). */

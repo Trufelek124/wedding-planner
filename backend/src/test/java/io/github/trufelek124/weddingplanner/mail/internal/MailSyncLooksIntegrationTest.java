@@ -38,21 +38,73 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     // ---------------------------------------------------------------- the first look
 
     @Test
-    void theFirstLookNotesTheReceivedMessagesOfTheLastNinetyDaysAndNoneOlder() {
+    void theFirstLookNotesWhereTheMailboxStandsAndNothingOfWhatIsInIt() {
         received("m-day-1", daysAgo(1));
         received("m-day-89", daysAgo(89));
-        received("m-day-91", daysAgo(91));
-        received("m-day-400", daysAgo(400));
-        // Archived mail is still received mail: it has no INBOX label.
+        received("m-hours-ago", hoursAgo(2));
         box.deliver("m-archived", "thread-m-archived", daysAgo(30));
+        int listsBefore = google.count(MESSAGES);
 
         assertThat(sync.lookAtAll()).isEqualTo(1);
 
-        assertThat(noted(anna)).containsExactly("m-archived", "m-day-1", "m-day-89");
+        assertThat(noted(anna)).isEmpty();
+        assertThat(marker(anna)).isEqualTo(box.marker());
+        assertThat(lastLook(anna)).isNotNull();
+        assertThat(google.count(MESSAGES)).as("no message was listed").isEqualTo(listsBefore);
+        assertThat(refusals(anna)).isZero();
     }
 
     @Test
-    void theFirstLookLeavesOutWhatWasSentDraftsSpamTheBinAndChats() {
+    void whatArrivesAfterTheFirstLookIsNotedByTheNextOne() {
+        received("m-before", daysAgo(1));
+        sync.lookAtAll();
+
+        received("m-after-1", hoursAgo(1));
+        received("m-after-2", hoursAgo(1));
+        box.deliver("m-after-sent", "thread-sent", hoursAgo(1), "SENT");
+        sync.lookAtAll();
+
+        assertThat(noted(anna)).containsExactly("m-after-1", "m-after-2");
+    }
+
+    @Test
+    void theFirstLookTakesTheMarkerBeforeAnythingElseAndAsksForNoPage() {
+        for (int i = 1; i <= 7; i++) {
+            received("m-page-" + i, daysAgo(i));
+        }
+        box.pageSize(3);
+        Instant before = TestClock.now();
+
+        sync.lookAtAll();
+
+        List<Call> calls = google.calls().stream().filter(call -> call.path().startsWith("/gmail/")).toList();
+        // The connection asked for the address; then the marker: nothing more.
+        assertThat(calls.stream().map(Call::path).toList()).containsExactly(PROFILE, PROFILE);
+        assertThat(marker(anna)).isEqualTo(box.marker());
+        assertThat(lastLook(anna)).isBetween(before, TestClock.now());
+    }
+
+    @Test
+    void aFirstLookThatIsCutOffLeavesNoMarkerAndIsDoneAgain() {
+        google.answerNextCallsToWith(PROFILE, Reply.slow(2_600));
+
+        sync.lookAtAll();
+
+        assertThat(marker(anna)).isNull();
+        assertThat(lastLook(anna)).isNull();
+        assertThat(refusals(anna)).as("a cut off is no refusal").isZero();
+
+        sync.lookAtAll();
+
+        assertThat(marker(anna)).isEqualTo(box.marker());
+        assertThat(lastLook(anna)).isNotNull();
+    }
+
+    // ---------------------------------------------------------------- the ordinary look leaves out what is not received
+
+    @Test
+    void theHistoryLeavesOutWhatWasSentDraftsSpamTheBinAndChats() {
+        sync.lookAtAll();
         received("m-received", daysAgo(2));
         box.deliver("m-sent", "thread-a", daysAgo(2), "SENT");
         box.deliver("m-sent-and-inbox", "thread-a", daysAgo(2), "SENT", "INBOX");
@@ -67,37 +119,23 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     }
 
     @Test
-    void theFirstLookReadsEveryPageAndTakesTheMarkerBeforeTheFirstOfThem() {
-        for (int i = 1; i <= 7; i++) {
-            received("m-page-" + i, daysAgo(i));
-        }
-        box.pageSize(3);
-        Instant before = TestClock.now();
+    void aLookBackLeavesOutWhatWasSentDraftsSpamTheBinAndChatsAndAsksForNoMore() {
+        received("m-received", daysAgo(2));
+        // Archived mail is still received mail: it has no INBOX label.
+        box.deliver("m-archived", "thread-m-archived", daysAgo(30));
+        box.deliver("m-sent", "thread-a", daysAgo(2), "SENT");
+        box.deliver("m-sent-and-inbox", "thread-a", daysAgo(2), "SENT", "INBOX");
+        box.deliver("m-draft", "thread-b", daysAgo(2), "DRAFT");
+        box.deliver("m-spam", "thread-c", daysAgo(2), "SPAM");
+        box.deliver("m-bin", "thread-d", daysAgo(2), "TRASH");
+        box.deliver("m-chat", "thread-e", daysAgo(2), "CHAT");
 
-        sync.lookAtAll();
+        noteEverything(anna);
 
-        assertThat(noted(anna)).hasSize(7);
-        List<Call> calls = google.calls().stream().filter(call -> call.path().startsWith("/gmail/")).toList();
-        // The connection asked for the address; then the marker, and only then the pages: 3 + 3 + 1 messages.
-        assertThat(calls.stream().map(Call::path).toList())
-                .containsExactly(PROFILE, PROFILE, MESSAGES, MESSAGES, MESSAGES);
-        assertThat(calls.get(2).form()).doesNotContainKey("pageToken");
-        assertThat(calls.get(3).form()).containsKey("pageToken");
-        assertThat(marker(anna)).isEqualTo(box.marker());
-        assertThat(lastLook(anna)).isBetween(before, TestClock.now());
-    }
-
-    @Test
-    void theQueryAsksForTheLastNinetyDaysAndLeavesOutWhatIsNotReceived() {
-        Instant before = TestClock.now();
-
-        sync.lookAtAll();
-
+        assertThat(noted(anna)).containsExactly("m-archived", "m-received");
         Map<String, String> asked = google.calls(MESSAGES).get(0).form();
-        assertThat(asked.get("q"))
-                .contains("-in:sent", "-in:drafts", "-in:spam", "-in:trash", "-in:chats");
-        long after = Long.parseLong(asked.get("q").split(" ")[0].substring("after:".length()));
-        assertThat(Instant.ofEpochSecond(after)).isBetween(before.minus(Duration.ofDays(90)).minusSeconds(2), TestClock.now().minus(Duration.ofDays(90)));
+        assertThat(asked.get("q")).contains("-in:sent", "-in:drafts", "-in:spam", "-in:trash", "-in:chats");
+        assertThat(asked.keySet()).doesNotContain("format", "fields", "metadataHeaders");
     }
 
     @Test
@@ -114,7 +152,7 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     @Test
     void aLaterLookNotesOnlyWhatWasAddedSinceAndLeavesOutTheSameKinds() {
         received("m-old", daysAgo(3));
-        sync.lookAtAll();
+        noteEverything(anna);
         String markerAfterFirst = marker(anna);
         int listsBefore = google.count(MESSAGES);
 
@@ -137,7 +175,7 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     @Test
     void aLookWithNothingNewStillCountsAndKeepsTheMarkerCurrent() {
         received("m-old", daysAgo(3));
-        sync.lookAtAll();
+        noteEverything(anna);
         Instant first = lastLook(anna);
         TestClock.advance(Duration.ofMinutes(5));
 
@@ -154,7 +192,7 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     void lookingTwiceNotesNothingTwice() {
         received("m-1", daysAgo(3));
         received("m-2", daysAgo(2));
-        sync.lookAtAll();
+        noteEverything(anna);
         sync.lookAtAll();
         sync.lookAtAll();
 
@@ -165,7 +203,7 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     @Test
     void aMessageTheFirstLookAndTheHistoryBothNameIsStoredOnce() {
         received("m-both", hoursAgo(2));
-        sync.lookAtAll();
+        noteEverything(anna);
         assertThat(noted(anna)).containsExactly("m-both");
         // As when the message arrived while the first look was under way: the marker is from before it.
         jdbc.update("UPDATE mail_connection SET sync_marker = ?", "7391000");
@@ -180,7 +218,7 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     @Test
     void theStoreItselfNotesAMessageOnceHoweverOftenItIsToldOfIt() {
         received("m-1", daysAgo(1));
-        sync.lookAtAll();
+        noteEverything(anna);
         UUID owner = anna;
         Instant connectedAt = connections.find(owner).orElseThrow().connectedAt();
         MailSource.Noted again = new MailSource.Noted("m-1", "thread-m-1");
@@ -194,31 +232,9 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     // ---------------------------------------------------------------- a look counts only when complete
 
     @Test
-    void aFirstLookThatIsCutOffLeavesNoMarkerAndIsDoneAgain() {
-        for (int i = 1; i <= 5; i++) {
-            received("m-" + i, daysAgo(i));
-        }
-        box.pageSize(2);
-        google.answerNextCallsToWith(MESSAGES, Reply.normally(), Reply.slow(2_600));
-
-        sync.lookAtAll();
-
-        assertThat(marker(anna)).isNull();
-        assertThat(lastLook(anna)).isNull();
-        assertThat(noted(anna)).as("what was found is kept as it comes").hasSize(2);
-        assertThat(refusals(anna)).as("a cut off is no refusal").isZero();
-
-        sync.lookAtAll();
-
-        assertThat(noted(anna)).containsExactly("m-1", "m-2", "m-3", "m-4", "m-5");
-        assertThat(marker(anna)).isEqualTo(box.marker());
-        assertThat(lastLook(anna)).isNotNull();
-    }
-
-    @Test
     void aLaterLookThatIsCutOffLeavesTheMarkerAndTheTimeWhereTheyWere() {
         received("m-0", daysAgo(1));
-        sync.lookAtAll();
+        noteEverything(anna);
         String marker = marker(anna);
         Instant lookedAt = lastLook(anna);
         for (int i = 1; i <= 5; i++) {
@@ -242,25 +258,9 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     }
 
     @Test
-    void aLookThatIsTooSlowIsCutOffToo() {
-        received("m-1", daysAgo(1));
-        google.answerNextCallsToWith(MESSAGES, Reply.slow(2_600));
-
-        sync.lookAtAll();
-
-        assertThat(marker(anna)).isNull();
-        assertThat(noted(anna)).isEmpty();
-        assertThat(refusals(anna)).isZero();
-        sync.lookAtAll();
-        assertThat(noted(anna)).containsExactly("m-1");
-    }
-
-    // ---------------------------------------------------------------- the marker too old
-
-    @Test
     void aMarkerThatHasGrownTooOldIsReplacedByALookByDateFromTheDayBeforeTheLastCompleteLook() {
         received("m-before", daysAgo(10));
-        sync.lookAtAll();
+        noteEverything(anna);
         Instant lastComplete = lastLook(anna);
         TestClock.advance(Duration.ofDays(4));
         Instant dayBefore = lastComplete.atZone(ZoneOffset.UTC).toLocalDate().minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
@@ -298,6 +298,8 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
         received("m-anna-2", daysAgo(2));
         piotrsBox().deliver("m-piotr-1", "thread-piotr", daysAgo(1), "INBOX");
         box.pageSize(1);
+        lookBack(anna, 90);
+        lookBack(piotr(), 90);
         int before = google.calls().size();
 
         assertThat(sync.lookAtAll()).isEqualTo(2);
@@ -316,6 +318,7 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     @Test
     void aLookWhileAnotherIsRunningDoesNotStartASecond() throws Exception {
         received("m-1", daysAgo(1));
+        lookBack(anna, 90);
         google.answerNextCallsToWith(MESSAGES, Reply.slow(1_200));
 
         CompletableFuture<Integer> running = CompletableFuture.supplyAsync(sync::lookAtAll);
@@ -339,6 +342,8 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
         connectPiotr();
         received("m-anna", daysAgo(1));
         piotrsBox().deliver("m-piotr", "thread-piotr", daysAgo(1), "INBOX");
+        lookBack(anna, 90);
+        lookBack(piotr(), 90);
         sync.lookAtAll();
         assertThat(noted(anna)).hasSize(1);
 
@@ -354,6 +359,8 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
         connectPiotr();
         received("m-anna", daysAgo(1));
         piotrsBox().deliver("m-piotr", "thread-piotr", daysAgo(1), "INBOX");
+        lookBack(anna, 90);
+        lookBack(piotr(), 90);
         sync.lookAtAll();
         assertThat(noted(anna)).hasSize(1);
 
@@ -364,14 +371,14 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
         assertThat(lastLook(anna)).isNull();
         assertThat(noted(piotr())).containsExactly("m-piotr");
         google.mailbox("anna.other@planner.example").deliver("m-other", "thread-other", daysAgo(1), "INBOX");
-        sync.lookAtAll();
+        noteEverything(anna);
         assertThat(noted(anna)).containsExactly("m-other");
     }
 
     @Test
     void connectingTheSameMailboxAgainKeepsWhatWasNoted() throws Exception {
         received("m-anna", daysAgo(1));
-        sync.lookAtAll();
+        noteEverything(anna);
         String marker = marker(anna);
 
         assertThat(location(connect(wedding.anna, ANNA_MAILBOX))).isEqualTo(YES);
@@ -403,7 +410,7 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
         received("m-1", daysAgo(1));
         received("m-2", daysAgo(2));
         received("m-3", daysAgo(3));
-        sync.lookAtAll();
+        noteEverything(anna);
 
         Map<String, Object> mine = yours(mail(wedding.anna));
 
@@ -421,7 +428,7 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     @Test
     void ofAMessageTheTableHoldsTheTwoIdentifiersAndNothingElse() {
         box.deliver("m-secret-looking", "thread-secret-looking", daysAgo(1), "INBOX", "IMPORTANT", "CATEGORY_UPDATES", "Label_17");
-        sync.lookAtAll();
+        noteEverything(anna);
 
         List<String> columns = jdbc.queryForList(
                 "SELECT column_name FROM information_schema.columns WHERE table_name = 'mail_message' ORDER BY column_name", String.class);
@@ -439,7 +446,7 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
     @Test
     void theSyncAsksGoogleForNoMoreThanTheIdentifiers() {
         received("m-1", daysAgo(1));
-        sync.lookAtAll();
+        noteEverything(anna);
         received("m-2", hoursAgo(1));
         sync.lookAtAll();
 

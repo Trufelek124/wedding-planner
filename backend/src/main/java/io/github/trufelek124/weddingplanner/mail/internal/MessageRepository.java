@@ -110,6 +110,50 @@ class MessageRepository {
         return Optional.of(added);
     }
 
+    /**
+     * Notes what a look back found, as part of the ask {@code lookId} of this connection: the messages are noted under
+     * the ask's own look, the number of the new ones is added to what the ask has found, and with {@code last} the ask is
+     * done. All in one transaction, so a look back is done only with the last page, and a page stored twice (a run that
+     * is done again after it was cut off) counts each message once. Nothing is stored when the connection was replaced
+     * or removed, or the owner asked again, since the look began.
+     *
+     * @return how many messages were new, or empty when this is no longer the ask that is under way
+     */
+    @Transactional
+    Optional<Integer> noteLookBack(UUID memberId, Instant connectedAt, long lookId, List<Noted> messages, Instant now, boolean last) {
+        boolean still = !jdbc.sql("""
+                SELECT 1 FROM mail_connection
+                WHERE member_id = ? AND connected_at = ? AND state = 'CONNECTED'
+                  AND look_back_look = ? AND look_back_done_at IS NULL
+                FOR UPDATE
+                """)
+                .params(memberId, at(connectedAt), lookId)
+                .query((rows, number) -> 1)
+                .list()
+                .isEmpty();
+        if (!still) {
+            return Optional.empty();
+        }
+        int added = 0;
+        for (Noted message : messages) {
+            added += jdbc.sql("""
+                    INSERT INTO mail_message (member_id, message_id, thread_id, noted_at, look, newness)
+                    VALUES (?, ?, ?, ?, ?, -1 * nextval('mail_noted_seq'))
+                    ON CONFLICT (member_id, message_id) DO NOTHING
+                    """)
+                    .params(memberId, message.messageId(), message.threadId(), at(now), lookId)
+                    .update();
+        }
+        jdbc.sql("""
+                UPDATE mail_connection
+                SET look_back_found = look_back_found + ?, look_back_done_at = CASE WHEN ? THEN CAST(? AS timestamptz) END
+                WHERE member_id = ?
+                """)
+                .params(added, last, at(now), memberId)
+                .update();
+        return Optional.of(added);
+    }
+
     int count(UUID memberId) {
         return jdbc.sql("SELECT count(*) FROM mail_message WHERE member_id = ?").param(memberId).query(Integer.class).single();
     }

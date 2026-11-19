@@ -496,6 +496,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mail/gmail/look-back": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Looks through earlier mail
+         * @description Asks the server to note the received messages of the last 7 to 90 days of the caller's own mailbox, newest first, so that they are read like new mail. Never the partner's mailbox. Answers at once with what GET /api/mail answers, already saying that the look back is under way; asking again, or for longer, replaces what was asked and counts nothing twice. Answers mail-not-connected when there is no mailbox to look through or it has to be connected again, and mail-not-set-up while the import is off.
+         */
+        post: operations["lookBack"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mail/gmail/return": {
         parameters: {
             query?: never;
@@ -1264,6 +1284,8 @@ export interface components {
              * @description When the server last looked at the mailbox.
              */
             lastLookAt: string | null;
+            /** @description The look back through earlier mail, if the owner asked for one. Always there. */
+            lookBack: components["schemas"]["MailLookBack"];
             /**
              * Format: int32
              * @description How many messages the server has noted; 0 until the sync exists.
@@ -1276,6 +1298,42 @@ export interface components {
         MailConnectionStart: {
             /** @description Google's address, made for this attempt only. Go there at once; it works once. */
             authorizationUrl: string;
+        };
+        /** @description Where the owner's look back through earlier mail stands (S03 section 5). It is asked for on the e-mail page, for the owner's own mailbox, and never started by connecting. */
+        MailLookBack: {
+            /**
+             * Format: date-time
+             * @description When it was asked.
+             */
+            askedAt: string | null;
+            /**
+             * Format: int32
+             * @description How many days were asked for, 7 to 90; null while nothing was asked.
+             */
+            days: number | null;
+            /**
+             * Format: date-time
+             * @description When it was done.
+             */
+            doneAt: string | null;
+            /**
+             * Format: int32
+             * @description How many messages this ask noted; those that were noted before it are not counted again.
+             */
+            found: number;
+            /**
+             * @description NONE: nothing was asked yet (or the mailbox was connected anew). UNDER_WAY: asked, not all looked through yet. DONE: the last page was stored.
+             * @enum {string}
+             */
+            state: "NONE" | "UNDER_WAY" | "DONE";
+        };
+        /** @description How far back to look through the caller's own mailbox. */
+        MailLookBackRequest: {
+            /**
+             * Format: int32
+             * @description The last so many days, 7 to 90.
+             */
+            days: number;
         };
         /** @description Where the reading of the mail stands, for both mailboxes of the wedding together (S04 section 8). Numbers only: nothing of anybody's address or message. The costs are an estimate from the tokens used and the prices in the server's settings, in whole US cents. */
         MailReading: {
@@ -1557,7 +1615,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:already-decided" | "urn:wedding-planner:problem:entry-changed" | "urn:wedding-planner:problem:mail-not-set-up" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:already-decided" | "urn:wedding-planner:problem:entry-changed" | "urn:wedding-planner:problem:mail-not-set-up" | "urn:wedding-planner:problem:mail-not-connected" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -3461,6 +3519,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    lookBack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailLookBackRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailState"];
+                };
             };
             /** @description Any error. */
             default: {

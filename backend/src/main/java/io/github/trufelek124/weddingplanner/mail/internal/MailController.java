@@ -2,16 +2,19 @@ package io.github.trufelek124.weddingplanner.mail.internal;
 
 import io.github.trufelek124.weddingplanner.identity.UserId;
 import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.ConnectionStart;
+import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.LookBackRequest;
 import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.MailStateResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -53,6 +56,18 @@ class MailController {
                 ConnectCookie.set(request, setup.require().google().publicUrl().getScheme().equals("https"), started.cookieValue()));
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
         return new ConnectionStart(started.authorizationUrl());
+    }
+
+    @Operation(
+            summary = "Looks through earlier mail",
+            description = "Asks the server to note the received messages of the last 7 to 90 days of the caller's own mailbox, "
+                    + "newest first, so that they are read like new mail. Never the partner's mailbox. Answers at once with what "
+                    + "GET /api/mail answers, already saying that the look back is under way; asking again, or for longer, replaces "
+                    + "what was asked and counts nothing twice. Answers mail-not-connected when there is no mailbox to look through "
+                    + "or it has to be connected again, and mail-not-set-up while the import is off.")
+    @PostMapping("/gmail/look-back")
+    MailStateResponse lookBack(UserId user, @Valid @RequestBody LookBackRequest body) {
+        return mail.lookBack(user, body.days());
     }
 
     @Operation(

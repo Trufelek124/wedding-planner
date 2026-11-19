@@ -3,6 +3,9 @@ package io.github.trufelek124.weddingplanner.mail.internal;
 import io.github.trufelek124.weddingplanner.mail.ReadingReport;
 import io.github.trufelek124.weddingplanner.mail.internal.MailTypes.ConnectionState;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 
 /**
@@ -37,12 +40,49 @@ final class MailDtos {
                     String address,
             @Schema(description = "When it was connected.", nullable = true) Instant connectedAt,
             @Schema(description = "When the server last looked at the mailbox.", nullable = true) Instant lastLookAt,
-            @Schema(description = "How many messages the server has noted; 0 until the sync exists.") int messagesNoted) {
+            @Schema(description = "How many messages the server has noted; 0 until the sync exists.") int messagesNoted,
+            @Schema(description = "The look back through earlier mail, if the owner asked for one. Always there.") LookBackView lookBack) {
 
         @Override
         public String toString() {
             return "MailConnection[state=" + state + "]";
         }
+    }
+
+    @Schema(
+            name = "MailLookBack",
+            description = "Where the owner's look back through earlier mail stands (S03 section 5). It is asked for on the "
+                    + "e-mail page, for the owner's own mailbox, and never started by connecting.")
+    record LookBackView(
+            @Schema(description = "NONE: nothing was asked yet (or the mailbox was connected anew). UNDER_WAY: asked, not all looked "
+                    + "through yet. DONE: the last page was stored.") LookBackState state,
+            @Schema(description = "How many days were asked for, 7 to 90; null while nothing was asked.", nullable = true) Integer days,
+            @Schema(description = "When it was asked.", nullable = true) Instant askedAt,
+            @Schema(description = "When it was done.", nullable = true) Instant doneAt,
+            @Schema(description = "How many messages this ask noted; those that were noted before it are not counted again.") int found) {
+
+        @Override
+        public String toString() {
+            return "MailLookBack[state=" + state + "]";
+        }
+    }
+
+    /** Where a look back stands. */
+    enum LookBackState {
+        NONE,
+        UNDER_WAY,
+        DONE
+    }
+
+    @Schema(name = "MailLookBackRequest", description = "How far back to look through the caller's own mailbox.")
+    record LookBackRequest(
+            @Schema(description = "The last so many days, 7 to 90.", minimum = "7", maximum = "90")
+                    @NotNull(message = DAYS_RANGE)
+                    @Min(value = 7, message = DAYS_RANGE)
+                    @Max(value = 90, message = DAYS_RANGE)
+                    Integer days) {
+
+        static final String DAYS_RANGE = "Choose a number of days from 7 to 90.";
     }
 
     @Schema(name = "PartnersMailConnection", description = "The partner's connection: whether there is one, never which mailbox.")

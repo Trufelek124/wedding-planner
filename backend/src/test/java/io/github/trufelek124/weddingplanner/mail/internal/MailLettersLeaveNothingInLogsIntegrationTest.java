@@ -65,7 +65,8 @@ class MailLettersLeaveNothingInLogsIntegrationTest extends MailLettersTestBase {
                 "msg-gone-qx");
         secrets.addAll(identifiers);
 
-        sync.lookAtAll();
+        lookBack(piotr(), 90);
+        noteEverything(anna());
         List<MessageHandle> handles = reading.waiting(100);
         assertThat(handles).hasSize(9);
         // Every kind of message, then every kind of trouble, with the answers themselves carrying the secrets.

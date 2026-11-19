@@ -2166,6 +2166,20 @@ a.button {
   gap: 1rem;
 }
 
+.mail-earlier {
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.mail-earlier-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mail-earlier-form select {
+  max-width: 16rem;
+}
+
 .mail-adds input[name='threshold'] {
   max-width: 8rem;
 }

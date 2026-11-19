@@ -48,7 +48,8 @@ class MailSyncLeavesNothingInLogsIntegrationTest extends MailSyncTestBase {
         annasBox().pageSize(2);
 
         // The first look of both, then a later one, one that is cut off, and a marker that has grown too old.
-        sync.lookAtAll();
+        assertThat(http.postJsonAs(wedding.anna, "/api/mail/gmail/look-back", "{\"days\":90}").statusCode()).isEqualTo(200);
+        noteEverything(piotr());
         secrets.add(marker(anna()));
         secrets.add(marker(piotr()));
         TestClock.advance(Duration.ofMinutes(5));
@@ -89,6 +90,8 @@ class MailSyncLeavesNothingInLogsIntegrationTest extends MailSyncTestBase {
         String log = output.getAll();
         assertThat(log).as("the log was captured, and the looks are in it")
                 .contains("Looked at the mailbox of member " + anna())
+                .contains("Member " + anna() + " asked to look back 90 days")
+                .contains("The look back of member " + anna() + " over 90 days is done: 5 messages noted")
                 .contains("is put off until")
                 .contains("has to be connected again");
         for (String secret : secrets) {

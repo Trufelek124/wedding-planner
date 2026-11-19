@@ -33,13 +33,13 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
         annasBox().pageSize(1);
         annasBox().deliver("a1", "ta1", daysAgo(3), "INBOX");
         annasBox().deliver("a2", "ta2", daysAgo(2), "INBOX");
-        sync.lookAtAll();
+        noteEverything(anna());
         connectPiotr();
         piotrsBox().pageSize(1);
         piotrsBox().deliver("p1", "tp1", daysAgo(5), "INBOX");
         piotrsBox().deliver("p2", "tp2", daysAgo(4), "INBOX");
         TestClock.advance(Duration.ofMinutes(5));
-        sync.lookAtAll();
+        noteEverything(piotr());
         annasBox().deliver("a3", "ta3", hoursAgo(3), "INBOX");
         annasBox().deliver("a4", "ta4", hoursAgo(2), "INBOX");
         TestClock.advance(Duration.ofMinutes(5));
@@ -254,14 +254,14 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
     void theKeyIsTheSameAfterTheSameMailboxIsConnectedAgain() throws Exception {
         connectAnna();
         annasBox().deliver("a1", "ta1", daysAgo(1), "INBOX");
-        sync.lookAtAll();
+        noteEverything(anna());
         Keys before = reading.keysOf(reading.waiting(1).getFirst());
 
         assertThat(http.deleteAs(wedding.anna, "/api/mail/gmail/connection").statusCode()).isEqualTo(204);
         assertThat(reading.waiting(1)).isEmpty();
         connectAnna();
         TestClock.advance(Duration.ofMinutes(5));
-        sync.lookAtAll();
+        noteEverything(anna());
 
         assertThat(reading.waiting(1)).hasSize(1);
         assertThat(reading.keysOf(reading.waiting(1).getFirst())).isEqualTo(before);

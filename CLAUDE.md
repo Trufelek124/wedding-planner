@@ -110,7 +110,10 @@ closing comment quotes its summary lines and its exit code.
   page before disconnecting. It has no entry in the top bar: it is reached from the suggestions inbox and, while
   the mail is not connected, from Home. Its part "Reading your mail" (S04 section 8) says the reading's state in
   words, never by its name, the numbers of both mailboxes together, and the estimated cost in US dollars
-  (`dollars()` in `src/mail/mailApi.ts`, from whole cents — `money()` is for the wedding's currency).
+  (`dollars()` in `src/mail/mailApi.ts`, from whole cents — `money()` is for the wedding's currency). Its part
+  "Earlier mail" asks the server to look back through your own mailbox — a choice of days, 30 to begin with, one
+  request per press — and, while that is under way, asks the server again every few seconds until it is done or
+  the page is left.
 - The top bar is one row from 64rem up. Below that the name and the signed-in block share a row and the entries
   are one row that moves sideways, with the entry of the page that is shown brought into view; the entries stay a
   plain list of links at every width, with no menu button.
@@ -301,7 +304,11 @@ uses another only through the types in that module's own package, and never in a
   - The import is off unless all its settings are there and valid (`MailSetup`); off, it asks nothing of Google.
   - It goes out only to Google's configured addresses, with short limits and no redirects followed.
   - The sync (`MailSync`, every five minutes) reads a mailbox through `MailSource`, which has nothing of Gmail in
-    its words; `GmailSource` is Gmail behind it. Of a message it keeps **only Google's identifier of it and of its
+    its words; `GmailSource` is Gmail behind it. **The first look notes where the mailbox stands and nothing of
+    what is already in it** (D-009): earlier mail is looked through only when its owner asks
+    (`POST /api/mail/gmail/look-back`, 7 to 90 days, their own mailbox and nobody else's). What was asked is kept
+    with the connection, so it goes on after a restart, is done only with its last page, and counts a message
+    once however often it is asked. Of a message it keeps **only Google's identifier of it and of its
     thread** (`mail_message`): no sender, subject, snippet, label or date. A message is noted once; a look counts
     only when it is complete (the marker and "last looked at" move with the last of what it found); a refusal by
     Google puts that mailbox off for growing times that are kept in the table; a mailbox that has to be connected

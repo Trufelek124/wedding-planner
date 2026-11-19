@@ -37,7 +37,7 @@ class MailStateAndDisconnectingIntegrationTest extends MailTestBase {
         assertThat(yours(state)).containsEntry("state", "NOT_CONNECTED");
         // Every field is always there, as a value or as null.
         assertThat(state.keySet()).containsExactlyInAnyOrder("setUp", "yours", "partner", "reading");
-        assertThat(yours(state).keySet()).containsExactlyInAnyOrder("state", "address", "connectedAt", "lastLookAt", "messagesNoted");
+        assertThat(yours(state).keySet()).containsExactlyInAnyOrder("state", "address", "connectedAt", "lastLookAt", "messagesNoted", "lookBack");
     }
 
     @Test

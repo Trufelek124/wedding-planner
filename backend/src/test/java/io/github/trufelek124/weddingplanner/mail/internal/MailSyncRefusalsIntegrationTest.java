@@ -23,6 +23,8 @@ class MailSyncRefusalsIntegrationTest extends MailSyncTestBase {
         box = annasBox();
         connectAnna();
         box.deliver("m-1", "thread-1", daysAgo(1), "INBOX");
+        // Connecting notes nothing of what is in the mailbox (D-009): Anna has asked for the last ninety days.
+        lookBack(anna, 90);
     }
 
     private static final Reply TOO_MANY = Reply.json(429, "{\"error\":{\"code\":429,\"status\":\"RESOURCE_EXHAUSTED\"}}");
@@ -94,7 +96,7 @@ class MailSyncRefusalsIntegrationTest extends MailSyncTestBase {
         int calls = google.calls().size();
 
         // The server is restarted: a new service object, with only the database to go by.
-        MailSync restarted = new MailSync(setup, connections, messageRepository, source, clock, false);
+        MailSync restarted = new MailSync(setup, connections, messageRepository, source, clock, new org.springframework.core.task.SyncTaskExecutor(), false);
 
         assertThat(restarted.lookAtAll()).as("still put off").isZero();
         assertThat(google.calls()).hasSize(calls);
@@ -131,6 +133,7 @@ class MailSyncRefusalsIntegrationTest extends MailSyncTestBase {
     void aMailboxThatIsPutOffDoesNotStopTheOther() throws Exception {
         connectPiotr();
         piotrsBox().deliver("m-piotr", "thread-piotr", daysAgo(1), "INBOX");
+        lookBack(piotr(), 90);
         google.answerEveryGmailCallOfWith(ANNA_MAILBOX, TOO_MANY);
 
         assertThat(sync.lookAtAll()).isEqualTo(2);
@@ -234,6 +237,7 @@ class MailSyncRefusalsIntegrationTest extends MailSyncTestBase {
     void aConnectionThatNeedsConnectingAgainDoesNotStopTheOtherMailbox() throws Exception {
         connectPiotr();
         piotrsBox().deliver("m-piotr", "thread-piotr", daysAgo(1), "INBOX");
+        lookBack(piotr(), 90);
         google.withdraw(google.refreshTokenOf(ANNA_MAILBOX));
 
         sync.lookAtAll();

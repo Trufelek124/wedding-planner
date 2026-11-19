@@ -939,6 +939,10 @@
             "format" : "date-time",
             "type" : [ "string", "null" ]
           },
+          "lookBack" : {
+            "$ref" : "#/components/schemas/MailLookBack",
+            "description" : "The look back through earlier mail, if the owner asked for one. Always there."
+          },
           "messagesNoted" : {
             "description" : "How many messages the server has noted; 0 until the sync exists.",
             "format" : "int32",
@@ -949,7 +953,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "address", "connectedAt", "lastLookAt", "messagesNoted", "state" ],
+        "required" : [ "address", "connectedAt", "lastLookAt", "lookBack", "messagesNoted", "state" ],
         "type" : "object"
       },
       "MailConnectionStart" : {
@@ -961,6 +965,52 @@
           }
         },
         "required" : [ "authorizationUrl" ],
+        "type" : "object"
+      },
+      "MailLookBack" : {
+        "description" : "Where the owner's look back through earlier mail stands (S03 section 5). It is asked for on the e-mail page, for the owner's own mailbox, and never started by connecting.",
+        "properties" : {
+          "askedAt" : {
+            "description" : "When it was asked.",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "days" : {
+            "description" : "How many days were asked for, 7 to 90; null while nothing was asked.",
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "doneAt" : {
+            "description" : "When it was done.",
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "found" : {
+            "description" : "How many messages this ask noted; those that were noted before it are not counted again.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "state" : {
+            "description" : "NONE: nothing was asked yet (or the mailbox was connected anew). UNDER_WAY: asked, not all looked through yet. DONE: the last page was stored.",
+            "enum" : [ "NONE", "UNDER_WAY", "DONE" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "askedAt", "days", "doneAt", "found", "state" ],
+        "type" : "object"
+      },
+      "MailLookBackRequest" : {
+        "description" : "How far back to look through the caller's own mailbox.",
+        "properties" : {
+          "days" : {
+            "description" : "The last so many days, 7 to 90.",
+            "format" : "int32",
+            "maximum" : 90,
+            "minimum" : 7,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "days" ],
         "type" : "object"
       },
       "MailReading" : {
@@ -1446,9 +1496,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:already-decided", "urn:wedding-planner:problem:entry-changed", "urn:wedding-planner:problem:mail-not-set-up", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:already-decided", "urn:wedding-planner:problem:entry-changed", "urn:wedding-planner:problem:mail-not-set-up", "urn:wedding-planner:problem:mail-not-connected", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "ALREADY_DECIDED", "ENTRY_CHANGED", "MAIL_NOT_SET_UP", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "ALREADY_DECIDED", "ENTRY_CHANGED", "MAIL_NOT_SET_UP", "MAIL_NOT_CONNECTED", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -3988,6 +4038,46 @@
           }
         },
         "summary" : "Starts connecting a Gmail mailbox",
+        "tags" : [ "mail-controller" ]
+      }
+    },
+    "/api/mail/gmail/look-back" : {
+      "post" : {
+        "description" : "Asks the server to note the received messages of the last 7 to 90 days of the caller's own mailbox, newest first, so that they are read like new mail. Never the partner's mailbox. Answers at once with what GET /api/mail answers, already saying that the look back is under way; asking again, or for longer, replaces what was asked and counts nothing twice. Answers mail-not-connected when there is no mailbox to look through or it has to be connected again, and mail-not-set-up while the import is off.",
+        "operationId" : "lookBack",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MailLookBackRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MailState"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Looks through earlier mail",
         "tags" : [ "mail-controller" ]
       }
     },

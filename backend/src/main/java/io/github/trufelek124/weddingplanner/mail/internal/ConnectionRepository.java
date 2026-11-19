@@ -30,11 +30,23 @@ class ConnectionRepository {
             String syncMarker,
             Instant lastLookAt,
             int refusals,
-            Instant putOffUntil) {
+            Instant putOffUntil,
+            LookBack lookBack) {
 
         @Override
         public String toString() {
             return "Connection[member=" + memberId + ", state=" + state + "]";
+        }
+    }
+
+    /**
+     * What the owner asked for with "Read earlier mail": how many days, when, from which moment on mail is wanted, the
+     * look the ask notes its messages under, and whether and when it was done. Null in a connection where nothing was asked.
+     */
+    record LookBack(int days, Instant askedAt, Instant from, long look, Instant doneAt, int found) {
+
+        boolean underWay() {
+            return doneAt == null;
         }
     }
 
@@ -48,7 +60,8 @@ class ConnectionRepository {
     }
 
     private static final String SELECT =
-            "SELECT member_id, state, address, token_sealed, connected_at, sync_marker, last_look_at, refusals, put_off_until"
+            "SELECT member_id, state, address, token_sealed, connected_at, sync_marker, last_look_at, refusals, put_off_until,"
+                    + " look_back_days, look_back_asked_at, look_back_from, look_back_look, look_back_done_at, look_back_found"
                     + " FROM mail_connection";
 
     private final JdbcClient jdbc;
@@ -89,7 +102,13 @@ class ConnectionRepository {
                     sync_marker = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.sync_marker END,
                     last_look_at = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.last_look_at END,
                     refusals = 0,
-                    put_off_until = NULL
+                    put_off_until = NULL,
+                    look_back_days = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.look_back_days END,
+                    look_back_asked_at = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.look_back_asked_at END,
+                    look_back_from = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.look_back_from END,
+                    look_back_look = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.look_back_look END,
+                    look_back_done_at = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.look_back_done_at END,
+                    look_back_found = CASE WHEN mail_connection.address = EXCLUDED.address THEN mail_connection.look_back_found ELSE 0 END
                 """)
                 .params(memberId, address, tokenSealed, at(now))
                 .update();
@@ -122,6 +141,28 @@ class ConnectionRepository {
                 """)
                         .params(memberId, tokenSealedThatFailed)
                         .update()
+                == 1;
+    }
+
+    /**
+     * Records that the owner asked to look back {@code days} days, replacing any earlier ask: what was found by it is
+     * counted from nothing, and the moment mail is wanted from is fixed now. Only for a connection that is connected.
+     *
+     * @return whether it was recorded; false when the member has no connection, or one that has to be made again
+     */
+    boolean askLookBack(UUID memberId, int days, Instant now) {
+        return jdbc.sql("""
+                UPDATE mail_connection
+                SET look_back_days = ?,
+                    look_back_asked_at = ?,
+                    look_back_from = ?,
+                    look_back_look = nextval('mail_look_seq'),
+                    look_back_done_at = NULL,
+                    look_back_found = 0
+                WHERE member_id = ? AND state = 'CONNECTED'
+                """)
+                .params(days, at(now), at(now.minus(java.time.Duration.ofDays(days))), memberId)
+                .update()
                 == 1;
     }
 
@@ -166,7 +207,23 @@ class ConnectionRepository {
                 rows.getInt("refusals"),
                 rows.getObject("put_off_until", OffsetDateTime.class) == null
                         ? null
-                        : rows.getObject("put_off_until", OffsetDateTime.class).toInstant());
+                        : rows.getObject("put_off_until", OffsetDateTime.class).toInstant(),
+                lookBackOf(rows));
+    }
+
+    private static LookBack lookBackOf(java.sql.ResultSet rows) throws java.sql.SQLException {
+        int days = rows.getInt("look_back_days");
+        if (rows.wasNull()) {
+            return null;
+        }
+        OffsetDateTime done = rows.getObject("look_back_done_at", OffsetDateTime.class);
+        return new LookBack(
+                days,
+                rows.getObject("look_back_asked_at", OffsetDateTime.class).toInstant(),
+                rows.getObject("look_back_from", OffsetDateTime.class).toInstant(),
+                rows.getLong("look_back_look"),
+                done == null ? null : done.toInstant(),
+                rows.getInt("look_back_found"));
     }
 
     private static OffsetDateTime at(Instant instant) {

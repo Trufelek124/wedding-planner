@@ -38,7 +38,7 @@ class ReadingWithoutAKeyIntegrationTest extends MailTestBase {
         assertThat(location(connect(wedding.anna, ANNA_MAILBOX))).isEqualTo(YES);
         google.mailbox(ANNA_MAILBOX).write("m-1", "t-1", Instant.now().minus(Duration.ofDays(2)), "Jan <jan@palace-on-the-hill.example>", "Hi",
                 Mime.plain("Hello"), "INBOX");
-        NotingForTests.lookAtAll(context);
+        NotingForTests.lookBackAndLookAtAll(context);
         int threadCalls = google.calls("/gmail/v1/users/me/threads").size();
 
         assertThat(round.report().state()).isEqualTo(State.OFF);

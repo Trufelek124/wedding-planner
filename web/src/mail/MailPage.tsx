@@ -14,8 +14,12 @@ import {
   fetchMail,
   googleAddress,
   lastLook,
+  LOOK_BACK_CHOICES,
+  LOOK_BACK_TO_BEGIN_WITH,
+  lookBack,
   moment,
   startConnecting,
+  type MailLookBack,
   type MailReading,
   type MailState,
   type PartnersMailConnection,
@@ -84,7 +88,7 @@ export function MailPage() {
       ) : mail.state.status === 'loading' ? (
         <PageWaiting what="Loading…" />
       ) : (
-        <Loaded mail={mail.state.data} onChanged={mail.reload} say={say} />
+        <Loaded mail={mail.state.data} onChanged={mail.reload} onState={mail.set} say={say} />
       )}
     </div>
   )
@@ -93,10 +97,12 @@ export function MailPage() {
 interface LoadedProps {
   mail: MailState
   onChanged: () => void
+  /** What the server said, put on the page at once. */
+  onState: (state: MailState) => void
   say: (tone: Notice['tone'], text: string) => void
 }
 
-function Loaded({ mail, onChanged, say }: LoadedProps) {
+function Loaded({ mail, onChanged, onState, say }: LoadedProps) {
   if (!mail.setUp) {
     return (
       <p className="empty">The e-mail import is not set up on this server, so there is nothing to connect. Whoever runs the planner can switch it on.</p>
@@ -104,7 +110,7 @@ function Loaded({ mail, onChanged, say }: LoadedProps) {
   }
   return (
     <>
-      <Yours mail={mail} onChanged={onChanged} say={say} />
+      <Yours mail={mail} onChanged={onChanged} onState={onState} say={say} />
       <Partner partner={mail.partner} />
       <AddsByItself say={say} />
       <Reading reading={mail.reading} />
@@ -112,7 +118,7 @@ function Loaded({ mail, onChanged, say }: LoadedProps) {
   )
 }
 
-function Yours({ mail, onChanged, say }: LoadedProps) {
+function Yours({ mail, onChanged, onState, say }: LoadedProps) {
   const { timeZone } = useCurrentWedding()
   const mine = mail.yours
   const sending = useRef(false)
@@ -209,6 +215,7 @@ function Yours({ mail, onChanged, say }: LoadedProps) {
               <dd>{mine.messagesNoted}</dd>
             </div>
           </dl>
+          <EarlierMail lookBack={mine.lookBack} reading={mail.reading} onChanged={onChanged} onState={onState} say={say} />
         </>
       ) : (
         <>
@@ -267,6 +274,164 @@ function Yours({ mail, onChanged, say }: LoadedProps) {
   )
 }
 
+/** How often the page asks the server again while a look back is under way. */
+const POLL_EVERY_MS = 5000
+
+/** "7 days" for the choice, "the last 30 days" for the sentences. */
+function daysWord(days: number): string {
+  return days === 1 ? '1 day' : `${days} days`
+}
+
+/** What the look back has found, as a person would say it. */
+function foundWords(found: number): string {
+  return found === 0 ? 'No messages found.' : found === 1 ? '1 message found.' : `${found} messages found.`
+}
+
+/**
+ * Earlier mail is read only when its owner asks: how far back, one press, and how it stands. While it is under way the
+ * page asks the server again every few seconds, and stops when it is done or the page is left.
+ */
+function EarlierMail({
+  lookBack: standing,
+  reading,
+  onChanged,
+  onState,
+  say,
+}: {
+  lookBack: MailLookBack
+  reading: MailReading
+  onChanged: () => void
+  onState: (state: MailState) => void
+  say: (tone: Notice['tone'], text: string) => void
+}) {
+  const { timeZone } = useCurrentWedding()
+  const sending = useRef(false)
+  const [days, setDays] = useState<number>(LOOK_BACK_TO_BEGIN_WITH)
+  const [busy, setBusy] = useState(false)
+  const [refused, setRefused] = useState<string | undefined>(undefined)
+  const [trouble, setTrouble] = useState<string | null>(null)
+
+  const underWay = standing.state === 'UNDER_WAY'
+  useEffect(() => {
+    if (!underWay) {
+      return
+    }
+    const controller = new AbortController()
+    let asking = false
+    const timer = setInterval(() => {
+      if (asking) {
+        return
+      }
+      asking = true
+      fetchMail(controller.signal)
+        .then((state) => {
+          if (!controller.signal.aborted) {
+            onState(state)
+          }
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          asking = false
+        })
+    }, POLL_EVERY_MS)
+    return () => {
+      clearInterval(timer)
+      controller.abort()
+    }
+  }, [underWay, onState])
+
+  async function ask(event: React.FormEvent) {
+    event.preventDefault()
+    if (sending.current) {
+      return
+    }
+    sending.current = true
+    setBusy(true)
+    setRefused(undefined)
+    setTrouble(null)
+    try {
+      onState(await lookBack(days))
+    } catch (error) {
+      const message = error instanceof ApiError ? error.fieldMessage('days') : undefined
+      if (message !== undefined) {
+        setRefused(message)
+      } else if (error instanceof ApiError && error.is('urn:wedding-planner:problem:mail-not-connected')) {
+        // The page reads again and shows how it really stands: what it says here is said on the page, not in this part.
+        say('alert', 'Your Gmail is not connected, or it has to be connected again, so there was no mailbox to look through. Connect it first.')
+        onChanged()
+      } else if (error instanceof ApiError && error.is('urn:wedding-planner:problem:mail-not-set-up')) {
+        onChanged()
+      } else if (error instanceof ApiError) {
+        setTrouble('That did not work. Nothing was asked. Try again.')
+      } else {
+        setTrouble('The server cannot be reached, so nothing was asked. Try again.')
+      }
+    }
+    sending.current = false
+    setBusy(false)
+  }
+
+  return (
+    <div className="stack-tight mail-earlier" role="group" aria-labelledby="mail-earlier">
+      <h3 id="mail-earlier">Earlier mail</h3>
+      <p>
+        The planner reads new mail from the moment you connected; earlier mail is read like new mail, but only if you ask for it here. It looks
+        through your own mailbox only, and you can ask again or for longer.
+      </p>
+      {reading.state === 'OFF' && (
+        <p>Reading is not set up on this server yet: what is found is noted now, and read once reading is set up.</p>
+      )}
+      <form className="mail-earlier-form" onSubmit={(event) => void ask(event)} noValidate aria-label="Read earlier mail">
+        <Field label="How far back" error={refused}>
+          {(control) => (
+            <select
+              {...control}
+              name="days"
+              value={days}
+              onChange={(event) => {
+                setDays(Number(event.target.value))
+                setRefused(undefined)
+              }}
+            >
+              {LOOK_BACK_CHOICES.map((choice) => (
+                <option key={choice} value={choice}>
+                  The last {daysWord(choice)}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <div>
+          <button type="submit" className="button" disabled={busy}>
+            {busy ? 'Asking…' : 'Read earlier mail'}
+          </button>
+        </div>
+      </form>
+      {trouble !== null && (
+        <p role="alert" className="alert">
+          {trouble}
+        </p>
+      )}
+      <LookBackStands standing={standing} timeZone={timeZone} />
+    </div>
+  )
+}
+
+function LookBackStands({ standing, timeZone }: { standing: MailLookBack; timeZone: string }) {
+  if (standing.state === 'NONE' || standing.days === null) {
+    return null
+  }
+  if (standing.state === 'UNDER_WAY') {
+    return <p role="status">Looking through the last {daysWord(standing.days)} of your mailbox…</p>
+  }
+  const when = standing.doneAt === null ? '' : ` on ${moment(standing.doneAt, timeZone)}`
+  return (
+    <p role="status">
+      The last {daysWord(standing.days)} were looked through{when}: {foundWords(standing.found)}
+    </p>
+  )
+}
+
 /** In plain words, before the button: what asking for the permission means. */
 function WhatConnectingMeans({ reading }: { reading: MailReading }) {
   return (
@@ -274,7 +439,7 @@ function WhatConnectingMeans({ reading }: { reading: MailReading }) {
       <h3 id="mail-means">What connecting means</h3>
       <ul className="mail-means" aria-labelledby="mail-means">
         <li>The planner asks Google for permission to read your mail, and nothing else. It cannot send, change or delete anything.</li>
-        <li>It looks at the last three months, and after that at new mail every few minutes.</li>
+        <li>From the moment you connect it looks at new mail every few minutes. Earlier mail is read only if you ask for it on this page.</li>
         <li>Of a message that does not concern the wedding it keeps only that it was looked at.</li>
         {reading.state === 'OFF' ? (
           <li>

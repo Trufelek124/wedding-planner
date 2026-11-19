@@ -1,5 +1,7 @@
 package io.github.trufelek124.weddingplanner.mail.internal;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.github.trufelek124.weddingplanner.TestClock;
 import io.github.trufelek124.weddingplanner.mail.MailTestBase;
 import io.github.trufelek124.weddingplanner.mail.StandInGoogle.Mailbox;
@@ -56,6 +58,21 @@ abstract class MailSyncTestBase extends MailTestBase {
 
     void connectPiotr() throws Exception {
         org.assertj.core.api.Assertions.assertThat(location(connect(wedding.piotr, PIOTR_MAILBOX))).isEqualTo(YES);
+    }
+
+    /** Anna asks to look back this many days, as she would on the page (the sync is not woken: tests call the look). */
+    void lookBack(UUID owner, int days) {
+        assertThat(connections.askLookBack(owner, days, TestClock.now())).as("the look back was recorded").isTrue();
+    }
+
+    /**
+     * What the first look used to do in these tests: the owner asks for the last ninety days, and the sync looks once
+     * at every mailbox. The first look of a mailbox takes where it stands and notes nothing; the look back notes
+     * what is in it, the newest first.
+     */
+    int noteEverything(UUID owner) {
+        lookBack(owner, 90);
+        return sync.lookAtAll();
     }
 
     static Instant daysAgo(long days) {

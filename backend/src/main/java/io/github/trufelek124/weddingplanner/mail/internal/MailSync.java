@@ -1,6 +1,8 @@
 package io.github.trufelek124.weddingplanner.mail.internal;
 
 import io.github.trufelek124.weddingplanner.mail.internal.ConnectionRepository.Connection;
+import io.github.trufelek124.weddingplanner.mail.internal.ConnectionRepository.LookBack;
+import io.github.trufelek124.weddingplanner.mail.internal.MailTypes.ConnectionState;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Kind;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Page;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.SourceFailure;
@@ -12,21 +14,30 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Keeps up with the connected mailboxes (S03 section 5): notes which received messages are there, and nothing of them
  * but their identifiers. Every few minutes the server looks at each mailbox in turn.
  *
  * <ul>
- *   <li>The first look notes the last 90 days; a later one asks what was added since the marker; a marker that has
- *       grown too old is replaced by a look by date from the day of the last complete look, less one.
+ *   <li>The first look notes where the mailbox stands and nothing of what is in it (D-009); a later one asks what was
+ *       added since the marker; a marker that has grown too old is replaced by a look by date from the day of the last
+ *       complete look, less one.
+ *   <li>After a mailbox's ordinary look, a look back that its owner asked for and that is not done yet is carried out:
+ *       the received messages since the moment fixed when it was asked, newest first, stored as they come and done
+ *       only with the last page. A look back that was cut off is done again from its beginning.
  *   <li>A look counts only when it is complete: what it finds is stored as it comes (storing twice is harmless), but
  *       the marker and the time of the last look move in the transaction that stores the last of it. A look that is
  *       cut off leaves them where they were and is simply done again.
@@ -43,16 +54,16 @@ class MailSync {
 
     private static final Logger log = LoggerFactory.getLogger(MailSync.class);
 
-    /** How far back the first look goes. */
-    static final Duration FIRST_LOOK = Duration.ofDays(90);
-
     private final MailSetup setup;
     private final ConnectionRepository connections;
     private final MessageRepository messages;
     private final MailSource source;
     private final Clock clock;
     private final boolean automatic;
+    private final TaskExecutor executor;
     private final AtomicBoolean running = new AtomicBoolean();
+    /** Somebody asked for a round while one was running: it is run again once that one has ended. */
+    private final AtomicBoolean wanted = new AtomicBoolean();
 
     MailSync(
             MailSetup setup,
@@ -60,12 +71,14 @@ class MailSync {
             MessageRepository messages,
             MailSource source,
             Clock clock,
+            @Qualifier("applicationTaskExecutor") TaskExecutor executor,
             @Value("${app.mail.sync-automatic}") boolean automatic) {
         this.setup = setup;
         this.connections = connections;
         this.messages = messages;
         this.source = source;
         this.clock = clock;
+        this.executor = executor;
         this.automatic = automatic;
     }
 
@@ -78,6 +91,32 @@ class MailSync {
     }
 
     /**
+     * A look back was just asked for: a round starts in the background, once what was asked is committed, so that it
+     * begins within moments and not at the next tick. A round that is already running is not started twice: it goes
+     * round once more when it has ended. Does nothing where the sync does not run by itself.
+     */
+    void wake() {
+        if (!automatic) {
+            return;
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    wakeNow();
+                }
+            });
+        } else {
+            wakeNow();
+        }
+    }
+
+    private void wakeNow() {
+        wanted.set(true);
+        executor.execute(this::lookAtAll);
+    }
+
+    /**
      * Looks at every connected mailbox that is not put off, one after the other.
      *
      * @return how many mailboxes were looked at; 0 also when the import is not set up or another look is under way
@@ -86,19 +125,22 @@ class MailSync {
         if (setup.ready().isEmpty() || !running.compareAndSet(false, true)) {
             return 0;
         }
+        int looked = 0;
         try {
-            int looked = 0;
-            for (Connection connection : connections.dueForLook(clock.instant())) {
-                look(connection);
-                looked++;
-            }
-            return looked;
+            do {
+                wanted.set(false);
+                for (Connection connection : connections.dueForLook(clock.instant())) {
+                    look(connection);
+                    looked++;
+                }
+            } while (wanted.get());
         } catch (RuntimeException unexpected) {
             log.warn("The mailbox sync stopped unexpectedly ({})", unexpected.getClass().getSimpleName());
-            return 0;
         } finally {
             running.set(false);
         }
+        // Asked for in the moment between the last check and letting go.
+        return wanted.get() ? looked + lookAtAll() : looked;
     }
 
     private void look(Connection connection) {
@@ -110,7 +152,9 @@ class MailSync {
                         connection.memberId(), noted.get(), Duration.ofNanos(System.nanoTime() - started).toMillis());
             } else {
                 log.info("The mailbox of member {} was connected anew during the look; it is looked at again later", connection.memberId());
+                return;
             }
+            lookBack(connection.memberId(), connection.connectedAt());
         } catch (SourceFailure failure) {
             ended(connection, failure.kind(), Duration.ofNanos(System.nanoTime() - started).toMillis());
         } catch (RuntimeException unexpected) {
@@ -123,7 +167,7 @@ class MailSync {
     private Optional<Integer> lookAt(Connection connection) throws SourceFailure {
         Instant now = clock.instant();
         if (connection.syncMarker() == null) {
-            return byDate(connection, now.minus(FIRST_LOOK));
+            return firstLook(connection);
         }
         try {
             return since(connection);
@@ -135,9 +179,15 @@ class MailSync {
         log.info("The marker of member {} has grown too old: looking through the days since the last complete look", connection.memberId());
         Instant lastComplete = connection.lastLookAt();
         Instant from = lastComplete == null
-                ? now.minus(FIRST_LOOK)
+                ? now
                 : lastComplete.atZone(ZoneOffset.UTC).toLocalDate().minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
         return byDate(connection, from);
+    }
+
+    /** Where the mailbox stands is noted, and nothing of what is in it: that is only looked at when its owner asks. */
+    private Optional<Integer> firstLook(Connection connection) throws SourceFailure {
+        String standing = source.standingNow(connection.memberId());
+        return store(connection, messages.beginLook(true), new Page(java.util.List.of(), null, null), new Completion(standing, clock.instant()));
     }
 
     /** The marker is taken first: what arrives while the pages are read is then found by the next look. */
@@ -180,6 +230,40 @@ class MailSync {
             added += stored.get();
             if (last) {
                 return Optional.of(added);
+            }
+            continuation = onward(continuation, page);
+        }
+    }
+
+    /**
+     * Carries out the look back this mailbox's owner asked for, if there is one that is not done. It is read again here,
+     * not taken from the round's list: it may have been asked for while the ordinary look was under way.
+     */
+    private void lookBack(UUID memberId, Instant connectedAt) throws SourceFailure {
+        Optional<LookBack> asked = connections.find(memberId)
+                .filter(c -> c.state() == ConnectionState.CONNECTED && c.connectedAt().equals(connectedAt))
+                .map(Connection::lookBack)
+                .filter(LookBack::underWay);
+        if (asked.isEmpty()) {
+            return;
+        }
+        LookBack lookBack = asked.get();
+        long started = System.nanoTime();
+        int found = 0;
+        String continuation = null;
+        while (true) {
+            Page page = source.receivedSince(memberId, lookBack.from(), continuation);
+            boolean last = page.continuation() == null;
+            Optional<Integer> stored = messages.noteLookBack(memberId, connectedAt, lookBack.look(), page.messages(), clock.instant(), last);
+            if (stored.isEmpty()) {
+                log.info("The look back of member {} was replaced during the look; it is carried out again later", memberId);
+                return;
+            }
+            found += stored.get();
+            if (last) {
+                log.info("The look back of member {} over {} days is done: {} messages noted in this run, {} ms",
+                        memberId, lookBack.days(), found, Duration.ofNanos(System.nanoTime() - started).toMillis());
+                return;
             }
             continuation = onward(continuation, page);
         }

@@ -1,12 +1,17 @@
 package io.github.trufelek124.weddingplanner.mail.internal;
 
+import io.github.trufelek124.weddingplanner.api.ApiException;
+import io.github.trufelek124.weddingplanner.api.ProblemCode;
 import io.github.trufelek124.weddingplanner.identity.UserId;
 import io.github.trufelek124.weddingplanner.mail.MailReading;
 import io.github.trufelek124.weddingplanner.mail.ReadingReport;
 import io.github.trufelek124.weddingplanner.mail.internal.ConnectionRepository.Connection;
+import io.github.trufelek124.weddingplanner.mail.internal.ConnectionRepository.LookBack;
 import io.github.trufelek124.weddingplanner.mail.internal.GoogleClient.Failure;
 import io.github.trufelek124.weddingplanner.mail.internal.GoogleClient.Granted;
 import io.github.trufelek124.weddingplanner.mail.internal.GoogleClient.GoogleFailure;
+import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.LookBackState;
+import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.LookBackView;
 import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.MailStateResponse;
 import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.MyConnection;
 import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.PartnersConnection;
@@ -67,6 +72,7 @@ class MailService {
     private final Clock clock;
     private final MailReading reading;
     private final ReadingReport report;
+    private final MailSync sync;
 
     MailService(
             MailSetup setup,
@@ -78,7 +84,8 @@ class MailService {
             MessageRepository messages,
             Clock clock,
             MailReading reading,
-            ReadingReport report) {
+            ReadingReport report,
+            MailSync sync) {
         this.setup = setup;
         this.weddings = weddings;
         this.connections = connections;
@@ -89,6 +96,7 @@ class MailService {
         this.clock = clock;
         this.reading = reading;
         this.report = report;
+        this.sync = sync;
     }
 
     // ---------------------------------------------------------------- the state
@@ -128,11 +136,37 @@ class MailService {
 
     private MyConnection view(Connection connection) {
         return new MyConnection(connection.state(), connection.address(), connection.connectedAt(), connection.lastLookAt(),
-                messages.count(connection.memberId()));
+                messages.count(connection.memberId()), lookBackOf(connection.lookBack()));
     }
 
     private static MyConnection notConnected() {
-        return new MyConnection(ConnectionState.NOT_CONNECTED, null, null, null, 0);
+        return new MyConnection(ConnectionState.NOT_CONNECTED, null, null, null, 0, lookBackOf(null));
+    }
+
+    private static LookBackView lookBackOf(LookBack asked) {
+        if (asked == null) {
+            return new LookBackView(LookBackState.NONE, null, null, null, 0);
+        }
+        return new LookBackView(
+                asked.underWay() ? LookBackState.UNDER_WAY : LookBackState.DONE, asked.days(), asked.askedAt(), asked.doneAt(), asked.found());
+    }
+
+    // ---------------------------------------------------------------- looking back
+
+    /**
+     * The caller asks for the last {@code days} days of their own mailbox to be looked through. Only what is recorded
+     * here; the sync does it, and is woken once this is stored. There is no way to name another mailbox.
+     */
+    MailStateResponse lookBack(UserId user, int days) {
+        setup.require();
+        Membership mine = weddings.membershipOf(user);
+        if (!connections.askLookBack(mine.memberId(), days, clock.instant())) {
+            throw new ApiException(ProblemCode.MAIL_NOT_CONNECTED,
+                    "Your mailbox is not connected, or it has to be connected again. Connect it first.");
+        }
+        log.info("Member {} asked to look back {} days", mine.memberId(), days);
+        sync.wake();
+        return state(user);
     }
 
     // ---------------------------------------------------------------- connecting

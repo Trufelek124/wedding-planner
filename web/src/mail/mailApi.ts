@@ -5,6 +5,11 @@ export type MailConnection = Schemas['MailConnection']
 export type PartnersMailConnection = Schemas['PartnersMailConnection']
 export type ConnectionState = MailConnection['state']
 export type MailReading = Schemas['MailReading']
+export type MailLookBack = Schemas['MailLookBack']
+
+/** How far back an owner may ask, in days. The server takes 7 to 90 and says so; these are the ones the page offers. */
+export const LOOK_BACK_CHOICES = [7, 14, 30, 60, 90] as const
+export const LOOK_BACK_TO_BEGIN_WITH = 30
 
 export async function fetchMail(signal?: AbortSignal): Promise<MailState> {
   return unwrap(await api.GET('/api/mail', { signal }))
@@ -18,6 +23,16 @@ export async function startConnecting(): Promise<string> {
 /** @throws ApiError `mail-not-set-up` while the import is off */
 export async function disconnect(): Promise<void> {
   unwrap(await api.DELETE('/api/mail/gmail/connection'))
+}
+
+/**
+ * Asks the server to look through the last `days` days of the owner's own mailbox. Answers with what the page is told,
+ * which already says that the look back is under way. Asked once: nothing here tries again by itself.
+ * @throws ApiError `mail-not-connected` without a connected mailbox, `mail-not-set-up` while the import is off, and a
+ *   field problem on `days` outside 7 to 90
+ */
+export async function lookBack(days: number): Promise<MailState> {
+  return unwrap(await api.POST('/api/mail/gmail/look-back', { body: { days } }))
 }
 
 /**

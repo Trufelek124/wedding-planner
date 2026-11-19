@@ -188,8 +188,9 @@ What the owner does once, in the Google project that already holds the sign-in c
    mailbox is connected: go on through "Advanced". The planner's page says so beforehand.
 5. Copy the client's **secret** into the server's environment file, make the **key** with
    `openssl rand -base64 32`, set the public address, and start the server again.
-6. On the web, each owner opens **E-mail import** and connects their mailbox. Check again after more than a
-   week that both are still connected. If Google refuses, or the connection keeps ending, the route does not
+6. On the web, each owner opens **E-mail import** and connects their mailbox. From then on new mail is picked
+   up; for mail that was already there, each owner chooses how far back and presses **Read earlier mail** once
+   (D-009). Check again after more than a week that both are still connected. If Google refuses, or the connection keeps ending, the route does not
    hold for these accounts: say so — the fallback is recorded in D-006.
 
 To withdraw the planner's access without the planner: Google account → Security → Third-party access.

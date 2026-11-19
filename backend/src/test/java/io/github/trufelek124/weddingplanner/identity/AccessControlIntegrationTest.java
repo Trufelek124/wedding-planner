@@ -60,6 +60,8 @@ class AccessControlIntegrationTest extends PostgresIntegrationTest {
         assertThat(checked).contains(
                 "GET /api/suggestions/{id}", "POST /api/suggestions/{id}/keep", "POST /api/suggestions/{id}/undo",
                 "GET /api/suggestions/settings", "PUT /api/suggestions/settings");
+        // Looking back through a mailbox is its owner's to ask, signed in (S03 section 5).
+        assertThat(checked).contains("POST /api/mail/gmail/look-back");
     }
 
     @Test

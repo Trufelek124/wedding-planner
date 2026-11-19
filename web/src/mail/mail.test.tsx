@@ -13,7 +13,16 @@ function open(path: string) {
   render(<App />)
 }
 
-const NOT_CONNECTED = { state: 'NOT_CONNECTED', address: null, connectedAt: null, lastLookAt: null, messagesNoted: 0 } as const
+type LookBack = MailState['yours']['lookBack']
+
+/** Nothing asked: what every connection says until its owner asks to look back. */
+const NOTHING_ASKED: LookBack = { state: 'NONE', days: null, askedAt: null, doneAt: null, found: 0 }
+
+const UNDER_WAY: LookBack = { state: 'UNDER_WAY', days: 30, askedAt: '2026-11-19T13:00:00Z', doneAt: null, found: 0 }
+
+const DONE: LookBack = { state: 'DONE', days: 30, askedAt: '2026-11-19T13:00:00Z', doneAt: '2026-11-19T13:05:00Z', found: 212 }
+
+const NOT_CONNECTED = { state: 'NOT_CONNECTED', address: null, connectedAt: null, lastLookAt: null, messagesNoted: 0, lookBack: NOTHING_ASKED } as const
 
 type Reading = MailState['reading']
 
@@ -59,6 +68,7 @@ const CONNECTED = {
   connectedAt: '2026-11-10T09:30:00Z',
   lastLookAt: '2026-11-19T13:05:00Z',
   messagesNoted: 412,
+  lookBack: NOTHING_ASKED,
 } as const
 
 function serverWith(state: MailState, extra: Record<string, Handler> = {}) {
@@ -89,7 +99,9 @@ describe('the e-mail import page', () => {
     const list = screen.getByRole('list', { name: 'What connecting means' })
     expect(list).toHaveTextContent('read your mail, and nothing else')
     expect(list).toHaveTextContent('cannot send, change or delete')
-    expect(list).toHaveTextContent('last three months')
+    expect(list).toHaveTextContent('From the moment you connect it looks at new mail every few minutes')
+    expect(list).toHaveTextContent('Earlier mail is read only if you ask for it on this page')
+    expect(list).not.toHaveTextContent('three months')
     expect(list).toHaveTextContent('only that it was looked at')
     expect(list).toHaveTextContent('Nothing is sent to an AI service on this server yet')
     expect(list).toHaveTextContent('not verified')
@@ -368,6 +380,351 @@ describe('reading your mail', () => {
     await screen.findByText(/The e-mail import is not set up on this server/)
     expect(screen.queryByRole('region', { name: 'Reading your mail' })).toBeNull()
     expect(screen.queryByText('Reading your mail')).toBeNull()
+  })
+})
+
+describe('earlier mail', () => {
+  const CHOICE = { name: 'How far back' }
+
+  function part() {
+    return within(screen.getByRole('group', { name: 'Earlier mail' }))
+  }
+
+  function connected(lookBack: LookBack, reading: Reading = QUIET) {
+    return mail({ yours: { ...CONNECTED, lookBack }, reading })
+  }
+
+  const REFUSED_DAYS = {
+    fieldProblems: [{ field: 'days', message: 'Choose a number of days from 7 to 90.' }],
+  }
+
+  it('is a part of Your Gmail, with the choice at 30 days and the button, when nothing was asked', async () => {
+    serverWith(connected(NOTHING_ASKED))
+    open('/mail')
+
+    const earlier = await screen.findByRole('group', { name: 'Earlier mail' })
+    expect(screen.getByRole('region', { name: 'Your Gmail' })).toContainElement(earlier)
+    expect(earlier).toHaveTextContent('reads new mail from the moment you connected')
+    expect(earlier).toHaveTextContent('earlier mail is read like new mail, but only if you ask for it here')
+    expect(earlier).toHaveTextContent('your own mailbox only')
+    expect(earlier).toHaveTextContent('ask again or for longer')
+    const choice = part().getByRole('combobox', CHOICE)
+    expect(choice).toHaveValue('30')
+    expect(within(choice).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'The last 7 days',
+      'The last 14 days',
+      'The last 30 days',
+      'The last 60 days',
+      'The last 90 days',
+    ])
+    expect(part().getByRole('button', { name: 'Read earlier mail' })).toBeEnabled()
+    // Nothing asked: nothing more is said.
+    expect(part().queryByRole('status')).toBeNull()
+    expect(earlier).not.toHaveTextContent('looked through')
+    expect(earlier).not.toHaveTextContent('Looking through')
+  })
+
+  it('says that it is looking, in words, while a look back is under way', async () => {
+    serverWith(connected(UNDER_WAY))
+    open('/mail')
+
+    expect(await screen.findByText('Looking through the last 30 days of your mailbox…')).toHaveRole('status')
+    expect(part().getByRole('button', { name: 'Read earlier mail' })).toBeEnabled()
+    expect(screen.getByRole('group', { name: 'Earlier mail' }).textContent).not.toMatch(/UNDER_WAY|NONE|DONE/)
+  })
+
+  it('says when it was done and how many messages it found, with the choice and the button still there', async () => {
+    serverWith(connected(DONE))
+    open('/mail')
+
+    // 13:05 UTC is 14:05 in Warsaw.
+    expect(await screen.findByText('The last 30 days were looked through on 19 Nov 2026, 14:05: 212 messages found.')).toHaveRole('status')
+    expect(part().getByRole('combobox', CHOICE)).toBeInTheDocument()
+    expect(part().getByRole('button', { name: 'Read earlier mail' })).toBeEnabled()
+  })
+
+  it.each([
+    [1, 'The last 30 days were looked through on 19 Nov 2026, 14:05: 1 message found.'],
+    [0, 'The last 30 days were looked through on 19 Nov 2026, 14:05: No messages found.'],
+  ])('says %s found as a person would', async (found, words) => {
+    serverWith(connected({ ...DONE, found }))
+    open('/mail')
+
+    expect(await screen.findByText(words)).toBeInTheDocument()
+    expect(screen.queryByText(/\b0 messages/)).toBeNull()
+  })
+
+  it('says 7 days and 90 days as they were asked for', async () => {
+    serverWith(connected({ ...DONE, days: 7, found: 3 }))
+    open('/mail')
+
+    expect(await screen.findByText(/The last 7 days were looked through on 19 Nov 2026, 14:05: 3 messages found\./)).toBeInTheDocument()
+  })
+
+  it('says that what is found is noted now and read later, where reading is not set up', async () => {
+    serverWith(connected(NOTHING_ASKED, QUIET))
+    open('/mail')
+
+    expect(await screen.findByText(/Reading is not set up on this server yet: what is found is noted now, and read once reading is set up\./)).toBeInTheDocument()
+  })
+
+  it('does not say it where reading is on', async () => {
+    serverWith(connected(NOTHING_ASKED, READ))
+    open('/mail')
+
+    await screen.findByRole('group', { name: 'Earlier mail' })
+    expect(screen.queryByText(/Reading is not set up on this server yet/)).toBeNull()
+  })
+
+  it.each([
+    [mail({ yours: NOT_CONNECTED }), 'not connected'],
+    [mail({ yours: { ...CONNECTED, state: 'NEEDS_RECONNECTING' } }), 'has to be connected again'],
+  ])('is not there while the mailbox is %s', async (state) => {
+    serverWith(state)
+    open('/mail')
+
+    await screen.findByRole('button', { name: 'Connect Gmail' })
+    expect(screen.queryByRole('group', { name: 'Earlier mail' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Read earlier mail' })).toBeNull()
+  })
+
+  it('is not there while the import is not set up', async () => {
+    serverWith(mail({ setUp: false }))
+    open('/mail')
+
+    await screen.findByText(/The e-mail import is not set up on this server/)
+    expect(screen.queryByRole('group', { name: 'Earlier mail' })).toBeNull()
+  })
+
+  it('asks for the 30 days it begins with when only the button is pressed', async () => {
+    const server = serverWith(connected(NOTHING_ASKED), { 'POST /api/mail/gmail/look-back': Response.json(connected(UNDER_WAY)) })
+    open('/mail')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read earlier mail' }))
+
+    await waitFor(() => expect(server.requests('POST /api/mail/gmail/look-back')).toHaveLength(1))
+    expect(await server.requests('POST /api/mail/gmail/look-back')[0]!.json()).toEqual({ days: 30 })
+  })
+
+  it.each([7, 14, 30, 60, 90])('sends %s days when that is what was chosen', async (days) => {
+    const server = serverWith(connected(NOTHING_ASKED), { 'POST /api/mail/gmail/look-back': Response.json(connected({ ...UNDER_WAY, days })) })
+    open('/mail')
+
+    await userEvent.selectOptions(await screen.findByRole('combobox', CHOICE), `The last ${days} days`)
+    await userEvent.click(screen.getByRole('button', { name: 'Read earlier mail' }))
+
+    expect(await screen.findByText(`Looking through the last ${days} days of your mailbox…`)).toBeInTheDocument()
+    expect(server.requests('POST /api/mail/gmail/look-back')).toHaveLength(1)
+    expect(await server.requests('POST /api/mail/gmail/look-back')[0]!.json()).toEqual({ days })
+  })
+
+  it('sends one request for one press, however fast it is pressed', async () => {
+    let answer: (response: Response) => void = () => undefined
+    const server = serverWith(connected(NOTHING_ASKED), {
+      'POST /api/mail/gmail/look-back': () => new Promise<Response>((resolve) => (answer = resolve)),
+    })
+    open('/mail')
+
+    await userEvent.dblClick(await screen.findByRole('button', { name: 'Read earlier mail' }))
+    await waitFor(() => expect(server.requests('POST /api/mail/gmail/look-back')).toHaveLength(1))
+    answer(Response.json(connected(UNDER_WAY)))
+
+    await screen.findByText('Looking through the last 30 days of your mailbox…')
+    expect(server.requests('POST /api/mail/gmail/look-back')).toHaveLength(1)
+  })
+
+  it('says that it is on its way while the server answers, and shows the answer at once without asking again', async () => {
+    let answer: (response: Response) => void = () => undefined
+    const server = serverWith(connected(NOTHING_ASKED), {
+      'POST /api/mail/gmail/look-back': () => new Promise<Response>((resolve) => (answer = resolve)),
+    })
+    open('/mail')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read earlier mail' }))
+    expect(part().getByRole('button', { name: 'Asking…' })).toBeDisabled()
+    expect(part().queryByRole('status')).toBeNull()
+
+    answer(Response.json(connected(UNDER_WAY)))
+    expect(await screen.findByText('Looking through the last 30 days of your mailbox…')).toBeInTheDocument()
+    expect(part().getByRole('button', { name: 'Read earlier mail' })).toBeEnabled()
+    expect(server.requests('GET /api/mail')).toHaveLength(1)
+  })
+
+  it('can be asked again, for longer, once it was done', async () => {
+    const server = serverWith(connected(DONE), { 'POST /api/mail/gmail/look-back': Response.json(connected({ ...UNDER_WAY, days: 90 })) })
+    open('/mail')
+
+    await userEvent.selectOptions(await screen.findByRole('combobox', CHOICE), 'The last 90 days')
+    await userEvent.click(screen.getByRole('button', { name: 'Read earlier mail' }))
+
+    expect(await screen.findByText('Looking through the last 90 days of your mailbox…')).toBeInTheDocument()
+    expect(screen.queryByText(/were looked through/)).toBeNull()
+    expect(server.requests('POST /api/mail/gmail/look-back')).toHaveLength(1)
+  })
+
+  it('puts what the server says about the days next to the choice, and takes it away when the choice changes', async () => {
+    serverWith(connected(NOTHING_ASKED), { 'POST /api/mail/gmail/look-back': problem(400, 'bad-request', 'Bad request', REFUSED_DAYS) })
+    open('/mail')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read earlier mail' }))
+
+    const choice = await screen.findByRole('combobox', CHOICE)
+    await waitFor(() => expect(choice).toHaveAccessibleDescription('Choose a number of days from 7 to 90.'))
+    expect(choice).toBeInvalid()
+    expect(part().getByRole('button', { name: 'Read earlier mail' })).toBeEnabled()
+    await userEvent.selectOptions(choice, 'The last 14 days')
+    expect(screen.queryByText('Choose a number of days from 7 to 90.')).toBeNull()
+  })
+
+  it('says in words that the mailbox is not connected, reads the page again, and asks nothing a second time', async () => {
+    const server = serverWith(connected(NOTHING_ASKED), { 'POST /api/mail/gmail/look-back': problem(409, 'mail-not-connected', 'Not connected') })
+    open('/mail')
+
+    const button = await screen.findByRole('button', { name: 'Read earlier mail' })
+    server.answer('GET /api/mail', () => Response.json(mail({ yours: { ...CONNECTED, state: 'NEEDS_RECONNECTING' } })))
+    await userEvent.click(button)
+
+    expect(await screen.findByRole('alert', { name: '' })).toHaveTextContent('Your Gmail is not connected, or it has to be connected again')
+    expect(await screen.findByRole('button', { name: 'Connect Gmail' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Earlier mail' })).toBeNull()
+    expect(server.requests('POST /api/mail/gmail/look-back')).toHaveLength(1)
+    expect(server.requests('GET /api/mail')).toHaveLength(2)
+  })
+
+  it('says so when the server cannot be reached, asks nothing again by itself, and lets it be tried again', async () => {
+    const server = serverWith(connected(NOTHING_ASKED), { 'POST /api/mail/gmail/look-back': new TypeError('Failed to fetch') })
+    open('/mail')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read earlier mail' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The server cannot be reached, so nothing was asked. Try again.')
+    expect(part().getByRole('button', { name: 'Read earlier mail' })).toBeEnabled()
+    expect(server.requests('POST /api/mail/gmail/look-back')).toHaveLength(1)
+    expect(part().queryByRole('status')).toBeNull()
+
+    server.answer('POST /api/mail/gmail/look-back', () => Response.json(connected(UNDER_WAY)))
+    await userEvent.click(part().getByRole('button', { name: 'Read earlier mail' }))
+    expect(await screen.findByText('Looking through the last 30 days of your mailbox…')).toBeInTheDocument()
+    expect(screen.queryByText(/cannot be reached/)).toBeNull()
+  })
+
+  it('says that something went wrong for any other trouble', async () => {
+    serverWith(connected(NOTHING_ASKED), { 'POST /api/mail/gmail/look-back': problem(500, 'internal-error', 'Something went wrong') })
+    open('/mail')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read earlier mail' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('That did not work. Nothing was asked. Try again.')
+  })
+
+  it('reads the page again when the import turns out not to be set up', async () => {
+    const server = serverWith(connected(NOTHING_ASKED), { 'POST /api/mail/gmail/look-back': problem(409, 'mail-not-set-up') })
+    open('/mail')
+
+    const button = await screen.findByRole('button', { name: 'Read earlier mail' })
+    server.answer('GET /api/mail', () => Response.json(mail({ setUp: false })))
+    await userEvent.click(button)
+
+    expect(await screen.findByText(/The e-mail import is not set up on this server/)).toBeInTheDocument()
+  })
+})
+
+describe('while a look back is under way', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  // Only the interval is the test's: the page, the requests and the waiting of the test itself run as they do.
+  function withTheClock() {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'], shouldAdvanceTime: true })
+  }
+
+  function connected(lookBack: LookBack) {
+    return mail({ yours: { ...CONNECTED, lookBack } })
+  }
+
+  it('asks the server again every few seconds, shows what it says, and stops when it is done', async () => {
+    withTheClock()
+    const server = serverWith(connected(UNDER_WAY))
+    open('/mail')
+    await screen.findByText('Looking through the last 30 days of your mailbox…')
+    expect(server.requests('GET /api/mail')).toHaveLength(1)
+
+    await vi.advanceTimersByTimeAsync(5_000)
+    await waitFor(() => expect(server.requests('GET /api/mail')).toHaveLength(2))
+    expect(screen.getByText('Looking through the last 30 days of your mailbox…')).toBeInTheDocument()
+
+    await vi.advanceTimersByTimeAsync(5_000)
+    await waitFor(() => expect(server.requests('GET /api/mail')).toHaveLength(3))
+
+    server.answer('GET /api/mail', () => Response.json(connected(DONE)))
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(await screen.findByText('The last 30 days were looked through on 19 Nov 2026, 14:05: 212 messages found.')).toBeInTheDocument()
+    const asked = server.requests('GET /api/mail').length
+
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(server.requests('GET /api/mail')).toHaveLength(asked)
+    expect(screen.queryByText(/Looking through/)).toBeNull()
+  })
+
+  it('does not ask while nothing is under way, nor while it is done', async () => {
+    withTheClock()
+    const server = serverWith(connected(DONE))
+    open('/mail')
+    await screen.findByText(/were looked through/)
+
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(server.requests('GET /api/mail')).toHaveLength(1)
+  })
+
+  it('starts asking when a look back is begun on the page, and stops when it is done', async () => {
+    withTheClock()
+    const server = serverWith(mail({ yours: { ...CONNECTED, lookBack: NOTHING_ASKED } }), {
+      'POST /api/mail/gmail/look-back': Response.json(connected(UNDER_WAY)),
+    })
+    open('/mail')
+    await userEvent.click(await screen.findByRole('button', { name: 'Read earlier mail' }))
+    await screen.findByText('Looking through the last 30 days of your mailbox…')
+    server.answer('GET /api/mail', () => Response.json(connected(DONE)))
+
+    await vi.advanceTimersByTimeAsync(5_000)
+
+    expect(await screen.findByText(/212 messages found/)).toBeInTheDocument()
+    const asked = server.requests('GET /api/mail').length
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(server.requests('GET /api/mail')).toHaveLength(asked)
+  })
+
+  it('stops asking when the page is left', async () => {
+    withTheClock()
+    const server = serverWith(connected(UNDER_WAY), { 'GET /api/home': home() })
+    open('/mail')
+    await screen.findByText('Looking through the last 30 days of your mailbox…')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Home' }))
+    await screen.findByText('214 days to go')
+    const asked = server.requests('GET /api/mail').length
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(server.requests('GET /api/mail')).toHaveLength(asked)
+  })
+
+  it('goes on quietly when the server cannot be reached for a moment, and shows the truth when it can again', async () => {
+    withTheClock()
+    const server = serverWith(connected(UNDER_WAY))
+    open('/mail')
+    await screen.findByText('Looking through the last 30 days of your mailbox…')
+
+    server.answer('GET /api/mail', new TypeError('Failed to fetch'))
+    await vi.advanceTimersByTimeAsync(5_000)
+    await waitFor(() => expect(server.requests('GET /api/mail')).toHaveLength(2))
+    expect(screen.getByText('Looking through the last 30 days of your mailbox…')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+
+    server.answer('GET /api/mail', () => Response.json(connected(DONE)))
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(await screen.findByText(/212 messages found/)).toBeInTheDocument()
   })
 })
 

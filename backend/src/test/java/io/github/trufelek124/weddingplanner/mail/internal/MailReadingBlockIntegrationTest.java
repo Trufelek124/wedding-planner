@@ -77,12 +77,12 @@ class MailReadingBlockIntegrationTest extends MailLettersTestBase {
         annasBox().deliver("a1", "ta1", daysAgo(3), "INBOX");
         annasBox().deliver("a2", "ta2", daysAgo(2), "INBOX");
         annasBox().deliver("a3", "ta3", daysAgo(1), "INBOX");
-        sync.lookAtAll();
+        noteEverything(anna());
         connectPiotr();
         piotrsBox().deliver("p1", "tp1", daysAgo(5), "INBOX");
         piotrsBox().deliver("p2", "tp2", daysAgo(4), "INBOX");
         TestClock.advance(Duration.ofMinutes(5));
-        sync.lookAtAll();
+        noteEverything(piotr());
         assertThat(readingSeenBy(wedding.anna)).containsEntry("waiting", 5).containsEntry("read", 0);
 
         List<MessageHandle> waiting = reading.waiting(100);
@@ -103,7 +103,7 @@ class MailReadingBlockIntegrationTest extends MailLettersTestBase {
         connectAnna();
         connectPiotr();
         annasBox().deliver("a1", "ta1", daysAgo(1), "INBOX");
-        sync.lookAtAll();
+        noteEverything(anna());
         reading.mark(reading.waiting(1).getFirst(), new AboutTheWedding(1));
         said = new ReadingReport.Report(State.MONTHLY_LIMIT, 2000, 2050, 2000);
 

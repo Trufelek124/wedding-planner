@@ -43,6 +43,8 @@ public enum ProblemCode {
     ENTRY_CHANGED(HttpStatus.CONFLICT, "entry-changed", "The entry was changed after it was added"),
     /** The e-mail import is off on this server: it was not given everything it needs. Nothing is asked of Google. */
     MAIL_NOT_SET_UP(HttpStatus.CONFLICT, "mail-not-set-up", "The e-mail import is not set up on this server"),
+    /** The caller has no mailbox connected (or it has to be connected again): there is nothing to look through. */
+    MAIL_NOT_CONNECTED(HttpStatus.CONFLICT, "mail-not-connected", "Your mailbox is not connected"),
     /** What was sent is larger than the server takes; a picture, for instance. */
     UPLOAD_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "upload-too-large", "That is too large to upload"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "method-not-allowed", "Method not allowed"),

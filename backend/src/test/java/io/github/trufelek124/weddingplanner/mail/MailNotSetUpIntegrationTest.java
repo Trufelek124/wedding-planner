@@ -74,7 +74,9 @@ class MailNotSetUpIntegrationTest extends PostgresIntegrationTest {
         HttpResponse<String> connect = wedding.http.post("/api/mail/gmail/connection", Map.of("Authorization", "Bearer " + wedding.anna));
         HttpResponse<String> disconnect = wedding.http.deleteAs(wedding.anna, "/api/mail/gmail/connection");
 
-        for (HttpResponse<String> response : java.util.List.of(connect, disconnect)) {
+        HttpResponse<String> lookBack = wedding.http.postJsonAs(wedding.anna, "/api/mail/gmail/look-back", "{\"days\":30}");
+
+        for (HttpResponse<String> response : java.util.List.of(connect, disconnect, lookBack)) {
             assertThat(response.statusCode()).isEqualTo(409);
             assertThat(TestHttp.json(response)).containsEntry("type", "urn:wedding-planner:problem:mail-not-set-up");
         }
