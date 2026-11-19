@@ -45,8 +45,8 @@
   "docs/specs/S01-product-scope.md": {
    "publicId": "WP-DOC-1",
    "id": "3b912d99-f4d4-44ea-95e7-01b011c12d10",
-   "sha256": "639690a7416292b6bf7ada8defd806ca1d77fefcc4f7d851ecbd29d0b12c50d3",
-   "commit": "a4a9300"
+   "sha256": "5ec2406cc3afa4d67b8bc6fce927ac4baa6551019bb78562e56404216ad81c7c",
+   "commit": "79f8f6f"
   },
   "docs/decisions.md#D-001": {
    "publicId": "WP-DOC-2",
@@ -99,8 +99,8 @@
   "docs/specs/S03-mail-connection-and-sync.md": {
    "publicId": "WP-DOC-10",
    "id": "2c206000-bf22-4895-8793-dfa921bce8cf",
-   "sha256": "40992da117c4573ba63497db3ded7508c7bb83e34bf4331f810519371f3a04b3",
-   "commit": "a4a9300"
+   "sha256": "8217d99a24117e29cefa71dba608af5235d87a98213880382c576999f82d85f6",
+   "commit": "79f8f6f"
   },
   "docs/decisions.md#D-006": {
    "publicId": "WP-DOC-11",
@@ -111,8 +111,8 @@
   "docs/specs/S04-reading-the-mail.md": {
    "publicId": "WP-DOC-12",
    "id": "8f8b9b00-2f5f-4d46-9609-aa87121e7b56",
-   "sha256": "0bb17567292e18bee8e50619db3bdb8f8791edb2b24bf911accc10087ed49ead",
-   "commit": "5b78cd7"
+   "sha256": "d59087f2a8685575481ea3856743c98f8c132490deb97d5dc4b64a617ce4c6cf",
+   "commit": "79f8f6f"
   },
   "docs/decisions.md#D-007": {
    "publicId": "WP-DOC-13",
@@ -143,6 +143,12 @@
    "id": "2cef4608-73a0-44c1-9fe0-93f5dfd284a8",
    "sha256": "b13db524bcd0a4b31fdb43fe6c47dfa74e136c01209f0cec15e4ab4f11180957",
    "commit": "fce6905"
+  },
+  "docs/decisions.md#D-011": {
+   "publicId": "WP-DOC-18",
+   "id": "742b6fdb-6025-43d5-9c68-2ec0c6e9d217",
+   "sha256": "c52cf8f1e507d70d93755e7855490f0ad549b80befccb6c33bd642ee80fb4999",
+   "commit": "79f8f6f"
   }
  }
 }
