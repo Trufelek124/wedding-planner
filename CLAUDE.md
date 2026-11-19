@@ -265,6 +265,11 @@ it blocks nothing.
    was given → `add_comment` → `complete_task`.
    `complete_task` takes `{"taskId","result"}`; `result` is one or two sentences with the commits — later tasks
    that depend on this one see it.
+6. **Then bring `main` up to date.** The owner wants `main` kept current: it is where the branches are merged, and
+   what the image is published from (D-002). `git fetch origin main`; if `main` is an ancestor of the branch,
+   `git push origin <branch>:main`. If `main` has commits the branch lacks, merge `origin/main` into the branch,
+   pass the gate again, push the branch, and only then push it to `main`. Never force a push to `main`, and never
+   put there what has not passed the gate.
 
 ### The closing comment
 
