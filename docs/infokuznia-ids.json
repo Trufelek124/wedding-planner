@@ -696,6 +696,12 @@
    "publicId": "WP-TS-85",
    "id": "3d0a06cd-9f7d-402e-8df8-8cae2bc00572",
    "title": "Deployment: the compose file hands the e-mail import's and the reading's settings to the container"
+  },
+  "EP7-S2-T7": {
+   "type": "task",
+   "publicId": "WP-TS-86",
+   "id": "6c426bcb-6a3e-43b7-b9b0-e482c909bf64",
+   "title": "Backend tests: the stand-in for the AI service listens on one address and is named by it"
   }
  }
 }

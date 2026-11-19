@@ -1,0 +1,20 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP7-S2-T7",
+   "story": "EP7-S2",
+   "title": "Backend tests: the stand-in for the AI service listens on one address and is named by it",
+   "description": "On the owner's Mac 17 backend tests failed and the image could not be published: every test of TriageIntegrationTest and four of ReadingErrorsIntegrationTest never reached the stand-in for the AI service. The stand-in listens on the first address of 'localhost' and names itself 'http://localhost:port'. Where 'localhost' has two addresses (a Mac: 127.0.0.1 and ::1) the AI service's client, once a connection to the working address has failed - which the tests of dropped connections do on purpose - keeps to the other address, where nothing listens. In a cloud session 'localhost' has one address, so it never showed. The stand-in binds to 127.0.0.1 and names itself by that address. Done when the three test classes pass on a machine whose 'localhost' has a second address on which nothing listens, where they failed before, and the gate passes.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java"
+   ]
+  }
+ ]
+}

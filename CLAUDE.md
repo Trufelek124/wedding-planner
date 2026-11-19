@@ -349,6 +349,9 @@ uses another only through the types in that module's own package, and never in a
     instructions or to what a step answers is a reason to tell the owner to measure again.
   - It is off without `APP_AI_API_KEY`: no client of the service is made. Tests use `StandInAnthropic` and the
     mail tests' `StandInGoogle`. **No test, and nothing a session runs, ever calls the real AI service.**
+    `StandInAnthropic` listens on `127.0.0.1` and is named by that number, not by `localhost`: on the owner's Mac
+    `localhost` has two addresses, and the service's client, once a connection has failed, keeps to the one
+    where nothing listens. The gate runs on that Mac too, at every publishing.
 
 ## Changing the API
 

@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
@@ -122,7 +123,11 @@ public final class StandInAnthropic {
 
     private StandInAnthropic() {
         try {
-            server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+            // One address, by its number, and the same one in the address the client is given. "localhost" has two
+            // on many machines (a Mac: 127.0.0.1 and ::1) and this server would listen on one of them: the service's
+            // client, once a connection to that one has failed - which the tests of dropped connections do on
+            // purpose - keeps to the other, where nothing listens, and no later test reaches the stand-in.
+            server = HttpServer.create(new InetSocketAddress(InetAddress.getByAddress(new byte[] {127, 0, 0, 1}), 0), 0);
             server.setExecutor(Executors.newCachedThreadPool(runnable -> {
                 Thread thread = new Thread(runnable, "stand-in-anthropic");
                 thread.setDaemon(true);
@@ -130,7 +135,7 @@ public final class StandInAnthropic {
             }));
             server.createContext("/", this::serve);
             server.start();
-            base = "http://localhost:" + server.getAddress().getPort();
+            base = "http://127.0.0.1:" + server.getAddress().getPort();
         } catch (IOException e) {
             throw new UncheckedIOException("could not start the stand-in for the AI service", e);
         }
