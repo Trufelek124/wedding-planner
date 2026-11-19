@@ -53,7 +53,7 @@ import org.robolectric.shadows.ShadowLog
 @Config(qualifiers = PHONE)
 class VendorsScreenTest : SignedInPhoneTest() {
 
-    private fun zl(amount: String) = "$amount zł"
+    private fun zl(amount: String) = "$amount\u00a0zł"
 
     private val categories = listOf(StandIn.category("c1", "Venue"), StandIn.category("c2", "Music"), StandIn.category("c3", "Flowers and decor"))
 

@@ -54,6 +54,7 @@
     <string name="more_budget">Budget</string>
     <string name="budget_title">Budget</string>
     <string name="more_vendors">Vendors</string>
+    <string name="more_guests">Guests</string>
     <string name="budget_figure_budget">Budget</string>
     <string name="budget_figure_planned">Planned</string>
     <string name="budget_figure_committed">Committed</string>
@@ -90,6 +91,26 @@
     <string name="contact_map">show on a map</string>
     <string name="contact_site">open it</string>
     <string name="contact_no_app">No app on this phone can open that.</string>
+
+    <!-- The guests -->
+    <string name="guests_title">Guests</string>
+    <string name="guest_title">Guest</string>
+    <string name="guests_all">All</string>
+    <string name="guests_empty">No guests yet. Add the people you are inviting in the web app.</string>
+    <string name="guests_no_match">Nobody matches. Choose another status.</string>
+    <string name="guest_open">see this guest</string>
+    <string name="guest_not_there">This guest is no longer there.</string>
+    <string name="guests_head_count">Head count</string>
+    <string name="guests_breakdown">By status and side</string>
+    <string name="guests_head_count_note">People, with plus-ones and children counted.</string>
+    <string name="guests_on_their_own">On their own</string>
+    <string name="guest_household">Household</string>
+    <string name="guest_dietary">Dietary needs</string>
+    <string name="guest_contact">Contact</string>
+    <string name="guest_phone">Phone</string>
+    <string name="guest_email">E-mail</string>
+    <string name="guest_no_contact">No phone number or e-mail address yet.</string>
+    <string name="guest_notes">Notes</string>
 
     <!-- The plan and the tasks -->
     <string name="filter_to_do">To do</string>

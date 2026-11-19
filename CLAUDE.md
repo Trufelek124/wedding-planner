@@ -145,9 +145,12 @@ first uses it, at the version D-005 names.
   pages and its `labels.ts`; money is `money()` in `money/Money.kt`, on whole numbers of the smallest unit as on the
   web. Screen texts are in `strings.xml`.
 - The bar at the bottom has four places: Home, Plan, Tasks and More. What has no place of its own is a row in More
-  (`planner/MoreContent.kt`) and an entry in `BEHIND_MORE` in `PlannerScreens.kt`, which gives it the arrow back at
-  the top and keeps More chosen below. The budget and the vendors are only shown on the phone; they are set on the
-  web (S01 §4).
+  (`planner/MoreContent.kt`) and an entry in `BEHIND_MORE` in `PlannerScreens.kt`, which gives it its title (the
+  name of the vendor or guest it shows), the arrow back at the top, and keeps More chosen below. The budget, the
+  vendors and the guests are only shown on the phone; they are set on the web (S01 §4).
+- How many people come is the server's count (`Planner.guestCounts`), never added up on the phone, and a copy
+  without one shows none. A list is narrowed down by status with `StatusChips`; the guest list comes before the
+  head count's breakdown, because finding a guest is what the screen is mostly opened for.
 - A phone number, an e-mail address, an address and a website open in the phone's own apps through
   `planner/Contact.kt`, and only through it. What the server holds was typed by a person: each way builds one fixed
   kind of intent, a number is dialled and never called, and a website opens only as `http` or `https` — anything

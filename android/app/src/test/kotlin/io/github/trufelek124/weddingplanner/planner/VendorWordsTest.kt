@@ -15,7 +15,7 @@ import org.robolectric.RobolectricTestRunner
 class VendorWordsTest {
 
     private val pln = "PLN"
-    private fun zl(amount: String) = "$amount zł"
+    private fun zl(amount: String) = "$amount\u00a0zł"
 
     private fun vendor(
         name: String = "Palace on the Hill",

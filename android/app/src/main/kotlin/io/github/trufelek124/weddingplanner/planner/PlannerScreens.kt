@@ -73,9 +73,11 @@ private enum class Place(val route: String, val title: Int, val label: Int, val 
  * A screen behind More: reached from its list (the budget also from Home's glance at the money), with
  * a back arrow in the top bar, and More stays the place that is selected. Pressing More on it leads to the list.
  *
- * @param title what the top bar says; null where it is the name of what is shown
+ * @param title what the top bar says; of a screen named by what it shows (a vendor, a guest), what it says
+ *   where that is gone
+ * @param nameOf the name of what the screen shows, from the id in its address; null where the screen has a title of its own
  */
-private class BehindMore(val route: String, @StringRes val title: Int?)
+private class BehindMore(val route: String, @StringRes val title: Int, val nameOf: ((Planner, String) -> String?)? = null)
 
 private const val BUDGET = "budget"
 private const val VENDORS = "vendors"
@@ -84,10 +86,18 @@ private const val VENDORS = "vendors"
 private const val VENDOR = "vendor"
 private const val VENDOR_ROUTE = "$VENDOR?id={id}"
 
+private const val GUESTS = "guests"
+
+/** One guest: "guest?id=…". */
+private const val GUEST = "guest"
+private const val GUEST_ROUTE = "$GUEST?id={id}"
+
 private val BEHIND_MORE = listOf(
     BehindMore(BUDGET, R.string.budget_title),
     BehindMore(VENDORS, R.string.vendors_title),
-    BehindMore(VENDOR_ROUTE, null),
+    BehindMore(VENDOR_ROUTE, R.string.vendor_title) { planner, id -> planner.vendor(id)?.name },
+    BehindMore(GUESTS, R.string.guests_title),
+    BehindMore(GUEST_ROUTE, R.string.guest_title) { planner, id -> planner.guest(id)?.name },
 )
 
 /** Where a task is added or changed: "task?id=…" for an existing one, "task?parent=…" for a new one under a step. */
@@ -214,11 +224,10 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                 title = {
                     val title = when {
                         onTheForm -> stringResource(if (changingATask) R.string.task_change else R.string.task_add)
-                        // One vendor is named by its name; a vendor that is gone has none.
+                        // One vendor or guest is named by its name; one that is gone has none.
                         behind != null ->
-                            behind.title?.let { stringResource(it) }
-                                ?: current?.arguments?.getString("id")?.let(planner::vendor)?.name
-                                ?: stringResource(R.string.vendor_title)
+                            current?.arguments?.getString("id")?.let { id -> behind.nameOf?.invoke(planner, id) }
+                                ?: stringResource(behind.title)
                         else -> stringResource(here.title)
                     }
                     Text(title, modifier = Modifier.semantics { heading() })
@@ -318,7 +327,7 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                     composable(Place.PLAN.route) { PlanContent(planner, today = today, actions = actions, foot = loaded) }
                     composable(Place.TASKS.route) { TasksContent(planner, actions = actions, foot = loadedUnderTheButton) }
                     composable(Place.MORE.route) {
-                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }, onVendors = { navigation.navigate(VENDORS) }) {
+                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }, onVendors = { navigation.navigate(VENDORS) }, onGuests = { navigation.navigate(GUESTS) }) {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 loaded()
                                 SignedInAs(userName, unsent = planner.unsent, onSignOut = onSignOut)
@@ -339,6 +348,21 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                             VendorGone(onBack = { navigation.popBackStack() })
                         } else {
                             VendorContent(planner, vendor, actions = actions, foot = loaded)
+                        }
+                    }
+                    composable(GUESTS) {
+                        GuestsContent(planner, onOpen = { navigation.navigate("$GUEST?id=${Uri.encode(it.id)}") }, foot = loaded)
+                    }
+                    composable(
+                        route = GUEST_ROUTE,
+                        arguments = listOf(navArgument("id") { type = NavType.StringType }),
+                    ) { entry ->
+                        val guest = entry.arguments?.getString("id")?.let(planner::guest)
+                        if (guest == null) {
+                            // Removed in the web app and loaded again since.
+                            GuestGone(onBack = { navigation.popBackStack() })
+                        } else {
+                            GuestContent(planner, guest, foot = loaded)
                         }
                     }
                     composable(

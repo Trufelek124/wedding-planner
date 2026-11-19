@@ -1,19 +1,13 @@
 package io.github.trufelek124.weddingplanner.planner
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +45,9 @@ fun VendorsContent(planner: Planner, onOpen: (Vendor) -> Unit, modifier: Modifie
         if (all.isEmpty()) {
             item(key = "empty") { NothingHere(stringResource(R.string.vendors_empty)) }
         } else {
-            item(key = "which") { WhichStatus(offered, only, onChoose = { chosen = it?.name.orEmpty() }) }
+            item(key = "which") {
+                StatusChips(stringResource(R.string.vendors_all), offered, only, label = ::vendorStatusLabel, onChoose = { chosen = it?.name.orEmpty() })
+            }
             if (shown.isEmpty()) {
                 item(key = "nothing") { NothingHere(stringResource(R.string.vendors_no_match)) }
             }
@@ -61,17 +57,6 @@ fun VendorsContent(planner: Planner, onOpen: (Vendor) -> Unit, modifier: Modifie
             }
         }
         item(key = "foot") { foot() }
-    }
-}
-
-/** "All" and the statuses that occur: a row that scrolls sideways where it does not fit. */
-@Composable
-private fun WhichStatus(offered: List<VendorStatus>, only: VendorStatus?, onChoose: (VendorStatus?) -> Unit) {
-    Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(selected = only == null, onClick = { onChoose(null) }, label = { Text(stringResource(R.string.vendors_all)) })
-        for (status in offered) {
-            FilterChip(selected = only == status, onClick = { onChoose(status) }, label = { Text(vendorStatusLabel(status)) })
-        }
     }
 }
 

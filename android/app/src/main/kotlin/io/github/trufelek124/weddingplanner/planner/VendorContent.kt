@@ -1,14 +1,11 @@
 package io.github.trufelek124.weddingplanner.planner
 
 import android.content.Intent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -24,10 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,14 +56,7 @@ fun VendorContent(planner: Planner, vendor: Vendor, actions: TaskActions, modifi
         item(key = "contact") { GroupTitle(stringResource(R.string.vendor_contact)) }
         contact(vendor, open)
         if (noApp) {
-            item(key = "no-app") {
-                Text(
-                    text = stringResource(R.string.contact_no_app),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(vertical = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },
-                )
-            }
+            item(key = "no-app") { NoApp() }
         }
         if (vendor.notes.isNotEmpty()) {
             item(key = "notes-title") { GroupTitle(stringResource(R.string.vendor_notes)) }
@@ -130,37 +116,6 @@ private fun LazyListScope.contact(vendor: Vendor, open: (Intent) -> Unit) {
     items(rows, key = { it.key }) { row ->
         ContactLine(row, open)
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-    }
-}
-
-/** @param intent what pressing it starts; null where it only shows */
-private class ContactRow(val key: String, val label: Int, val value: String, val intent: Intent?, val says: String?, val what: String)
-
-@Composable
-private fun ContactLine(row: ContactRow, open: (Intent) -> Unit) {
-    val label = stringResource(row.label)
-    val intent = row.intent
-    val onClickLabel = when (row.what) {
-        "call" -> stringResource(R.string.contact_call)
-        "mail" -> stringResource(R.string.contact_mail)
-        "map" -> stringResource(R.string.contact_map)
-        else -> stringResource(R.string.contact_site)
-    }
-    Column(
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .then(if (intent == null) Modifier else Modifier.clickable(onClickLabel = onClickLabel, role = Role.Button) { open(intent) })
-            .padding(vertical = 10.dp)
-            .semantics(mergeDescendants = true) { contentDescription = if (intent != null && row.says != null) row.says else "$label: ${row.value}" },
-    ) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            text = row.value,
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (intent != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-        )
     }
 }
 

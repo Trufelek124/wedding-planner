@@ -257,6 +257,8 @@ class Planner(
 
     fun vendor(id: String): Vendor? = vendorList.firstOrNull { it.id == id }
 
+    fun guest(id: String): Guest? = guests.firstOrNull { it.id == id }
+
     /** The plan items, tasks and payments that concern a vendor, in the list's order. */
     fun entriesOf(vendor: Vendor): List<Entry> = entries.filter { it.vendorId == vendor.id }
 
