@@ -71,7 +71,9 @@ A suggestion's words were written by whoever sent the mail, and passed through a
   a markup or an instruction.
 - The **link to Gmail is made by the server** from what it knows about the message, never taken from the mail's
   text, and the server refuses to keep one that is not an `https` address at `mail.google.com`. Clients open it as
-  any other web address.
+  any other web address. It says which mailbox the message is in, so that it opens in the right Google account.
+  That part of the link is its owner's: the other owner is answered the link without it (S03: the partner's
+  address is never shown), and could not open a message in the other's mailbox in any case.
 - The card always shows **who the mail came from and the passage**, so that the person can judge the proposal —
   above all one that asks for money.
 

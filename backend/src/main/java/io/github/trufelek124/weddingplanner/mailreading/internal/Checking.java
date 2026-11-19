@@ -98,7 +98,8 @@ final class Checking {
         String amountText = raw.amount() == null ? "" : raw.amount().strip();
         String currency = raw.currency() == null ? "" : raw.currency().strip();
         if (!amountText.isEmpty()) {
-            if (!AMOUNT.matcher(amountText).matches() || !CURRENCY.matcher(currency).matches()) {
+            // No currency named is let through as an empty one: the caller says in the notes that the planner cannot count it.
+            if (!AMOUNT.matcher(amountText).matches() || (!currency.isEmpty() && !CURRENCY.matcher(currency).matches())) {
                 return Optional.empty();
             }
             amount = new Amount(amountText, currency.toUpperCase(Locale.ROOT));

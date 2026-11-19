@@ -18,6 +18,12 @@ import java.util.UUID;
 public interface MailReading {
 
     /**
+     * Whether the e-mail import is set up on this server (S03). While it is not, nothing is waiting, nothing can be
+     * read and nothing is asked of Google: the reader then has nothing to do and says so.
+     */
+    boolean isSetUp();
+
+    /**
      * Which message, in whose mailbox and in which wedding. What the two identifiers mean is not the reader's business:
      * it hands the whole record back.
      */

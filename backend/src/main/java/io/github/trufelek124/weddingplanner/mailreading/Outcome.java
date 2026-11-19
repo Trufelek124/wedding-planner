@@ -40,10 +40,12 @@ public sealed interface Outcome<A> {
         /** The model declined the message (stop reason "refusal"). Not to be tried again. */
         DECLINED,
         /**
-         * The answer cannot be used: cut off, not the shape asked for, more than five proposals, or the service
+         * The answer cannot be used: cut off, not the shape asked for, or the service
          * found the request itself wrong (a 400). Not to be tried again.
          */
         CANNOT_BE_USED,
+        /** The answer has more than five proposals ({@link MailExtraction#MOST_PROPOSALS}): it is not used at all. */
+        TOO_MANY_PROPOSALS,
         /** The service is busy or failing (too many requests, overloaded, a 5xx, no connection). Try later; the message stays as it is. */
         TRY_LATER,
         /**

@@ -237,7 +237,8 @@ first uses it, at the version D-005 names.
 
 ## The backend's modules
 
-`api`, `appinfo`, `webapp`, `identity`, `wedding`, `vendors`, `planning`, `inspirations`, `guests`, `suggestions`, `mail`. A module
+`api`, `appinfo`, `webapp`, `identity`, `wedding`, `vendors`, `planning`, `inspirations`, `guests`, `suggestions`, `mail`,
+`mailreading`. A module
 uses another only through the types in that module's own package, and never in a circle (`ModularityTest`).
 
 - `planning` and `inspirations` use `vendors` (`Vendors.exists`), not the other way round. What the register needs
@@ -246,7 +247,7 @@ uses another only through the types in that module's own package, and never in a
   `VendorUse` in its own module.
 - `inspirations` uses `planning` (`PlanItems.exists`).
 - `guests` stands by itself: the guest list, its households and the head count.
-- `suggestions` (S02) uses `wedding`, `planning` and `vendors`, and nothing uses it. What accepting makes is made by
+- `suggestions` (S02) uses `wedding`, `planning` and `vendors`, and only `mailreading` uses it. What accepting makes is made by
   those modules' own "add" (`PlanEntries.addEntry`, `VendorRegister.addVendor`), so the same rules and the same
   messages per field apply; no rule is copied. A module that makes what another module's form makes goes the same
   way, with `BeanRules` for the rules the request's type declares.
@@ -279,8 +280,37 @@ uses another only through the types in that module's own package, and never in a
     keys that name a message and its thread without saying anything, and marking a message with its verdict,
     which is what makes it "read" for good. A message's content is never kept or logged; attachments are never
     fetched; a text comes from the plain part, or from the HTML part with no markup, script or style left.
+    It also makes the link that opens a message in Gmail (`linkTo`), which names the mailbox so that it opens in
+    the right Google account: that address is its owner's, and `suggestions` answers the other owner the link
+    without it.
   - Tests use `StandInGoogle`, which also stands in for a mailbox, and move a test clock; the sync does not run by
     itself in tests. **No test ever calls the real Google.**
+
+- `mailreading` (S04, D-007) reads the noted messages with two AI steps and hands in what they propose. It uses
+  `mail`, `suggestions`, `wedding`, `vendors` and `planning`, and nothing uses it. Its rules are security rules too:
+  - The two steps are `MailTriage` and `MailExtraction`, through the AI service's own Java SDK. **Do not write
+    Claude API code from memory**: the API changes; read the current guide (the `claude-api` skill) first. Models
+    are settings (`claude-haiku-5-5`, `claude-opus-5-5`, never with a date added); thinking, a temperature and a
+    prefilled answer are not sent (the models refuse them); the answer's shape is asked for (structured output).
+  - **The models are given no tools.** What a message says can at most become a suggestion that waits for a
+    person; the only thing this module does with an answer is `Suggestions.handIn`.
+  - A request carries what S04 section 3 names and nothing else. What somebody else wrote stands between lines
+    with a marker made for that one request; the instructions are the two files in `resources/mailreading/`.
+  - What is not an answer is a value of `Outcome.Why`, never an exception with a text: declined, cannot be used,
+    too many proposals, try later, the key or the account is not accepted, asked nothing.
+  - An answer is checked again by the server (`Checking`): kinds, lengths, real days, and **the passage must stand
+    in what was sent** or the proposal is dropped. Names are matched by the server (`Vendors.withAddress`,
+    `Vendors.named`, `PlanCategories.named`), and money is worked out by the server (`Money`, exact, only in the
+    wedding's currency) — never by the model.
+  - The round (`ReadingRound`, every minute) takes the newest messages that wait, each one whole or not at all:
+    **marking is the last thing**, and a proposal's source key is `<thread key>/<message key>/<n>`, so a message
+    done twice proposes nothing twice. The brakes are in the settings: a monthly limit on the estimated cost, a
+    daily limit of messages, fifty new suggestions from one mailbox in a day; a busy service makes it wait, a key
+    that is not accepted stops it until the server is started again.
+  - `reading_usage` counts calls and tokens per day, step and model, and nothing of a message. **Nothing of a
+    message, an answer or the key is kept or logged**; of an exception only its kind.
+  - It is off without `APP_AI_API_KEY`: no client of the service is made. Tests use `StandInAnthropic` and the
+    mail tests' `StandInGoogle`. **No test, and nothing a session runs, ever calls the real AI service.**
 
 ## Changing the API
 

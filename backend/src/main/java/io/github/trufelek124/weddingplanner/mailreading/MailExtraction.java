@@ -95,7 +95,7 @@ public interface MailExtraction {
      * smallest unit, and deciding what to do with another currency, is the caller's.
      *
      * @param value digits with a point and at most two decimals, never negative: "2500", "2500.50"
-     * @param currency three capital letters, as the mail names it: "PLN"
+     * @param currency three capital letters, as the mail names it: "PLN"; empty when the mail names no currency
      */
     record Amount(String value, String currency) {}
 

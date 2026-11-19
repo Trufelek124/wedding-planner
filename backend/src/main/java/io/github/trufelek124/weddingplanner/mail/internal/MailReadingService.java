@@ -50,6 +50,11 @@ class MailReadingService implements MailReading {
     }
 
     @Override
+    public boolean isSetUp() {
+        return setup.ready().isPresent();
+    }
+
+    @Override
     public List<MessageHandle> waiting(int most) {
         return waiting(most, List.of());
     }

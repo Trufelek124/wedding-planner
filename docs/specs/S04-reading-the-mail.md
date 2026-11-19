@@ -10,8 +10,8 @@ The sync (S03) notes which messages are in a connected mailbox. This spec says w
 a small AI model decides whether it concerns the wedding, a larger one reads the ones that do and proposes
 entries, and what it proposes becomes **suggestions** (S02) that wait for one of the two owners.
 
-Left for later, and tracked in WP-US-22: adding an entry by itself when the confidence is high, and a later
-message updating the entry an earlier one produced. Everything this step proposes waits for a person.
+Left for later: adding an entry by itself when the import is sure enough (S05), and a later message updating
+the entry an earlier one produced (WP-US-22). Everything this step proposes waits for a person.
 
 ## 2. The way of one message
 
@@ -26,6 +26,9 @@ noted ──▶ fetched from Gmail ──▶ triage ──┬─ not about the w
   yet" and is done again. Doing it again proposes nothing twice (S02's source key).
 - The newest messages are read first, a few at a time, so that the first days after connecting bring what is
   current before what is three months old.
+- A message that cannot be fetched for now is left as it is and tried again later, at growing intervals; the
+  others are read on. Nothing is asked of the AI service about a message from which nothing could be proposed
+  (its mailbox was disconnected meanwhile).
 
 ## 3. What leaves the server
 
@@ -45,7 +48,9 @@ beyond what the mail itself says.
 ## 4. What the two steps answer
 
 - **Triage** answers one question — does this message concern the wedding of the two owners? — with yes or no
-  and how sure it is. A wedding newsletter, an advertisement and somebody else's wedding are "no".
+  and how sure it is. A wedding newsletter, an advertisement and somebody else's wedding are "no". **A "no" that
+  is less sure than 60 in 100** (a setting) is read on as if it were a "yes": missing a message that concerns the
+  wedding is worse than paying for one extraction that proposes nothing.
 - **Extraction** answers with at most **five** proposals. Each has a kind (task, payment, step of the plan,
   vendor), a title in the language of the message, and what applies of: notes, a first day, a day it is due, an
   amount as the mail writes it with the kind of payment, a category by name, a vendor by name with what
@@ -67,13 +72,17 @@ A message is written by anybody, and the models read it. So:
 - **Names are matched by the server, not by the model**: a vendor is linked when the sender's address is a
   vendor's address, or the proposed name is exactly a vendor's name; a category when the proposed name is
   exactly one of the planner's. Otherwise the name stays what S02 calls a name the planner does not have yet.
+  A vendor the planner already has — by its name, by the address the message gives for it, or because it is the
+  sender introducing itself — is not proposed again; a known sender introducing somebody else is.
 - **At most five proposals from one message.** An answer with more is not used at all, and the message is marked
   as one that could not be read: a mail that floods is not a mail to act on.
-- **At most fifty new suggestions from one mailbox in a day.** When that is reached, the reading of that mailbox
-  goes on the next day; nothing is lost, and nobody can fill the inbox by sending a thousand mails.
+- **Fifty new suggestions from one mailbox in a day, and its reading goes on the next day.** The message that
+  reaches the limit is still handled whole; nothing is lost, the other mailbox is read on, and nobody can fill
+  the inbox by sending a thousand mails.
 - **Money is not worked out by the model.** It answers the amount as the mail writes it, with its currency. The
   server turns it into the planner's whole numbers when the currency is the wedding's; an amount in another
-  currency is left out of the proposal and said in its notes.
+  currency, or with no currency named, is left out of the proposal and said in its notes. Only a payment carries
+  an amount.
 - What becomes of a proposal is S02's: it is shown as plain text with the sender and the passage, and it waits.
 
 ## 6. What is kept
@@ -84,15 +93,15 @@ A message is written by anybody, and the models read it. So:
 - What the AI service was asked and what it answered is **not kept**, and not logged. The log says that a
   message was read, by which step, what it came to, and how many tokens it took — never which message, who
   sent it, or a word of it.
-- How much was used: per day and per model, the number of calls and of tokens. That is what the cost is
-  worked out from (section 8).
+- How much was used: per day, step and model, the number of calls and of tokens. That is what the cost is
+  worked out from (section 8). The reading's days and months are UTC.
 
 ## 7. When something does not work
 
 | What happens | What the server does |
 |---|---|
 | The AI service is busy or fails | The reading waits, with growing pauses, and goes on where it stopped. No message is lost or marked. |
-| The AI service does not accept the server's key, or the account has no credit | The reading stops and the e-mail page says so. It starts again when the server is started with a key that works. |
+| The AI service does not accept the server's key, the account has no credit, or it does not know the model that is set | The reading stops and the e-mail page says so. It starts again when the server is started with a key that works. |
 | The model declines a message, or answers in a shape the server cannot use | The message's verdict is "could not be read". It is not tried again. |
 | A message is too large to fetch, or has no text | "Could not be read." |
 | Gmail no longer has the message | "Could not be read." |
@@ -115,6 +124,7 @@ The reading is **off unless the server is given a key for the AI service**, and 
 (S03) to be set up. Off, the server starts as before, notes messages as S03 says, and asks nothing of the AI
 service. The settings — the key, the two models, the limits, the prices the estimate uses — are named in
 `docs/deployment.md`. The key is a secret like the others: never in the repository, a response or the log.
+A setting that is not valid turns the reading off, and the log names the setting (never its value).
 
 ## 10. How good it is, and what the owner does
 
@@ -129,6 +139,7 @@ service. The settings — the key, the two models, the limits, the prices the es
 
 | What | Where |
 |---|---|
-| Adding by itself at the threshold, with undo; a later message updating an earlier entry | WP-US-22 (WP-TS-66) |
+| Adding by itself at the threshold, with undo | S05, WP-US-22 |
+| A later message updating an earlier entry | WP-US-22, a task of its own |
 | Attachments, other mail providers | Not in the first version (S01 section 13) |
 | Cheaper reading through the service's batch interface | D-007 says when to reconsider |

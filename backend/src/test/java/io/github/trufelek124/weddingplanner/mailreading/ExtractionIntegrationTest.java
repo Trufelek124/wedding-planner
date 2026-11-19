@@ -200,7 +200,6 @@ class ExtractionIntegrationTest extends ReadingTestBase {
                 with(with(proposal("PAYMENT", "Three decimals", DEPOSIT), "amount", "\"1.234\""), "currency", "\"PLN\""),
                 with(with(proposal("PAYMENT", "Words", DEPOSIT), "amount", "\"about 100\""), "currency", "\"PLN\""),
                 with(with(proposal("PAYMENT", "An exponent", DEPOSIT), "amount", "\"1e3\""), "currency", "\"PLN\""),
-                with(proposal("PAYMENT", "No currency", DEPOSIT), "amount", "\"100\""),
                 with(with(proposal("PAYMENT", "A currency of two", DEPOSIT), "amount", "\"100\""), "currency", "\"PL\""),
                 with(with(proposal("PAYMENT", "An unknown payment kind", DEPOSIT), "amount", "\"100\""), "paymentKind", "\"ADVANCE\""),
                 with(proposal("TASK", "Too sure", GUESTS), "howSure", "101"),
@@ -272,8 +271,18 @@ class ExtractionIntegrationTest extends ReadingTestBase {
         Outcome<Extracted> six = answered(proposals(one, one, one, one, one, one));
         Outcome<Extracted> five = answered(proposals(one, one, one, one, one));
 
-        assertThat(six).isEqualTo(new Unanswered<Extracted>(Outcome.Why.CANNOT_BE_USED, new Used("claude-opus-5-5", 120, 40)));
+        assertThat(six).isEqualTo(new Unanswered<Extracted>(Outcome.Why.TOO_MANY_PROPOSALS, new Used("claude-opus-5-5", 120, 40)));
         assertThat(proposals(five)).hasSize(5);
+    }
+
+    @Test
+    void anAmountWithNoCurrencyIsLetThroughWithAnEmptyOneButAWrongCurrencyDropsTheProposal() {
+        String named = with(proposal("PAYMENT", "Pay the deposit", DEPOSIT), "amount", "\"100\"");
+
+        Extracted answer = ((Answered<Extracted>) answered(proposals(named))).answer();
+
+        assertThat(answer.proposals()).hasSize(1);
+        assertThat(answer.proposals().get(0).amount()).isEqualTo(new MailExtraction.Amount("100", ""));
     }
 
     @Test
@@ -281,7 +290,7 @@ class ExtractionIntegrationTest extends ReadingTestBase {
         String one = proposal("TASK", "Send the final guest list", GUESTS);
         String bad = proposal("MEETING", "Nothing", GUESTS);
 
-        assertThat(((Unanswered<Extracted>) answered(proposals(one, bad, bad, bad, bad, bad))).why()).isEqualTo(Outcome.Why.CANNOT_BE_USED);
+        assertThat(((Unanswered<Extracted>) answered(proposals(one, bad, bad, bad, bad, bad))).why()).isEqualTo(Outcome.Why.TOO_MANY_PROPOSALS);
     }
 
     @Test

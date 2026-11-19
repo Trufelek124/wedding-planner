@@ -91,6 +91,15 @@ installation has to fill in, without values.
 | `APP_MAIL_TOKEN_KEY` | for the e-mail import | 32 random bytes, base64 (`openssl rand -base64 32`): the key the mailboxes' tokens are encrypted with. It is deliberately not in the database: a copy of the database alone opens nobody's mail. **Keep it with the backups' secrets, not with the backups.** Losing or changing it means both owners connect their mail again. |
 | `MAIL_SYNC_INTERVAL` | no, default `5m` | How often the server looks at the connected mailboxes. |
 | `MAIL_SYNC_ENABLED` | no, default `true` | `false`: connected mailboxes are not looked at by themselves. Connecting and disconnecting still work. |
+| `APP_AI_API_KEY` | for reading the mail | The key of the account at the AI service (Anthropic). Empty: no message is read and nothing is sent to the service. Never in the repository, never in a log. |
+| `APP_AI_TRIAGE_MODEL`, `APP_AI_EXTRACTION_MODEL` | no, defaults `claude-haiku-5-5` and `claude-opus-5-5` | The two models (D-007), written exactly so. |
+| `APP_AI_TRIAGE_PRICE_IN`, `APP_AI_TRIAGE_PRICE_OUT`, `APP_AI_EXTRACTION_PRICE_IN`, `APP_AI_EXTRACTION_PRICE_OUT` | no, defaults `0.10`, `0.50`, `4`, `20` | US dollars per million tokens, by step: what the estimate of the cost is worked out from. Set them anew when the service's prices change. |
+| `MAIL_READING_MONTHLY_LIMIT_USD` | no, default `20` | When the month's estimate reaches it, the reading pauses until the next month. |
+| `MAIL_READING_DAILY_MESSAGES` | no, default `2000` | How many messages are read in a day at most. |
+| `MAIL_READING_DAILY_SUGGESTIONS` | no, default `50` | How many new suggestions one mailbox may bring in a day; then that mailbox waits until the next day. |
+| `MAIL_READING_TRIAGE_SURE` | no, default `60` | A "not about the wedding" that is less sure than this (0 to 100) is read in full all the same. |
+| `MAIL_READING_INTERVAL` | no, default `1m` | How often the server reads what waits, twenty messages at a time. |
+| `MAIL_READING_ENABLED` | no, default `true` | `false`: nothing is read by itself. |
 | `DEV_LOGIN_ENABLED` | no, default `false` | Signing in as an allowed address without Google. **Never `true` on a server others can reach.** |
 | `PREVIEWS_ENABLED` | no, default `true` | `false`: the server never goes out to fetch a preview for a saved link. Links are kept without one. |
 | `API_DOCS_ENABLED` | no, default `false` | Serves the API description at `/v3/api-docs`. For building clients, not for production. |
@@ -128,6 +137,41 @@ Disconnecting on the planner's page withdraws it as well and removes the token f
 
 At a log level below INFO the web server and the database layer would print request lines, cookies and
 statement values. The loggers that do are held at INFO in the server's own settings; leave them there.
+
+## Reading the mail
+
+Reading (S04) is the second half of the import: of every noted message the sender, the subject and the beginning
+go to the AI service, which says whether it concerns the wedding; a message that does is sent in full and comes
+back as proposals that wait in the suggestions inbox. S04 section 3 lists exactly what leaves the server.
+
+It is **off unless the server has `APP_AI_API_KEY`** and the e-mail import above is set up. Off, the server notes
+messages as before and sends nothing anywhere. A setting that is not valid also turns it off; the log names the
+setting, never its value.
+
+What the owner does once:
+
+1. In the Anthropic console, make **an API key** for the planner alone (a workspace of its own keeps its use
+   apart from anything else on the account).
+2. Set **a monthly spending limit** on that account or workspace. The server has its own limit
+   (`MAIL_READING_MONTHLY_LIMIT_USD`), but that one is worked out from an estimate; the account's limit is the
+   one that cannot be passed.
+3. Put the key into the server's environment file as `APP_AI_API_KEY` and start the server again.
+4. Open **E-mail import** on the web: it says that the mail is being read, how far it is, and what it has cost.
+
+What to expect, and what to do:
+
+- **The first look** over three months of two mailboxes is spread over days: at most 2,000 messages a day, and
+  at most 50 new suggestions from one mailbox in a day. D-007 estimates about 3 US dollars for a thousand
+  messages; the page shows what it really comes to.
+- **The service is busy**: the reading waits, for longer each time, and goes on by itself.
+- **The key is not accepted** (a wrong key, no credit, a model the account does not know): the reading stops and
+  the page says so. Correct the setting and **start the server again** — it does not try again by itself.
+- **A limit is reached**: the page says which, and the reading goes on the next day or the next month.
+- **The log** says that a message was read, by which step, what it came to, the model and the tokens — never
+  which message, who sent it, or a word of it. The AI service's SDK and its HTTP client are held at INFO in the
+  server's own settings for the same reason; leave them there.
+
+Nothing of this has run against the real service yet: the first days are worth watching on the page.
 
 ## Behind the proxy
 

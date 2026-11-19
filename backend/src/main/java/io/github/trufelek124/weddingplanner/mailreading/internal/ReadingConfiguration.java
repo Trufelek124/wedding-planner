@@ -10,17 +10,31 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties(ReadingProperties.class)
+@EnableConfigurationProperties({ReadingProperties.class, RoundProperties.class})
 class ReadingConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(ReadingConfiguration.class);
+
+    /**
+     * How the round runs and what holds it back. On only when the key is given and every setting, the round's too, is valid:
+     * otherwise the reading is off with one line that names the settings and never their values.
+     */
+    @Bean
+    Rules readingRules(ReadingProperties properties, RoundProperties round) {
+        ReadingSetup.Parsed parsed = ReadingSetup.parse(properties);
+        RoundSetup.Parsed rules = RoundSetup.parse(round, parsed.config() != null);
+        if (parsed.config() != null && !rules.invalid().isEmpty()) {
+            log.warn("The reading of the mail is off: not valid: {}", String.join(", ", rules.invalid()));
+        }
+        return rules.rules();
+    }
 
     /**
      * The one bean the two steps are: real when a key is given and the settings are valid, otherwise steps that ask
      * nothing. The client of the AI service is made here, once, and only in the first case.
      */
     @Bean(destroyMethod = "close")
-    ReadingSteps readingSteps(ReadingProperties properties) {
+    ReadingSteps readingSteps(ReadingProperties properties, Rules rules) {
         ReadingSetup.Parsed parsed = ReadingSetup.parse(properties);
         if (parsed.config() == null) {
             if (parsed.notSet()) {
@@ -29,6 +43,10 @@ class ReadingConfiguration {
                 // Names only, never a value.
                 log.warn("The reading of the mail is off: not valid: {}", String.join(", ", parsed.invalid()));
             }
+            return new NoSteps();
+        }
+        if (!rules.on()) {
+            // The key is there; one of the settings of the round is not valid (the rules bean above said which).
             return new NoSteps();
         }
         ReadingSetup.Config config = parsed.config();

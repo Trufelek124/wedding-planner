@@ -19,6 +19,12 @@ spring:
       max-request-size: 100MB
       # Uploads wait on the media volume while they arrive, not in /tmp, which is memory in the container.
       location: ${APP_MEDIA_DIR}/incoming
+  task:
+    scheduling:
+      # The mail sync and the reading of the mail run on their own clocks. A round of reading can take minutes (the AI
+      # service is slow), and the sync must not wait for it.
+      pool:
+        size: 2
   jackson:
     deserialization:
       # 1250.5 where a whole number belongs is refused, not cut down to 1250: money is whole numbers of
@@ -86,6 +92,28 @@ app:
     extraction-model: ${APP_AI_EXTRACTION_MODEL:claude-opus-5-5}
     # How long one call, answer included, may take. Extraction thinks before it writes.
     request-timeout: 5m
+    # The round (S04 section 2): how often the server reads what waits, counted from the end of the last round.
+    interval: ${MAIL_READING_INTERVAL:1m}
+    # false: the server never reads by itself (tests call the round themselves). Nothing runs while the reading is off.
+    automatic: ${MAIL_READING_ENABLED:true}
+    # How many messages one round takes at most, the newest first.
+    batch: 20
+    # A "no, this is not about the wedding" that is less sure than this (0 to 100) is read on as if it were a "yes":
+    # missing a message about the wedding is worse than paying for one extraction that proposes nothing.
+    triage-sure: ${MAIL_READING_TRIAGE_SURE:60}
+    # The brakes (S04 section 8). The estimate of the month in US dollars; when it reaches this, the reading pauses until
+    # the next month. Days and months are UTC.
+    monthly-limit-usd: ${MAIL_READING_MONTHLY_LIMIT_USD:20}
+    # How many messages are triaged in a day; when reached, the reading pauses until tomorrow.
+    daily-messages: ${MAIL_READING_DAILY_MESSAGES:2000}
+    # How many new suggestions one mailbox may bring in a day; when reached, that mailbox waits until tomorrow.
+    daily-suggestions-per-mailbox: ${MAIL_READING_DAILY_SUGGESTIONS:50}
+    # What the estimate of the cost is worked out from: US dollars per million tokens, by step. A model that answers
+    # and is not the one named above (the service's own fallback) is counted at the price of the step that asked.
+    triage-price-in: ${APP_AI_TRIAGE_PRICE_IN:0.10}
+    triage-price-out: ${APP_AI_TRIAGE_PRICE_OUT:0.50}
+    extraction-price-in: ${APP_AI_EXTRACTION_PRICE_IN:4}
+    extraction-price-out: ${APP_AI_EXTRACTION_PRICE_OUT:20}
 
 server:
   port: 8080
