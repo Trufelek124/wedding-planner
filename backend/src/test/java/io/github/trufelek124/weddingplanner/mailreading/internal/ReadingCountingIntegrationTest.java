@@ -3,8 +3,8 @@ package io.github.trufelek124.weddingplanner.mailreading.internal;
 import static io.github.trufelek124.weddingplanner.mailreading.internal.Answers.proposal;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.trufelek124.weddingplanner.mailreading.Reading.State;
-import io.github.trufelek124.weddingplanner.mailreading.Reading.Status;
+import io.github.trufelek124.weddingplanner.mail.ReadingReport.Report;
+import io.github.trufelek124.weddingplanner.mail.ReadingReport.State;
 import io.github.trufelek124.weddingplanner.mailreading.StandInAnthropic.Reply;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -77,17 +77,16 @@ class ReadingCountingIntegrationTest extends RoundTestBase {
                 Reply.says("{\"proposals\":[]}", "%MODEL%", 500_000, 100_000));
         round.round();
 
-        Status status = round.status();
+        Report status = round.report();
 
-        assertThat(status.costThisMonth()).isEqualByComparingTo("4.60");
-        assertThat(status.costInAll()).isEqualByComparingTo("4.60");
-        assertThat(status.monthlyLimit()).isEqualByComparingTo("20");
+        assertThat(status.costThisMonthCents()).isEqualTo(460L);
+        assertThat(status.costInAllCents()).isEqualTo(460L);
+        assertThat(status.monthlyLimitCents()).isEqualTo(2000L);
         assertThat(status.state()).isEqualTo(State.READING);
-        assertThat(status.costThisMonth().scale()).isEqualTo(2);
 
         // One more token is a part of a cent: a whole cent.
         usage.count(today(), UsageRepository.Step.EXTRACTION, "claude-opus-5-5", 1, 0);
-        assertThat(round.status().costThisMonth()).isEqualByComparingTo("4.61");
+        assertThat(round.report().costThisMonthCents()).isEqualTo(461L);
     }
 
     @Test
@@ -95,8 +94,8 @@ class ReadingCountingIntegrationTest extends RoundTestBase {
         usage.count(today().minusMonths(2), UsageRepository.Step.EXTRACTION, "claude-opus-5-5", 1_000_000, 0);
         usage.count(today(), UsageRepository.Step.EXTRACTION, "claude-opus-5-5", 500_000, 0);
 
-        assertThat(round.status().costThisMonth()).isEqualByComparingTo("2.00");
-        assertThat(round.status().costInAll()).isEqualByComparingTo("6.00");
+        assertThat(round.report().costThisMonthCents()).isEqualTo(200L);
+        assertThat(round.report().costInAllCents()).isEqualTo(600L);
     }
 
     @Test
@@ -135,7 +134,7 @@ class ReadingCountingIntegrationTest extends RoundTestBase {
         assertThat(round.round()).isEqualTo(1);
 
         assertThat(rows().stream().map(row -> row.get("model")).toList()).containsExactlyInAnyOrder("claude-haiku-5-5", "claude-some-other-model-9");
-        assertThat(round.status().costThisMonth()).as("$4 for a million tokens in, the extraction's price").isEqualByComparingTo("4.01");
+        assertThat(round.report().costThisMonthCents()).as("$4 for a million tokens in, the extraction's price").isEqualTo(401L);
     }
 
     @Test

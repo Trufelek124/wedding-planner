@@ -4,7 +4,7 @@ import static io.github.trufelek124.weddingplanner.mailreading.internal.Answers.
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.trufelek124.weddingplanner.mail.StandInGoogle;
-import io.github.trufelek124.weddingplanner.mailreading.Reading.State;
+import io.github.trufelek124.weddingplanner.mail.ReadingReport.State;
 import io.github.trufelek124.weddingplanner.mailreading.StandInAnthropic.Reply;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,18 +56,18 @@ class ReadingBrakesIntegrationTest extends RoundTestBase {
         assertThat(mine.round()).as("the first message is read, and before the second the limit is found reached").isEqualTo(1);
 
         assertThat(triageCalls()).isEqualTo(1);
-        assertThat(mine.status().state()).isEqualTo(State.MONTHLY_LIMIT);
-        assertThat(mine.status().costThisMonth()).isEqualByComparingTo("160.00");
-        assertThat(mine.status().monthlyLimit()).isEqualByComparingTo("20");
+        assertThat(mine.report().state()).isEqualTo(State.MONTHLY_LIMIT);
+        assertThat(mine.report().costThisMonthCents()).isEqualTo(16000L);
+        assertThat(mine.report().monthlyLimitCents()).isEqualTo(2000L);
         assertThat(mine.round()).isZero();
         assertThat(triageCalls()).as("a further round asks nothing").isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM mail_message WHERE verdict IS NULL", Integer.class)).isEqualTo(2);
 
         // Next month it goes on.
         TestClockAdvance.days(40);
-        assertThat(mine.status().state()).isEqualTo(State.READING);
-        assertThat(mine.status().costThisMonth()).isEqualByComparingTo("0.00");
-        assertThat(mine.status().costInAll()).isEqualByComparingTo("160.00");
+        assertThat(mine.report().state()).isEqualTo(State.READING);
+        assertThat(mine.report().costThisMonthCents()).isEqualTo(0L);
+        assertThat(mine.report().costInAllCents()).isEqualTo(16000L);
         assertThat(mine.round()).as("one more is read, and then the new month's limit is reached again").isEqualTo(1);
         assertThat(triageCalls()).isEqualTo(2);
     }
@@ -77,8 +77,8 @@ class ReadingBrakesIntegrationTest extends RoundTestBase {
         usage.count(java.time.LocalDate.ofInstant(clock.instant(), java.time.ZoneOffset.UTC), UsageRepository.Step.EXTRACTION, "claude-opus-5-5", 5_000_000, 0);
         // 5,000,000 tokens at $4 a million is exactly $20.
 
-        assertThat(round.status().state()).isEqualTo(State.MONTHLY_LIMIT);
-        assertThat(round.status().costThisMonth()).isEqualByComparingTo("20.00");
+        assertThat(round.report().state()).isEqualTo(State.MONTHLY_LIMIT);
+        assertThat(round.report().costThisMonthCents()).isEqualTo(2000L);
     }
 
     // ---------------------------------------------------------------- the day
@@ -94,11 +94,11 @@ class ReadingBrakesIntegrationTest extends RoundTestBase {
 
         assertThat(mine.round()).isEqualTo(2);
 
-        assertThat(mine.status().state()).isEqualTo(State.DAILY_LIMIT);
+        assertThat(mine.report().state()).isEqualTo(State.DAILY_LIMIT);
         assertThat(mine.round()).isZero();
         assertThat(triageCalls()).isEqualTo(2);
         TestClockAdvance.days(1);
-        assertThat(mine.status().state()).isEqualTo(State.READING);
+        assertThat(mine.report().state()).isEqualTo(State.READING);
         assertThat(mine.round()).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM mail_message WHERE verdict IS NULL", Integer.class)).isZero();
     }
@@ -184,28 +184,28 @@ class ReadingBrakesIntegrationTest extends RoundTestBase {
         service.answerEveryCallWith(Reply.error(529, "overloaded_error", "Overloaded"));
 
         assertThat(round.round()).isZero();
-        assertThat(round.status().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
+        assertThat(round.report().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
         long calls = service.calls().size();
         assertThat(round.round()).as("while it waits, nothing is asked").isZero();
         assertThat(service.calls()).hasSize((int) calls);
 
         // One minute for the first time ...
         TestClockAdvance.seconds(61);
-        assertThat(round.status().state()).isEqualTo(State.READING);
+        assertThat(round.report().state()).isEqualTo(State.READING);
         assertThat(round.round()).isZero();
         assertThat(service.calls().size()).isGreaterThan((int) calls);
         calls = service.calls().size();
         // ... two for the second ...
         TestClockAdvance.seconds(90);
-        assertThat(round.status().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
+        assertThat(round.report().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
         TestClockAdvance.seconds(31);
-        assertThat(round.status().state()).isEqualTo(State.READING);
+        assertThat(round.report().state()).isEqualTo(State.READING);
         assertThat(round.round()).isZero();
         // ... four for the third ...
         TestClockAdvance.seconds(3 * 60 + 50);
-        assertThat(round.status().state()).as("not yet four minutes").isEqualTo(State.WAITING_FOR_THE_SERVICE);
+        assertThat(round.report().state()).as("not yet four minutes").isEqualTo(State.WAITING_FOR_THE_SERVICE);
         TestClockAdvance.seconds(15);
-        assertThat(round.status().state()).isEqualTo(State.READING);
+        assertThat(round.report().state()).isEqualTo(State.READING);
 
         // One good answer sets it back: the next failure waits a minute only.
         service.reset();
@@ -227,23 +227,23 @@ class ReadingBrakesIntegrationTest extends RoundTestBase {
         // Nine failures in a row: 1, 2, 4 ... would be 256 minutes: it is an hour.
         round.round();
         TestClockAdvance.minutes(59);
-        assertThat(round.status().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
+        assertThat(round.report().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
         TestClockAdvance.minutes(2);
-        assertThat(round.status().state()).isEqualTo(State.READING);
+        assertThat(round.report().state()).isEqualTo(State.READING);
 
         // m-2 is read at last, and the next failure is the first again: a minute.
         service.reset();
         service.answerNextCallsWith(triageSays(false, 95), Reply.error(529, "overloaded_error", "x"), Reply.error(529, "overloaded_error", "x"), Reply.error(529, "overloaded_error", "x"));
         assertThat(round.round()).isEqualTo(1);
-        assertThat(round.status().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
+        assertThat(round.report().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
         TestClockAdvance.seconds(61);
-        assertThat(round.status().state()).isEqualTo(State.READING);
+        assertThat(round.report().state()).isEqualTo(State.READING);
     }
 
     // ---------------------------------------------------------------- the key is not accepted
 
     @Test
-    void whenTheKeyIsNotAcceptedTheReadingStopsAndAskedNothingAgainOfAnybody() {
+    void whenTheKeyIsNotAcceptedTheReadingStopsAndAskedNothingAgainOfAnybody() throws Exception {
         annaGets("m-1", "one", TEXT);
         annaGets("m-2", "two", TEXT);
         note();
@@ -251,7 +251,10 @@ class ReadingBrakesIntegrationTest extends RoundTestBase {
 
         assertThat(round.round()).isZero();
 
-        assertThat(round.status().state()).isEqualTo(State.KEY_NOT_ACCEPTED);
+        assertThat(round.report().state()).isEqualTo(State.KEY_NOT_ACCEPTED);
+        assertThat(mail(wedding.piotr).get("reading")).as("what the e-mail page is told, whoever asks")
+                .isInstanceOfSatisfying(java.util.Map.class, block -> assertThat(block).containsEntry("state", "KEY_NOT_ACCEPTED")
+                        .containsEntry("waiting", 2).containsEntry("read", 0));
         assertThat(isRead("m-1") || isRead("m-2")).isFalse();
         int aiCalls = service.calls().size();
         int googleCalls = google.calls(THREADS).size();
@@ -260,7 +263,7 @@ class ReadingBrakesIntegrationTest extends RoundTestBase {
         service.reset();
         service.answerEveryCallWith(triageSays(false, 95));
         assertThat(round.round()).isZero();
-        assertThat(round.status().state()).isEqualTo(State.KEY_NOT_ACCEPTED);
+        assertThat(round.report().state()).isEqualTo(State.KEY_NOT_ACCEPTED);
         assertThat(service.calls()).as("the service is not asked again").isEmpty();
         assertThat(google.calls(THREADS)).as("Gmail is not asked again").hasSize(googleCalls);
     }

@@ -26,12 +26,14 @@ owner's mail is not connected. It has no entry of its own in the top bar: it is 
 | You are connected | The address that is connected, since when, when the server last looked, how many messages it has noted, and **Disconnect** |
 | Google no longer lets the server in (access was withdrawn, or expired) | That it has to be connected again, and **Connect Gmail** |
 | Your partner | Whether they are connected and when the server last looked — not their address |
+| The import is set up | How far the reading of the mail is, and what it has cost (S04 section 8) |
 
 **Before connecting the page says, in plain words:** the planner asks Google for permission to *read* your mail and
 nothing else — it cannot send, change or delete anything; it looks at the last three months and then at new
-mail every few minutes; of a message that does not concern the wedding it keeps only that it was looked at; and,
-once the import is complete, the sender, the subject and the beginning of every message will be sent to the AI
-service that decides whether it concerns the wedding (S01 section 6, "What leaves the server"). Google will show
+mail every few minutes; of a message that does not concern the wedding it keeps only that it was looked at; and
+the sender, the subject and the beginning of every message are sent to the AI service that decides whether it
+concerns the wedding, a message that does in full, attachments never (S04 section 3) — or, on a server where
+reading is not set up, that nothing is sent yet and what will be. Google will show
 a warning that the app is not verified (D-006); the page says so beforehand, so that nobody is surprised.
 
 **Disconnect** asks first and says what it does (section 6).

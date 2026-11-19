@@ -1,6 +1,8 @@
 package io.github.trufelek124.weddingplanner.mail.internal;
 
 import io.github.trufelek124.weddingplanner.identity.UserId;
+import io.github.trufelek124.weddingplanner.mail.MailReading;
+import io.github.trufelek124.weddingplanner.mail.ReadingReport;
 import io.github.trufelek124.weddingplanner.mail.internal.ConnectionRepository.Connection;
 import io.github.trufelek124.weddingplanner.mail.internal.GoogleClient.Failure;
 import io.github.trufelek124.weddingplanner.mail.internal.GoogleClient.Granted;
@@ -8,6 +10,7 @@ import io.github.trufelek124.weddingplanner.mail.internal.GoogleClient.GoogleFai
 import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.MailStateResponse;
 import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.MyConnection;
 import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.PartnersConnection;
+import io.github.trufelek124.weddingplanner.mail.internal.MailDtos.ReadingBlock;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSetup.Outcome;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSetup.Ready;
 import io.github.trufelek124.weddingplanner.mail.internal.MailTypes.ConnectionState;
@@ -62,6 +65,8 @@ class MailService {
     private final GmailAccess access;
     private final MessageRepository messages;
     private final Clock clock;
+    private final MailReading reading;
+    private final ReadingReport report;
 
     MailService(
             MailSetup setup,
@@ -71,7 +76,9 @@ class MailService {
             GoogleClient google,
             GmailAccess access,
             MessageRepository messages,
-            Clock clock) {
+            Clock clock,
+            MailReading reading,
+            ReadingReport report) {
         this.setup = setup;
         this.weddings = weddings;
         this.connections = connections;
@@ -80,15 +87,18 @@ class MailService {
         this.access = access;
         this.messages = messages;
         this.clock = clock;
+        this.reading = reading;
+        this.report = report;
     }
 
     // ---------------------------------------------------------------- the state
 
     MailStateResponse state(UserId user) {
-        if (setup.ready().isEmpty()) {
-            return new MailStateResponse(false, notConnected(), new PartnersConnection(false, ConnectionState.NOT_CONNECTED, null));
-        }
         Membership mine = weddings.membershipOf(user);
+        ReadingBlock block = readingOf(mine);
+        if (setup.ready().isEmpty()) {
+            return new MailStateResponse(false, notConnected(), new PartnersConnection(false, ConnectionState.NOT_CONNECTED, null), block);
+        }
         Optional<Connection> yours = connections.find(mine.memberId());
         PartnersConnection partner = mine.memberIds().stream()
                 .filter(id -> !id.equals(mine.memberId()))
@@ -97,7 +107,23 @@ class MailService {
                         .map(connection -> new PartnersConnection(true, connection.state(), connection.lastLookAt()))
                         .orElse(new PartnersConnection(mine.joinedMemberIds().contains(id), ConnectionState.NOT_CONNECTED, null)))
                 .orElse(new PartnersConnection(false, ConnectionState.NOT_CONNECTED, null));
-        return new MailStateResponse(true, yours.map(this::view).orElse(notConnected()), partner);
+        return new MailStateResponse(true, yours.map(this::view).orElse(notConnected()), partner, block);
+    }
+
+    /** The wedding's reading, the same for both owners: numbers, never a message or an address. */
+    private ReadingBlock readingOf(Membership mine) {
+        MailReading.Counts counts = reading.counts(mine.weddingId());
+        ReadingReport.Report now = report.report();
+        return new ReadingBlock(
+                now.state(),
+                counts.waiting(),
+                counts.read(),
+                counts.aboutTheWedding(),
+                counts.couldNotBeRead(),
+                counts.proposals(),
+                now.costThisMonthCents(),
+                now.costInAllCents(),
+                now.monthlyLimitCents());
     }
 
     private MyConnection view(Connection connection) {

@@ -4,10 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.trufelek124.weddingplanner.PostgresIntegrationTest;
 import io.github.trufelek124.weddingplanner.mail.MailReading;
-import io.github.trufelek124.weddingplanner.mailreading.Reading;
-import io.github.trufelek124.weddingplanner.mailreading.Reading.State;
+import io.github.trufelek124.weddingplanner.mail.ReadingReport;
+import io.github.trufelek124.weddingplanner.mail.ReadingReport.State;
 import io.github.trufelek124.weddingplanner.mailreading.StandInAnthropic;
-import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,7 +42,7 @@ class ReadingStaysOffIntegrationTest extends PostgresIntegrationTest {
     ReadingSteps steps;
 
     @Autowired
-    Reading reading;
+    ReadingReport reading;
 
     @Autowired
     MailReading mail;
@@ -61,7 +60,7 @@ class ReadingStaysOffIntegrationTest extends PostgresIntegrationTest {
     @Test
     void aSettingThatIsNotValidSwitchesTheReadingOffAndTheServerStartedAllTheSame(CapturedOutput output) {
         assertThat(steps).isInstanceOf(NoSteps.class);
-        assertThat(reading.status().state()).isEqualTo(State.OFF);
+        assertThat(reading.report().state()).isEqualTo(State.OFF);
         assertThat(round.round()).isZero();
         assertThat(StandInAnthropic.get().calls()).isEmpty();
         assertThat(output.getAll()).contains("The reading of the mail is off: not valid: ").contains("MAIL_READING_DAILY_MESSAGES")
@@ -70,11 +69,11 @@ class ReadingStaysOffIntegrationTest extends PostgresIntegrationTest {
 
     @Test
     void theStateIsOffAndTheCostIsNothing() {
-        Reading.Status status = reading.status();
+        ReadingReport.Report status = reading.report();
 
         assertThat(status.state()).isEqualTo(State.OFF);
-        assertThat(status.costThisMonth()).isEqualByComparingTo(BigDecimal.ZERO);
-        assertThat(status.costInAll()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(status.costThisMonthCents()).isZero();
+        assertThat(status.costInAllCents()).isZero();
         assertThat(mail.isSetUp()).isFalse();
     }
 }

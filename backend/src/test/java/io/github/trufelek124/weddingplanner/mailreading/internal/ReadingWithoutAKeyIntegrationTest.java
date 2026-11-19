@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.trufelek124.weddingplanner.mail.MailTestBase;
 import io.github.trufelek124.weddingplanner.mail.internal.NotingForTests;
 import io.github.trufelek124.weddingplanner.mail.StandInGoogle.Mime;
-import io.github.trufelek124.weddingplanner.mailreading.Reading.State;
+import io.github.trufelek124.weddingplanner.mail.ReadingReport.State;
 import io.github.trufelek124.weddingplanner.mailreading.StandInAnthropic;
 import java.time.Duration;
 import java.time.Instant;
@@ -41,7 +41,7 @@ class ReadingWithoutAKeyIntegrationTest extends MailTestBase {
         NotingForTests.lookAtAll(context);
         int threadCalls = google.calls("/gmail/v1/users/me/threads").size();
 
-        assertThat(round.status().state()).isEqualTo(State.OFF);
+        assertThat(round.report().state()).isEqualTo(State.OFF);
         assertThat(round.round()).isZero();
 
         assertThat(google.calls("/gmail/v1/users/me/threads")).hasSize(threadCalls);

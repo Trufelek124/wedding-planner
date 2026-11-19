@@ -59,6 +59,17 @@ class MailNotSetUpIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void theReadingIsOffAndEveryNumberIsThereAsZero() throws Exception {
+        Map<String, Object> state = TestHttp.json(wedding.http.getAs(wedding.piotr, "/api/mail"));
+
+        assertThat((Map<String, Object>) state.get("reading")).containsOnly(
+                Map.entry("state", "OFF"), Map.entry("waiting", 0), Map.entry("read", 0), Map.entry("aboutTheWedding", 0),
+                Map.entry("couldNotBeRead", 0), Map.entry("suggestions", 0), Map.entry("costThisMonthCents", 0),
+                Map.entry("costInAllCents", 0), Map.entry("monthlyLimitCents", 2000));
+    }
+
+    @Test
     void theOtherCallsAnswerWithTheProblemThatSaysSo() throws Exception {
         HttpResponse<String> connect = wedding.http.post("/api/mail/gmail/connection", Map.of("Authorization", "Bearer " + wedding.anna));
         HttpResponse<String> disconnect = wedding.http.deleteAs(wedding.anna, "/api/mail/gmail/connection");

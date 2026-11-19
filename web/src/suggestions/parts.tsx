@@ -67,7 +67,9 @@ export function Source({ suggestion }: { suggestion: Suggestion }) {
     suggestion.senderName !== '' && suggestion.senderAddress !== ''
       ? `${suggestion.senderName} (${suggestion.senderAddress})`
       : suggestion.senderName !== '' ? suggestion.senderName : suggestion.senderAddress !== '' ? suggestion.senderAddress : 'Unknown sender'
-  const link = mailAddress(suggestion.mailLink)
+  // The mail can be opened only from the mailbox it is in: the other one's cannot be opened by you, and the card says whose it is.
+  const mine = wedding.members.find((member) => member.you)?.id
+  const link = mine !== undefined && suggestion.inboxMemberId === mine ? mailAddress(suggestion.mailLink) : null
 
   return (
     <>

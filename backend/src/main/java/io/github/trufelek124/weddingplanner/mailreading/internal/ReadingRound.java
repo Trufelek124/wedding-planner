@@ -12,10 +12,10 @@ import io.github.trufelek124.weddingplanner.mail.MailReading.NotAboutTheWedding;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Reason;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Unavailable;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Verdict;
+import io.github.trufelek124.weddingplanner.mail.ReadingReport;
 import io.github.trufelek124.weddingplanner.mailreading.MailExtraction;
 import io.github.trufelek124.weddingplanner.mailreading.MailTriage;
 import io.github.trufelek124.weddingplanner.mailreading.Outcome;
-import io.github.trufelek124.weddingplanner.mailreading.Reading;
 import io.github.trufelek124.weddingplanner.mailreading.Sender;
 import io.github.trufelek124.weddingplanner.mailreading.Used;
 import io.github.trufelek124.weddingplanner.suggestions.Suggestions;
@@ -65,7 +65,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @EnableScheduling
-class ReadingRound implements Reading, SchedulingConfigurer {
+class ReadingRound implements ReadingReport, SchedulingConfigurer {
 
     private static final Logger log = LoggerFactory.getLogger(ReadingRound.class);
 
@@ -149,11 +149,11 @@ class ReadingRound implements Reading, SchedulingConfigurer {
     // ---------------------------------------------------------------- the state
 
     @Override
-    public Status status() {
+    public Report report() {
         Instant now = clock.instant();
         BigDecimal month = estimate(monthTokens(now));
         BigDecimal all = estimate(usage.tokens(UsageRepository.Step.TRIAGE), usage.tokens(UsageRepository.Step.EXTRACTION));
-        return new Status(stateAt(now, month), cents(month), cents(all), rules.monthlyLimitUsd());
+        return new Report(stateAt(now, month), cents(month), cents(all), cents(rules.monthlyLimitUsd()));
     }
 
     private State stateAt(Instant now, BigDecimal monthEstimate) {
@@ -194,8 +194,8 @@ class ReadingRound implements Reading, SchedulingConfigurer {
                 .add(UsageRepository.dollars(triageThenExtraction[1], rules.extractionPrice()));
     }
 
-    private static BigDecimal cents(BigDecimal dollars) {
-        return dollars.setScale(2, RoundingMode.CEILING);
+    private static long cents(BigDecimal dollars) {
+        return dollars.movePointRight(2).setScale(0, RoundingMode.CEILING).longValueExact();
     }
 
     private static LocalDate today(Instant now) {

@@ -132,6 +132,22 @@ describe('the waiting suggestions', () => {
     expect(document.querySelectorAll('a[href^="javascript"], a[href^="http:"]')).toHaveLength(0)
   })
 
+  it('draws the link to the e-mail for your own inbox and not for the partner’s, which the card names', async () => {
+    inbox([
+      suggestion({ title: 'In my inbox', inboxMemberId: ANNA_MEMBER, mailLink: 'https://mail.google.com/mail/u/0/#all/mine' }),
+      suggestion({ title: 'In theirs', inboxMemberId: PIOTR_MEMBER, mailLink: 'https://mail.google.com/mail/u/0/#all/theirs' }),
+      suggestion({ title: 'In nobody’s I know', inboxMemberId: 'f0f0f0f0-0000-4000-8000-000000000000', mailLink: 'https://mail.google.com/mail/u/0/#all/who' }),
+    ])
+    open('/suggestions')
+
+    await screen.findByRole('article', { name: 'In my inbox' })
+    expect(card('In my inbox').getByRole('link', { name: 'Open the e-mail' })).toHaveAttribute('href', 'https://mail.google.com/mail/u/0/#all/mine')
+    expect(card('In theirs').queryByRole('link', { name: 'Open the e-mail' })).not.toBeInTheDocument()
+    expect(card('In theirs').getByText('Arrived').nextSibling).toHaveTextContent('in Piotr’s inbox')
+    expect(card('In nobody’s I know').queryByRole('link', { name: 'Open the e-mail' })).not.toBeInTheDocument()
+    expect(document.querySelectorAll('a[href*="theirs"]')).toHaveLength(0)
+  })
+
   it('shows what a mail wrote letter for letter, never as markup or a link', async () => {
     inbox([
       suggestion({

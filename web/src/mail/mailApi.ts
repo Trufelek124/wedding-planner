@@ -4,6 +4,7 @@ export type MailState = Schemas['MailState']
 export type MailConnection = Schemas['MailConnection']
 export type PartnersMailConnection = Schemas['PartnersMailConnection']
 export type ConnectionState = MailConnection['state']
+export type MailReading = Schemas['MailReading']
 
 export async function fetchMail(signal?: AbortSignal): Promise<MailState> {
   return unwrap(await api.GET('/api/mail', { signal }))
@@ -36,6 +37,16 @@ export function googleAddress(address: string): string | null {
 /** Whether the planner should ask an owner on Home to connect: the import works here and this owner's mail is not in. */
 export function needsConnecting(mail: MailState): boolean {
   return mail.setUp && mail.yours.state !== 'CONNECTED'
+}
+
+const US_DOLLARS = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+
+/**
+ * US dollars from whole cents: "$1.23", "$20.00". The AI service is paid in dollars whatever the wedding's currency is,
+ * so this is not `money()`, which is for the wedding's.
+ */
+export function dollars(cents: number): string {
+  return US_DOLLARS.format(cents / 100)
 }
 
 /** "19 Nov 2026, 14:05" in the time zone of the wedding, put together from parts so that browsers agree. */

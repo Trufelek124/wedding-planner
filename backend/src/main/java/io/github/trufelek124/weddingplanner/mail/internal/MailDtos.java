@@ -1,5 +1,6 @@
 package io.github.trufelek124.weddingplanner.mail.internal;
 
+import io.github.trufelek124.weddingplanner.mail.ReadingReport;
 import io.github.trufelek124.weddingplanner.mail.internal.MailTypes.ConnectionState;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
@@ -19,7 +20,9 @@ final class MailDtos {
     record MailStateResponse(
             @Schema(description = "False when the server was not given what the import needs.") boolean setUp,
             @Schema(description = "The caller's own connection.") MyConnection yours,
-            @Schema(description = "The partner's connection, without their address.") PartnersConnection partner) {
+            @Schema(description = "The partner's connection, without their address.") PartnersConnection partner,
+            @Schema(description = "How the reading of the mail stands. The wedding's, not one owner's: both owners get the same.")
+                    ReadingBlock reading) {
 
         @Override
         public String toString() {
@@ -52,6 +55,32 @@ final class MailDtos {
         @Override
         public String toString() {
             return "PartnersMailConnection[joined=" + joined + ", state=" + state + "]";
+        }
+    }
+
+    @Schema(
+            name = "MailReading",
+            description = "Where the reading of the mail stands, for both mailboxes of the wedding together (S04 section 8). "
+                    + "Numbers only: nothing of anybody's address or message. The costs are an estimate from the tokens used and "
+                    + "the prices in the server's settings, in whole US cents.")
+    record ReadingBlock(
+            @Schema(description = "OFF: nothing is read (no key for the AI service, or the import is not set up). READING: it reads. "
+                    + "WAITING_FOR_THE_SERVICE: the AI service asked to wait, and it goes on by itself. KEY_NOT_ACCEPTED: the key "
+                    + "or the account is not accepted, and it starts again when the server is started with one that is. "
+                    + "MONTHLY_LIMIT: the limit for the month is reached. DAILY_LIMIT: the limit of messages for the day is reached.")
+                    ReadingReport.State state,
+            @Schema(description = "Messages noted and not yet read.") int waiting,
+            @Schema(description = "Messages that were read, whatever came of it.") int read,
+            @Schema(description = "Of those read, the ones that concerned the wedding.") int aboutTheWedding,
+            @Schema(description = "Of those read, the ones that could not be read.") int couldNotBeRead,
+            @Schema(description = "How many suggestions came of the messages that were read.") int suggestions,
+            @Schema(description = "The estimated cost this month, in whole US cents, rounded up.") long costThisMonthCents,
+            @Schema(description = "The estimated cost in all, in whole US cents, rounded up.") long costInAllCents,
+            @Schema(description = "The monthly limit the month's estimate is held against, in whole US cents.") long monthlyLimitCents) {
+
+        @Override
+        public String toString() {
+            return "MailReading[state=" + state + "]";
         }
     }
 

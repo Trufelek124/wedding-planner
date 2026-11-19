@@ -1,10 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { ApiError } from '../api/client.ts'
 import { useLoaded } from '../planning/useLoaded.ts'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
+import { Warning } from '../ui/Warning.tsx'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
-import { browser, disconnect, fetchMail, googleAddress, lastLook, moment, startConnecting, type MailState, type PartnersMailConnection } from './mailApi.ts'
+import {
+  browser,
+  disconnect,
+  dollars,
+  fetchMail,
+  googleAddress,
+  lastLook,
+  moment,
+  startConnecting,
+  type MailReading,
+  type MailState,
+  type PartnersMailConnection,
+} from './mailApi.ts'
 
 interface Notice {
   key: number
@@ -91,6 +104,7 @@ function Loaded({ mail, onChanged, say }: LoadedProps) {
     <>
       <Yours mail={mail} onChanged={onChanged} say={say} />
       <Partner partner={mail.partner} />
+      <Reading reading={mail.reading} />
     </>
   )
 }
@@ -192,7 +206,6 @@ function Yours({ mail, onChanged, say }: LoadedProps) {
               <dd>{mine.messagesNoted}</dd>
             </div>
           </dl>
-          <p className="muted">For now the planner only notes which messages there are. Reading them comes later.</p>
         </>
       ) : (
         <>
@@ -203,11 +216,11 @@ function Yours({ mail, onChanged, say }: LoadedProps) {
             </p>
           ) : (
             <p>
-              When it is complete, the e-mail import will look through your Gmail for messages about the wedding and suggest tasks, payments and vendors.
-              Nothing changes in the planner until one of you accepts a suggestion.
+              The e-mail import looks through your Gmail for messages about the wedding, so that it can suggest tasks, payments and vendors. Nothing
+              changes in the planner until one of you accepts a suggestion.
             </p>
           )}
-          <WhatConnectingMeans />
+          <WhatConnectingMeans reading={mail.reading} />
         </>
       )}
 
@@ -252,7 +265,7 @@ function Yours({ mail, onChanged, say }: LoadedProps) {
 }
 
 /** In plain words, before the button: what asking for the permission means. */
-function WhatConnectingMeans() {
+function WhatConnectingMeans({ reading }: { reading: MailReading }) {
   return (
     <div className="stack-tight">
       <h3 id="mail-means">What connecting means</h3>
@@ -260,16 +273,115 @@ function WhatConnectingMeans() {
         <li>The planner asks Google for permission to read your mail, and nothing else. It cannot send, change or delete anything.</li>
         <li>It looks at the last three months, and after that at new mail every few minutes.</li>
         <li>Of a message that does not concern the wedding it keeps only that it was looked at.</li>
-        <li>
-          Once the import is complete, the sender, the subject and the beginning of every message will be sent to the AI service that decides whether it
-          concerns the wedding.
-        </li>
+        {reading.state === 'OFF' ? (
+          <li>
+            Nothing is sent to an AI service on this server yet. Once reading is switched on, the sender, the subject and the beginning of every message
+            will be sent to it, to decide whether the message concerns the wedding, and a message that does will be sent in full. Attachments are never
+            sent.
+          </li>
+        ) : (
+          <li>
+            The sender, the subject and the beginning of every message are sent to an AI service, to decide whether the message concerns the wedding. A
+            message that does is sent in full. Attachments are never sent.
+          </li>
+        )}
         <li>
           Google will warn you that this app is not verified. That is expected for a private app of two people: choose “Advanced” to go on.
         </li>
-        <li>For now the planner only notes which messages there are. Reading them comes later.</li>
       </ul>
     </div>
+  )
+}
+
+/** How the reading of the mail stands, in words, and what it has come to and cost. The wedding's: both owners are told the same. */
+function Reading({ reading }: { reading: MailReading }) {
+  const nothingEver = reading.state === 'OFF' && reading.read === 0
+  return (
+    <section className="group mail-reading" aria-labelledby="mail-reading">
+      <h2 id="mail-reading">Reading your mail</h2>
+      <ReadingState reading={reading} />
+      {!nothingEver && <ReadingNumbers reading={reading} />}
+    </section>
+  )
+}
+
+function ReadingState({ reading }: { reading: MailReading }) {
+  switch (reading.state) {
+    case 'OFF':
+      return (
+        <p>
+          The planner notes which messages there are, and reads none of them yet: reading is not set up on this server. Nothing is sent to the AI
+          service.
+        </p>
+      )
+    case 'READING':
+      return <p>The planner is reading your mail, the newest first, a few messages at a time.</p>
+    case 'WAITING_FOR_THE_SERVICE':
+      return <p>The AI service is busy just now. The reading goes on by itself.</p>
+    case 'KEY_NOT_ACCEPTED':
+      return (
+        <p role="status" className="alert">
+          <Warning /> The AI service does not accept the server’s key, so the reading has stopped. It starts again when the server is started with a key
+          that works.
+        </p>
+      )
+    case 'MONTHLY_LIMIT':
+      return <p>This month’s limit of {dollars(reading.monthlyLimitCents)} is reached. The reading goes on next month.</p>
+    case 'DAILY_LIMIT':
+      return <p>Today’s limit of messages is reached. The reading goes on tomorrow.</p>
+  }
+}
+
+function messages(count: number): string {
+  return count === 1 ? '1 message' : `${count} messages`
+}
+
+function aboutTheWedding({ read, aboutTheWedding: about }: MailReading): string {
+  if (read === 1) {
+    return about === 1 ? 'It concerned the wedding.' : 'It did not concern the wedding.'
+  }
+  return `${about === 0 ? 'None' : about} of them concerned the wedding.`
+}
+
+function ReadingNumbers({ reading }: { reading: MailReading }) {
+  const none = reading.read === 0
+  return (
+    <>
+      <ul className="mail-numbers" aria-label="What was read so far">
+        <li>
+          {reading.waiting === 0 ? 'No message waits to be read.' : `${messages(reading.waiting)} ${reading.waiting === 1 ? 'waits' : 'wait'} to be read.`}
+        </li>
+        <li>{none ? 'None has been read yet.' : `${messages(reading.read)} ${reading.read === 1 ? 'was' : 'were'} read.`}</li>
+        {!none && <li>{aboutTheWedding(reading)}</li>}
+        {reading.couldNotBeRead > 0 && <li>{reading.couldNotBeRead} could not be read.</li>}
+        {!none &&
+          (reading.suggestions === 0 ? (
+            <li>No suggestions came of it.</li>
+          ) : (
+            <li>
+              <Link to="/suggestions">{reading.suggestions === 1 ? '1 suggestion' : `${reading.suggestions} suggestions`}</Link> came of it.
+            </li>
+          ))}
+      </ul>
+      <h3 id="mail-cost">Estimated cost</h3>
+      <dl className="details mail-facts" aria-labelledby="mail-cost">
+        <div className="fact">
+          <dt>This month</dt>
+          <dd>{dollars(reading.costThisMonthCents)}</dd>
+        </div>
+        <div className="fact">
+          <dt>In all</dt>
+          <dd>{dollars(reading.costInAllCents)}</dd>
+        </div>
+        <div className="fact">
+          <dt>Monthly limit</dt>
+          <dd>{dollars(reading.monthlyLimitCents)}</dd>
+        </div>
+      </dl>
+      <p className="muted">
+        These are estimates, worked out from what was sent to the AI service and the prices in the server’s settings. The bill itself may differ.
+      </p>
+    </>
   )
 }
 

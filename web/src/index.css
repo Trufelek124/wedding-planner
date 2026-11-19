@@ -2133,7 +2133,15 @@ a.button {
 }
 
 .mail-yours,
-.mail-partner {
+.mail-partner,
+.mail-reading {
   display: grid;
   gap: 1rem;
+}
+
+.mail-numbers {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.25rem;
 }

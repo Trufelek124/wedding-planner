@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.trufelek124.weddingplanner.PostgresIntegrationTest;
 import io.github.trufelek124.weddingplanner.mail.MailReading;
-import io.github.trufelek124.weddingplanner.mailreading.Reading.State;
+import io.github.trufelek124.weddingplanner.mail.ReadingReport.State;
 import io.github.trufelek124.weddingplanner.mailreading.StandInAnthropic;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +32,7 @@ class ReadingMailNotSetUpIntegrationTest extends PostgresIntegrationTest {
         StandInAnthropic.get().reset();
 
         assertThat(mail.isSetUp()).isFalse();
-        assertThat(round.status().state()).isEqualTo(State.OFF);
+        assertThat(round.report().state()).isEqualTo(State.OFF);
         assertThat(round.round()).isZero();
         assertThat(StandInAnthropic.get().calls()).isEmpty();
     }

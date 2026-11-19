@@ -15,11 +15,40 @@ function open(path: string) {
 
 const NOT_CONNECTED = { state: 'NOT_CONNECTED', address: null, connectedAt: null, lastLookAt: null, messagesNoted: 0 } as const
 
+type Reading = MailState['reading']
+
+/** Nothing read, reading not set up: what a new server says. */
+const QUIET: Reading = {
+  state: 'OFF',
+  waiting: 0,
+  read: 0,
+  aboutTheWedding: 0,
+  couldNotBeRead: 0,
+  suggestions: 0,
+  costThisMonthCents: 0,
+  costInAllCents: 0,
+  monthlyLimitCents: 2000,
+}
+
+/** Reading under way, with believable numbers. */
+const READ: Reading = {
+  state: 'READING',
+  waiting: 128,
+  read: 47,
+  aboutTheWedding: 12,
+  couldNotBeRead: 3,
+  suggestions: 9,
+  costThisMonthCents: 460,
+  costInAllCents: 1234,
+  monthlyLimitCents: 2000,
+}
+
 function mail(overrides: Partial<MailState> = {}): MailState {
   return {
     setUp: true,
     yours: NOT_CONNECTED,
     partner: { joined: true, state: 'NOT_CONNECTED', lastLookAt: null },
+    reading: QUIET,
     ...overrides,
   }
 }
@@ -47,7 +76,7 @@ describe('the e-mail import page', () => {
     serverWith(mail({ setUp: false }))
     open('/mail')
 
-    expect(await screen.findByText(/not set up on this server/)).toBeInTheDocument()
+    expect(await screen.findByText(/The e-mail import is not set up on this server/)).toBeInTheDocument()
     expect(within(screen.getByRole('main')).queryByRole('button')).toBeNull()
   })
 
@@ -62,10 +91,10 @@ describe('the e-mail import page', () => {
     expect(list).toHaveTextContent('cannot send, change or delete')
     expect(list).toHaveTextContent('last three months')
     expect(list).toHaveTextContent('only that it was looked at')
-    expect(list).toHaveTextContent('sender, the subject and the beginning of every message will be sent to the AI service')
+    expect(list).toHaveTextContent('Nothing is sent to an AI service on this server yet')
     expect(list).toHaveTextContent('not verified')
     expect(list).toHaveTextContent('“Advanced”')
-    expect(list).toHaveTextContent('only notes which messages there are')
+    expect(list).not.toHaveTextContent('Reading them comes later')
     const button = screen.getByRole('button', { name: 'Connect Gmail' })
     expect(heading.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Disconnect' })).toBeNull()
@@ -140,7 +169,7 @@ describe('the e-mail import page', () => {
     serverWith(mail({ setUp: false }))
     open('/mail')
 
-    await screen.findByText(/not set up on this server/)
+    await screen.findByText(/The e-mail import is not set up on this server/)
     expect(screen.queryByRole('region', { name: 'Piotr' })).toBeNull()
   })
 
@@ -152,6 +181,193 @@ describe('the e-mail import page', () => {
     server.answer('GET /api/mail', () => Response.json(mail()))
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('button', { name: 'Connect Gmail' })).toBeInTheDocument()
+  })
+})
+
+describe('what connecting means, with the reading on', () => {
+  it('says that the sender, the subject and the beginning are sent, and a message about the wedding in full', async () => {
+    serverWith(mail({ reading: READ }))
+    open('/mail')
+
+    const list = await screen.findByRole('list', { name: 'What connecting means' })
+    expect(list).toHaveTextContent('The sender, the subject and the beginning of every message are sent to an AI service')
+    expect(list).toHaveTextContent('A message that does is sent in full')
+    expect(list).toHaveTextContent('Attachments are never sent')
+    expect(list).not.toHaveTextContent('Nothing is sent to an AI service')
+    expect(list).not.toHaveTextContent('will be sent')
+  })
+
+  it('says what would be sent, and that nothing is yet, while the reading is off', async () => {
+    serverWith(mail({ reading: QUIET }))
+    open('/mail')
+
+    const list = await screen.findByRole('list', { name: 'What connecting means' })
+    expect(list).toHaveTextContent('Nothing is sent to an AI service on this server yet.')
+    expect(list).toHaveTextContent('will be sent to it')
+    expect(list).toHaveTextContent('a message that does will be sent in full')
+    expect(list).toHaveTextContent('Attachments are never sent')
+  })
+})
+
+describe('reading your mail', () => {
+  function part() {
+    return within(screen.getByRole('region', { name: 'Reading your mail' }))
+  }
+
+  it.each([
+    ['OFF', /reads none of them yet: reading is not set up on this server\. Nothing is sent to the AI service\./],
+    ['READING', /The planner is reading your mail, the newest first, a few messages at a time\./],
+    ['WAITING_FOR_THE_SERVICE', /The AI service is busy just now\. The reading goes on by itself\./],
+    ['MONTHLY_LIMIT', /This month’s limit of \$20\.00 is reached\. The reading goes on next month\./],
+    ['DAILY_LIMIT', /Today’s limit of messages is reached\. The reading goes on tomorrow\./],
+  ] as const)('says %s in words, never by its name', async (state, words) => {
+    serverWith(mail({ reading: { ...READ, state, read: 5 } }))
+    open('/mail')
+
+    const reading = await screen.findByRole('region', { name: 'Reading your mail' })
+    expect(reading).toHaveTextContent(words)
+    expect(reading.textContent).not.toMatch(/WAITING_FOR|MONTHLY_LIMIT|DAILY_LIMIT|KEY_NOT|READING|\bOFF\b/)
+  })
+
+  it('says the limit as the server has it, not as 20 dollars', async () => {
+    serverWith(mail({ reading: { ...READ, state: 'MONTHLY_LIMIT', monthlyLimitCents: 3550 } }))
+    open('/mail')
+
+    expect(await screen.findByText(/This month’s limit of \$35\.50 is reached/)).toBeInTheDocument()
+  })
+
+  it('warns, in words, that the AI service does not accept the key and the reading has stopped', async () => {
+    serverWith(mail({ reading: { ...READ, state: 'KEY_NOT_ACCEPTED' } }))
+    open('/mail')
+
+    const warning = await screen.findByText(/does not accept the server’s key/)
+    expect(warning).toHaveRole('status')
+    expect(warning).toHaveClass('alert')
+    expect(warning).toHaveTextContent('the reading has stopped')
+    expect(warning).toHaveTextContent('starts again when the server is started with a key that works')
+    expect(warning.querySelector('svg.warning-sign')).not.toBeNull()
+    expect(warning.querySelector('svg.warning-sign')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('shows no warning while the key is accepted', async () => {
+    serverWith(mail({ reading: READ }))
+    open('/mail')
+
+    await screen.findByRole('region', { name: 'Reading your mail' })
+    expect(screen.queryByText(/does not accept/)).toBeNull()
+  })
+
+  it('shows the numbers as short sentences, and the suggestions as a link to the inbox', async () => {
+    serverWith(mail({ reading: READ }))
+    open('/mail')
+
+    const numbers = within(await screen.findByRole('list', { name: 'What was read so far' }))
+    expect(numbers.getByText('128 messages wait to be read.')).toBeInTheDocument()
+    expect(numbers.getByText('47 messages were read.')).toBeInTheDocument()
+    expect(numbers.getByText('12 of them concerned the wedding.')).toBeInTheDocument()
+    expect(numbers.getByText('3 could not be read.')).toBeInTheDocument()
+    expect(numbers.getByRole('link', { name: '9 suggestions' })).toHaveAttribute('href', '/suggestions')
+  })
+
+  it('leaves out the line of what could not be read when none could not', async () => {
+    serverWith(mail({ reading: { ...READ, couldNotBeRead: 0 } }))
+    open('/mail')
+
+    await screen.findByRole('list', { name: 'What was read so far' })
+    expect(part().queryByText(/could not be read/)).toBeNull()
+    expect(part().queryByText(/None could not|0 could not/)).toBeNull()
+  })
+
+  it('says a zero as a word, and has no link when no suggestion came of it', async () => {
+    serverWith(mail({ reading: { ...READ, waiting: 0, aboutTheWedding: 0, suggestions: 0 } }))
+    open('/mail')
+
+    const numbers = within(await screen.findByRole('list', { name: 'What was read so far' }))
+    expect(numbers.getByText('No message waits to be read.')).toBeInTheDocument()
+    expect(numbers.getByText('None of them concerned the wedding.')).toBeInTheDocument()
+    expect(numbers.getByText('No suggestions came of it.')).toBeInTheDocument()
+    expect(numbers.queryByRole('link')).toBeNull()
+    expect(part().queryByText(/\b0 /)).toBeNull()
+  })
+
+  it('says one as one', async () => {
+    serverWith(mail({ reading: { ...READ, waiting: 1, read: 2, aboutTheWedding: 1, couldNotBeRead: 1, suggestions: 1 } }))
+    open('/mail')
+
+    const numbers = within(await screen.findByRole('list', { name: 'What was read so far' }))
+    expect(numbers.getByText('1 message waits to be read.')).toBeInTheDocument()
+    expect(numbers.getByText('2 messages were read.')).toBeInTheDocument()
+    expect(numbers.getByText('1 of them concerned the wedding.')).toBeInTheDocument()
+    expect(numbers.getByRole('link', { name: '1 suggestion' })).toBeInTheDocument()
+  })
+
+  it('writes the estimated cost in dollars from cents, and says it is an estimate', async () => {
+    serverWith(mail({ reading: { ...READ, costThisMonthCents: 460, costInAllCents: 123_456, monthlyLimitCents: 2000 } }))
+    open('/mail')
+
+    const cost = within(await screen.findByRole('heading', { name: 'Estimated cost' }).then((heading) => heading.parentElement!))
+    expect(cost.getByText('This month').nextSibling).toHaveTextContent('$4.60')
+    expect(cost.getByText('In all').nextSibling).toHaveTextContent('$1,234.56')
+    expect(cost.getByText('Monthly limit').nextSibling).toHaveTextContent('$20.00')
+    expect(part().getByText(/estimates/)).toBeInTheDocument()
+  })
+
+  it('writes a few cents with their leading zero, and nothing as $0.00', async () => {
+    serverWith(mail({ reading: { ...READ, costThisMonthCents: 0, costInAllCents: 5 } }))
+    open('/mail')
+
+    expect((await screen.findByText('This month')).nextSibling).toHaveTextContent('$0.00')
+    expect(screen.getByText('In all').nextSibling).toHaveTextContent('$0.05')
+  })
+
+  it('shows only what is said, not the numbers, while the reading is off and nothing was ever read', async () => {
+    serverWith(mail({ reading: QUIET }))
+    open('/mail')
+
+    const reading = await screen.findByRole('region', { name: 'Reading your mail' })
+    expect(reading).toHaveTextContent('reads none of them yet')
+    expect(screen.queryByRole('list', { name: 'What was read so far' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Estimated cost' })).toBeNull()
+  })
+
+  it('shows the numbers while the reading is off after something was read', async () => {
+    serverWith(mail({ reading: { ...QUIET, read: 4, aboutTheWedding: 1, costInAllCents: 80 } }))
+    open('/mail')
+
+    expect(await screen.findByRole('list', { name: 'What was read so far' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Estimated cost' })).toBeInTheDocument()
+  })
+
+  it('shows the numbers and the cost while the reading is on and nothing was read yet', async () => {
+    serverWith(mail({ reading: { ...QUIET, state: 'READING', waiting: 30 } }))
+    open('/mail')
+
+    const numbers = within(await screen.findByRole('list', { name: 'What was read so far' }))
+    expect(numbers.getByText('30 messages wait to be read.')).toBeInTheDocument()
+    expect(numbers.getByText('None has been read yet.')).toBeInTheDocument()
+    expect(numbers.queryByText(/concerned the wedding/)).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Estimated cost' })).toBeInTheDocument()
+  })
+
+  it('is under the two mailboxes, and for both whoever is connected', async () => {
+    serverWith(mail({ yours: CONNECTED, reading: READ }))
+    open('/mail')
+
+    const reading = await screen.findByRole('region', { name: 'Reading your mail' })
+    const yours = screen.getByRole('region', { name: 'Your Gmail' })
+    const partner = screen.getByRole('region', { name: 'Piotr' })
+    expect(yours.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(partner.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByText('For now the planner only notes which messages there are.')).toBeNull()
+  })
+
+  it('is not there while the import is not set up', async () => {
+    serverWith(mail({ setUp: false }))
+    open('/mail')
+
+    await screen.findByText(/The e-mail import is not set up on this server/)
+    expect(screen.queryByRole('region', { name: 'Reading your mail' })).toBeNull()
+    expect(screen.queryByText('Reading your mail')).toBeNull()
   })
 })
 
@@ -223,7 +439,7 @@ describe('connecting', () => {
     const button = await screen.findByRole('button', { name: 'Connect Gmail' })
     server.answer('GET /api/mail', () => Response.json(mail({ setUp: false })))
     await userEvent.click(button)
-    expect(await screen.findByText(/not set up on this server/)).toBeInTheDocument()
+    expect(await screen.findByText(/The e-mail import is not set up on this server/)).toBeInTheDocument()
   })
 })
 
@@ -237,7 +453,8 @@ describe('coming back from Google', () => {
     open(`/mail?connected=${word}`)
 
     expect(await screen.findByText(text)).toHaveRole(role)
-    expect(screen.getByRole('group', { name: 'What happened' })).toHaveFocus()
+    // The keyboard is put there after the page is drawn: the text can be seen a moment before.
+    await waitFor(() => expect(screen.getByRole('group', { name: 'What happened' })).toHaveFocus())
     await waitFor(() => expect(window.location.search).toBe(''))
     expect(window.location.pathname).toBe('/mail')
     // The page still says it: the address lost the word, the page did not.
@@ -334,7 +551,7 @@ describe('disconnecting', () => {
     server.answer('GET /api/mail', () => Response.json(mail({ setUp: false })))
     await userEvent.click(screen.getByRole('button', { name: 'Yes, disconnect' }))
 
-    expect(await screen.findByText(/not set up on this server/)).toBeInTheDocument()
+    expect(await screen.findByText(/The e-mail import is not set up on this server/)).toBeInTheDocument()
   })
 })
 

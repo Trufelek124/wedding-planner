@@ -461,7 +461,7 @@ export interface paths {
         };
         /**
          * Where the e-mail import stands
-         * @description Whether the import is set up on this server, the caller's own connection with the mailbox's address, and the partner's connection without it. Nothing is asked of Google.
+         * @description Whether the import is set up on this server, the caller's own connection with the mailbox's address, the partner's connection without it, and where the reading of the mail stands (counts and an estimate of its cost, the wedding's own). Nothing is asked of Google.
          */
         get: operations["state"];
         put?: never;
@@ -1188,10 +1188,60 @@ export interface components {
             /** @description Google's address, made for this attempt only. Go there at once; it works once. */
             authorizationUrl: string;
         };
+        /** @description Where the reading of the mail stands, for both mailboxes of the wedding together (S04 section 8). Numbers only: nothing of anybody's address or message. The costs are an estimate from the tokens used and the prices in the server's settings, in whole US cents. */
+        MailReading: {
+            /**
+             * Format: int32
+             * @description Of those read, the ones that concerned the wedding.
+             */
+            aboutTheWedding: number;
+            /**
+             * Format: int64
+             * @description The estimated cost in all, in whole US cents, rounded up.
+             */
+            costInAllCents: number;
+            /**
+             * Format: int64
+             * @description The estimated cost this month, in whole US cents, rounded up.
+             */
+            costThisMonthCents: number;
+            /**
+             * Format: int32
+             * @description Of those read, the ones that could not be read.
+             */
+            couldNotBeRead: number;
+            /**
+             * Format: int64
+             * @description The monthly limit the month's estimate is held against, in whole US cents.
+             */
+            monthlyLimitCents: number;
+            /**
+             * Format: int32
+             * @description Messages that were read, whatever came of it.
+             */
+            read: number;
+            /**
+             * @description OFF: nothing is read (no key for the AI service, or the import is not set up). READING: it reads. WAITING_FOR_THE_SERVICE: the AI service asked to wait, and it goes on by itself. KEY_NOT_ACCEPTED: the key or the account is not accepted, and it starts again when the server is started with one that is. MONTHLY_LIMIT: the limit for the month is reached. DAILY_LIMIT: the limit of messages for the day is reached.
+             * @enum {string}
+             */
+            state: "OFF" | "READING" | "WAITING_FOR_THE_SERVICE" | "KEY_NOT_ACCEPTED" | "MONTHLY_LIMIT" | "DAILY_LIMIT";
+            /**
+             * Format: int32
+             * @description How many suggestions came of the messages that were read.
+             */
+            suggestions: number;
+            /**
+             * Format: int32
+             * @description Messages noted and not yet read.
+             */
+            waiting: number;
+        };
         /** @description Whether the e-mail import works on this server, and where each owner's connection stands. While it is not set up both connections read NOT_CONNECTED: there is nothing to connect. */
         MailState: {
             /** @description The partner's connection, without their address. */
             partner: components["schemas"]["PartnersMailConnection"];
+            /** @description How the reading of the mail stands. The wedding's, not one owner's: both owners get the same. */
+            reading: components["schemas"]["MailReading"];
             /** @description False when the server was not given what the import needs. */
             setUp: boolean;
             /** @description The caller's own connection. */

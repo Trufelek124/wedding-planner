@@ -20,7 +20,6 @@ class MailreadingModuleTest {
         assertThat(reading.getBasePackage().getName()).isEqualTo("io.github.trufelek124.weddingplanner.mailreading");
         assertThat(reading.contains(MailTriage.class)).isTrue();
         assertThat(reading.contains(MailExtraction.class)).isTrue();
-        assertThat(reading.contains(Reading.class)).isTrue();
         var uses = reading.getDirectDependencies(modules).stream().map(dependency -> dependency.getTargetModule().getIdentifier().toString()).collect(java.util.stream.Collectors.toSet());
         assertThat(uses).isSubsetOf("mail", "suggestions", "wedding", "vendors", "planning", "api");
         assertThat(uses).contains("mail", "suggestions");

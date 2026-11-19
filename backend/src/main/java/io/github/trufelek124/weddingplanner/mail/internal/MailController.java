@@ -32,7 +32,8 @@ class MailController {
     @Operation(
             summary = "Where the e-mail import stands",
             description = "Whether the import is set up on this server, the caller's own connection with the mailbox's "
-                    + "address, and the partner's connection without it. Nothing is asked of Google.")
+                    + "address, the partner's connection without it, and where the reading of the mail stands (counts and an estimate "
+                    + "of its cost, the wedding's own). Nothing is asked of Google.")
     @GetMapping
     MailStateResponse state(UserId user) {
         return mail.state(user);

@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Unavailable;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Why;
 import io.github.trufelek124.weddingplanner.mail.StandInGoogle.Mime;
-import io.github.trufelek124.weddingplanner.mailreading.Reading.State;
+import io.github.trufelek124.weddingplanner.mail.ReadingReport.State;
 import io.github.trufelek124.weddingplanner.mailreading.StandInAnthropic.Reply;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,7 +78,7 @@ class ReadingOutcomesIntegrationTest extends RoundTestBase {
         assertThat(round.round()).isZero();
 
         assertThat(isRead("m-1")).isFalse();
-        assertThat(round.status().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
+        assertThat(round.report().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
     }
 
     @Test
@@ -90,7 +90,7 @@ class ReadingOutcomesIntegrationTest extends RoundTestBase {
         assertThat(round.round()).isZero();
 
         assertThat(isRead("m-1")).isFalse();
-        assertThat(round.status().state()).isEqualTo(State.KEY_NOT_ACCEPTED);
+        assertThat(round.report().state()).isEqualTo(State.KEY_NOT_ACCEPTED);
     }
 
     // ---------------------------------------------------------------- extraction
@@ -129,7 +129,7 @@ class ReadingOutcomesIntegrationTest extends RoundTestBase {
 
         assertThat(round.round()).isZero();
         assertThat(isRead("m-1")).isFalse();
-        assertThat(round.status().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
+        assertThat(round.report().state()).isEqualTo(State.WAITING_FOR_THE_SERVICE);
 
         TestClock.advance(Duration.ofMinutes(2));
         service.reset();
@@ -148,7 +148,7 @@ class ReadingOutcomesIntegrationTest extends RoundTestBase {
         assertThat(round.round()).isZero();
 
         assertThat(isRead("m-1")).isFalse();
-        assertThat(round.status().state()).isEqualTo(State.KEY_NOT_ACCEPTED);
+        assertThat(round.report().state()).isEqualTo(State.KEY_NOT_ACCEPTED);
     }
 
     // ---------------------------------------------------------------- the unexpected
