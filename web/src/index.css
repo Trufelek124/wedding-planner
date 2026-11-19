@@ -2113,3 +2113,27 @@ a.button {
   padding-top: 0;
   border-top: 0;
 }
+
+/* E-mail import */
+
+.mail-page h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.mail-means {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.375rem;
+}
+
+.mail-facts .fact {
+  display: contents;
+}
+
+.mail-yours,
+.mail-partner {
+  display: grid;
+  gap: 1rem;
+}

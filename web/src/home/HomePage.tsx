@@ -14,6 +14,7 @@ import { useWaiting, waitingInWords } from '../suggestions/WaitingContext.ts'
 import { countdown, longDate } from '../wedding/dates.ts'
 import { useCurrentWedding, useWeddingUpdate } from '../wedding/WeddingContext.ts'
 import { changeWedding } from '../wedding/weddingApi.ts'
+import { fetchMail, needsConnecting } from '../mail/mailApi.ts'
 import { fetchHome, type Home } from './homeApi.ts'
 
 /** Where a signed-in owner lands: how long until the wedding, what is overdue, and what to turn to next. */
@@ -23,6 +24,9 @@ export function HomePage() {
   const home = useLoaded('home', fetchHome)
   const categories = useLoaded('categories', listCategories)
   const waiting = useWaiting()
+  // Only to know whether to ask for the e-mail; if it cannot be read, nothing is asked.
+  const mail = useLoaded('mail', fetchMail)
+  const connectMail = mail.state.status === 'ready' && needsConnecting(mail.state.data)
   return (
     <div className="stack-wide">
       <div className="hero">
@@ -43,6 +47,16 @@ export function HomePage() {
       {waiting.count !== null && waiting.count > 0 && (
         <p className="home-suggestions">
           <Link to="/suggestions">{waitingInWords(waiting.count)}</Link>
+        </p>
+      )}
+
+      {connectMail && mail.state.status === 'ready' && (
+        <p className="home-suggestions">
+          <Link to="/mail">
+            {mail.state.data.yours.state === 'NEEDS_RECONNECTING'
+              ? 'Your e-mail has to be connected again'
+              : 'Connect your e-mail, so that the planner can find what the wedding brings in'}
+          </Link>
         </p>
       )}
 

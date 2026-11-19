@@ -89,6 +89,8 @@ installation has to fill in, without values.
 | `GOOGLE_OAUTH_CLIENT_SECRET` | for the e-mail import | The secret of the same Google client. Never in the repository, never in a log. |
 | `APP_PUBLIC_URL` | for the e-mail import | The planner's own address as people reach it, `https://…` without a path. Google sends the browser back to `<this>/api/mail/gmail/return`. |
 | `APP_MAIL_TOKEN_KEY` | for the e-mail import | 32 random bytes, base64 (`openssl rand -base64 32`): the key the mailboxes' tokens are encrypted with. It is deliberately not in the database: a copy of the database alone opens nobody's mail. **Keep it with the backups' secrets, not with the backups.** Losing or changing it means both owners connect their mail again. |
+| `MAIL_SYNC_INTERVAL` | no, default `5m` | How often the server looks at the connected mailboxes. |
+| `MAIL_SYNC_ENABLED` | no, default `true` | `false`: connected mailboxes are not looked at by themselves. Connecting and disconnecting still work. |
 | `DEV_LOGIN_ENABLED` | no, default `false` | Signing in as an allowed address without Google. **Never `true` on a server others can reach.** |
 | `PREVIEWS_ENABLED` | no, default `true` | `false`: the server never goes out to fetch a preview for a saved link. Links are kept without one. |
 | `API_DOCS_ENABLED` | no, default `false` | Serves the API description at `/v3/api-docs`. For building clients, not for production. |

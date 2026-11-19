@@ -95,6 +95,11 @@ closing comment quotes its summary lines and its exit code.
   address. A decision is sent once; `already-decided` overwrites nothing and says what was decided and by whom.
   "Change and accept" sends every value of the proposal, because the server makes what is sent and nothing else.
   How many wait is asked once in `Shell` and shared with Home and the pages (`WaitingContext`).
+- The e-mail import page (`src/mail/`, S03) is at `/mail`, the address the server sends the browser back to after
+  Google. It sends the browser on only to an `https` address at `accounts.google.com` (`googleAddress`), says what
+  happened once and takes the parameter out of the address, never shows the partner's address, and asks on the
+  page before disconnecting. It has no entry in the top bar: it is reached from the suggestions inbox and, while
+  the mail is not connected, from Home.
 - The top bar is one row from 64rem up. Below that the name and the signed-in block share a row and the entries
   are one row that moves sideways, with the entry of the page that is shown brought into view; the entries stay a
   plain list of links at every width, with no menu button.
@@ -262,7 +267,14 @@ uses another only through the types in that module's own package, and never in a
     cookies and statement values are held at INFO in `application.yml`.
   - The import is off unless all its settings are there and valid (`MailSetup`); off, it asks nothing of Google.
   - It goes out only to Google's configured addresses, with short limits and no redirects followed.
-  - Tests use `StandInGoogle`. **No test ever calls the real Google.**
+  - The sync (`MailSync`, every five minutes) reads a mailbox through `MailSource`, which has nothing of Gmail in
+    its words; `GmailSource` is Gmail behind it. Of a message it keeps **only Google's identifier of it and of its
+    thread** (`mail_message`): no sender, subject, snippet, label or date. A message is noted once; a look counts
+    only when it is complete (the marker and "last looked at" move with the last of what it found); a refusal by
+    Google puts that mailbox off for growing times that are kept in the table; a mailbox that has to be connected
+    again is left alone. The log says that a look happened and how many messages it noted, never which.
+  - Tests use `StandInGoogle`, which also stands in for a mailbox, and move a test clock; the sync does not run by
+    itself in tests. **No test ever calls the real Google.**
 
 ## Changing the API
 

@@ -17,6 +17,7 @@ import { ChartPage } from './planning/ChartPage.tsx'
 import { EntryFormPage } from './planning/EntryFormPage.tsx'
 import { PlanPage } from './planning/PlanPage.tsx'
 import { TasksPage } from './planning/TasksPage.tsx'
+import { MailPage } from './mail/MailPage.tsx'
 import { Shell } from './shell/Shell.tsx'
 import { SuggestionFormPage } from './suggestions/SuggestionFormPage.tsx'
 import { SuggestionsPage } from './suggestions/SuggestionsPage.tsx'
@@ -94,6 +95,7 @@ function SignedIn({ user }: { user: Me }) {
                   <Route path="inspirations/new" element={<InspirationFormPage />} />
                   <Route path="inspirations/:id" element={<InspirationFormPage />} />
                   <Route path="suggestions" element={<SuggestionsPage />} />
+                  <Route path="mail" element={<MailPage />} />
                   <Route path="suggestions/:id" element={<SuggestionFormPage />} />
                   {/* An address that names no page leads home. */}
                   <Route path="*" element={<Navigate to="/" replace />} />

@@ -16,7 +16,8 @@ message and nothing of its content — and the suggestions inbox (S02) stays emp
 
 ## 2. What an owner sees
 
-A page **E-mail import**, reached from the signed-in block of the top bar and from the suggestions inbox.
+A page **E-mail import**, reached from the suggestions inbox, and from Home while the import is set up and the
+owner's mail is not connected. It has no entry of its own in the top bar: it is opened once or twice, not daily.
 
 | The server says | The page shows |
 |---|---|

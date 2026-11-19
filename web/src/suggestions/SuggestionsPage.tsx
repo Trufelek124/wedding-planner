@@ -161,7 +161,9 @@ export function SuggestionsPage() {
       <div className="page-head">
         <h1>Suggestions</h1>
       </div>
-      <p className="muted suggestions-lead">What the e-mail import proposes. Nothing changes in the planner until one of you accepts it.</p>
+      <p className="muted suggestions-lead">What the e-mail import proposes. Nothing changes in the planner until one of you accepts it.{' '}
+        <Link to="/mail">E-mail import</Link>: connect or disconnect your Gmail.
+      </p>
 
       <form className="filters vendor-filters" aria-label="Narrow down" onSubmit={(event) => event.preventDefault()}>
         <div className="filter">
