@@ -78,7 +78,7 @@ fun priorityInWords(entry: Entry): String {
     return if (reason == null) priorityLabel(entry.priority) else "${priorityLabel(entry.priority)} — $reason"
 }
 
-private val PAYMENT_KINDS = mapOf("DEPOSIT" to "deposit", "INSTALMENT" to "instalment", "FINAL" to "final payment")
+internal val PAYMENT_KINDS = mapOf("DEPOSIT" to "deposit", "INSTALMENT" to "instalment", "FINAL" to "final payment")
 
 /** "2,500.00 zł, deposit, paid 10 Nov 2026" or "… to pay"; null for an entry that carries no money. */
 fun moneyInWords(entry: Entry, currency: String): String? {

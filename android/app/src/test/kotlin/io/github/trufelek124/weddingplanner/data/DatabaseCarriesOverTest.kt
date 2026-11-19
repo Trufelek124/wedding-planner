@@ -310,4 +310,85 @@ class DatabaseCarriesOverTest {
             database.close()
         }
     }
+
+    @Test
+    fun `what version 6 held is still there, no suggestion is there until loaded, and the new table can be written and emptied`() = runBlocking {
+        val file = folder.root.resolve("planner.db")
+        aDatabaseOfVersion(6, file) { old ->
+            old.execSQL(
+                """INSERT INTO planner (id, loadedAt, weddingDate, currency, timeZone, daysLeft, today, budgetTotal, budgetPlanned, budgetCommitted,
+                   budgetPaid, overdueIds, nextIds, nextPaymentIds)
+                   VALUES (1, 1795093500000, '2027-06-19', 'PLN', 'Europe/Warsaw', 213, '2026-11-18', NULL, 0, 0, 0, '', '', '')""",
+            )
+            old.execSQL("INSERT INTO member (id, position, displayName, you) VALUES ('m1', 0, 'Anna', 1)")
+            old.execSQL(
+                """INSERT INTO inspiration (id, position, url, source, title, previewTitle, previewStatus, note, tags, boardId, planItemId, vendorId, addedById)
+                   VALUES ('i1', 0, NULL, 'PHOTO', 'Lace', '', 'NONE', '', '[]', NULL, NULL, NULL, 'm1')""",
+            )
+            old.execSQL(
+                """INSERT INTO guest (id, position, name, status, sideMemberId, householdId, plusOne, children, heads, dietaryNeeds,
+                   needsAccommodation, phone, email, notes)
+                   VALUES ('g1', 0, 'Aunt Krystyna', 'INVITED', NULL, NULL, 0, 0, 1, '', 0, '', '', '')""",
+            )
+            old.execSQL("INSERT INTO waiting_guest_status (guestId, status, name, revision, trouble) VALUES ('g1', 'CONFIRMED', 'Aunt Krystyna', 0, NULL)")
+            old.execSQL("INSERT INTO waiting_share (inspirationId, url, boardId, note, pictures, trouble) VALUES ('i2', 'https://www.instagram.com/p/Cabc123/', NULL, '', 0, NULL)")
+        }
+
+        val database = Room.databaseBuilder(context, PlannerDatabase::class.java, file.path).build()
+        try {
+            val stored = database.planner().stored()!!
+            val shown = plannerOf(stored)
+
+            // What was there, is there; what waited, waits.
+            assertEquals(listOf("Anna"), shown.members.map { it.displayName })
+            assertEquals(listOf("Lace"), shown.inspirations.map { it.title })
+            assertEquals(Waiting.TO_BE_SENT, shown.guest("g1")!!.waiting)
+            assertEquals(listOf("i2"), shown.shares.map { it.id })
+            // What came with version 7 is not there until the next load.
+            assertTrue(stored.suggestions.isEmpty())
+            assertTrue(shown.suggestions.isEmpty())
+
+            // The new table can be written and read, and a load puts the copy in the place of the last one while what waits stays.
+            database.planner().replace(
+                Stored(
+                    planner = stored.planner,
+                    entries = stored.entries,
+                    categories = stored.categories,
+                    vendors = stored.vendors,
+                    members = stored.members,
+                    guests = stored.guests,
+                    suggestions = listOf(
+                        SuggestionRow(
+                            "s1", 0, "PAYMENT", "Pay the deposit", "By bank transfer", null, "2026-12-01", 250000, "DEPOSIT", "c1", "v1", null, null, null, null,
+                            "Jan from Palace on the Hill", "jan@palace.example", "Deposit for the hall", "2026-11-18T13:05:00Z", "m1",
+                            "https://mail.google.com/mail/u/0/#all/18c0ffee", "Please pay the deposit by 1 December.", 62,
+                        ),
+                        SuggestionRow(
+                            "s2", 1, "VENDOR", "Studio Light", "", null, null, null, null, null, null, "Studio Light", "hello@studio.example", "+48 600 000 001",
+                            "https://studio.example", "", "hello@studio.example", "", "not a time", "m1", "https://mail.google.com/mail/u/0/#all/18c0ffef", "", 90,
+                        ),
+                    ),
+                ),
+            )
+            val after = plannerOf(database.planner().stored()!!)
+            assertEquals(listOf("s1", "s2"), after.suggestions.map { it.id })
+            val payment = after.suggestions.first()
+            assertEquals(SuggestionKind.PAYMENT, payment.kind)
+            assertEquals(250000L, payment.amount)
+            assertEquals(java.time.LocalDate.of(2026, 12, 1), payment.dueDate)
+            assertEquals(java.time.Instant.parse("2026-11-18T13:05:00Z"), payment.receivedAt)
+            assertEquals("Please pay the deposit by 1 December.", payment.passage)
+            // A time that cannot be read is no time, not a failure.
+            assertEquals(null, after.suggestions.last().receivedAt)
+            assertEquals("Studio Light", after.suggestions.last().vendorName)
+            assertEquals(Waiting.TO_BE_SENT, after.guest("g1")!!.waiting)
+            assertEquals(1, after.shares.size)
+
+            database.planner().forgetTheCopy()
+            assertTrue(database.planner().suggestions().isEmpty())
+            assertEquals(1, database.planner().shares().size)
+        } finally {
+            database.close()
+        }
+    }
 }

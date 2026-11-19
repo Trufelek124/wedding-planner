@@ -7,6 +7,7 @@ import io.github.trufelek124.weddingplanner.ServerAddress
 import io.github.trufelek124.weddingplanner.api.Api
 import io.github.trufelek124.weddingplanner.api.StandInServer
 import io.github.trufelek124.weddingplanner.api.respondJson
+import io.github.trufelek124.weddingplanner.api.respondText
 import io.ktor.http.HttpStatusCode
 import java.time.Clock
 import java.time.Instant
@@ -156,8 +157,8 @@ class PlannerRepositoryTest {
         // Every call carried the access token.
         assertTrue(server.calls.all { it.authorization == "Bearer access-1" })
         // The wedding, Home, the entries, the categories, the vendors, the boards, the budget, the guests,
-        // the households, the head count and the inspirations: one request each.
-        assertEquals(11, server.calls.size)
+        // the households, the head count, the inspirations and the suggestions: one request each.
+        assertEquals(12, server.calls.size)
     }
 
     @Test
@@ -399,6 +400,164 @@ class PlannerRepositoryTest {
         val onDisk = folder.root.listFiles()!!.filter { it.isFile }.joinToString("") { it.readBytes().toString(Charsets.ISO_8859_1) }
         for (private in listOf("Cabc123", "instagram.com", "Lace sleeves", "A page title", "Soft, with a train", "train", "boho", "lace")) {
             assertFalse(private, onDisk.contains(private))
+        }
+        assertTrue(database.planner().stored() == null)
+    }
+
+    // ---------------------------------------------------------------- the suggestions
+
+    private val deposit1 = StandIn.suggestion(
+        "s1", "Pay the deposit", kind = "PAYMENT", notes = "By bank transfer", dueDate = "2026-12-01", amount = 250000, paymentKind = "DEPOSIT", categoryId = "c1",
+        vendorId = "v1", senderName = "Jan from Palace on the Hill", senderAddress = "jan@palace.example", subject = "Deposit for the hall",
+        receivedAt = "2026-11-18T13:05:00Z", inboxMemberId = StandIn.MAREK, passage = "Please pay the deposit by 1 December.", confidence = 62,
+    )
+    private val studio = StandIn.suggestion(
+        "s2", "Studio Light", kind = "VENDOR", vendorName = "Studio Light", vendorEmail = "hello@studio.example", vendorPhone = "+48 600 000 001",
+        vendorWebsite = "https://studio.example", senderName = "", senderAddress = "hello@studio.example", subject = "", confidence = 90,
+    )
+    private val steps = StandIn.suggestion("s3", "Rehearsal dinner", kind = "PLAN_ITEM", startDate = "2026-12-01", dueDate = "2026-12-15")
+
+    @Test
+    fun `holds the suggestions as they were loaded, in the server's order`() = runBlocking {
+        server.planner(suggestions = listOf(deposit1, studio, steps))
+
+        assertEquals(Load.LOADED, planner.load())
+
+        val held = planner.planner.first()!!
+        assertEquals(listOf("s1", "s2", "s3"), held.suggestions.map { it.id })
+        val payment = held.suggestions.first()
+        assertEquals(SuggestionKind.PAYMENT, payment.kind)
+        assertEquals("Pay the deposit", payment.title)
+        assertEquals("By bank transfer", payment.notes)
+        assertEquals(LocalDate.of(2026, 12, 1), payment.dueDate)
+        assertNull(payment.startDate)
+        assertEquals(250000L, payment.amount)
+        assertEquals("DEPOSIT", payment.paymentKind)
+        assertEquals("c1", payment.categoryId)
+        assertEquals("v1", payment.vendorId)
+        assertNull(payment.vendorName)
+        assertEquals("Jan from Palace on the Hill", payment.senderName)
+        assertEquals("jan@palace.example", payment.senderAddress)
+        assertEquals("Deposit for the hall", payment.subject)
+        assertEquals(Instant.parse("2026-11-18T13:05:00Z"), payment.receivedAt)
+        assertEquals(StandIn.MAREK, payment.inboxMemberId)
+        assertEquals("https://mail.google.com/mail/u/0/#all/18c0ffee", payment.mailLink)
+        assertEquals("Please pay the deposit by 1 December.", payment.passage)
+        assertEquals(62, payment.confidence)
+        val vendor = held.suggestions[1]
+        assertEquals(SuggestionKind.VENDOR, vendor.kind)
+        assertEquals("Studio Light", vendor.vendorName)
+        assertEquals("hello@studio.example", vendor.vendorEmail)
+        assertEquals("+48 600 000 001", vendor.vendorPhone)
+        assertEquals("https://studio.example", vendor.vendorWebsite)
+        assertNull(vendor.vendorId)
+        assertNull(vendor.amount)
+        assertEquals(LocalDate.of(2026, 12, 1), held.suggestions[2].startDate)
+        assertEquals(SuggestionKind.PLAN_ITEM, held.suggestions[2].kind)
+    }
+
+    @Test
+    fun `a kind a newer server knows is OTHER, and a field it adds breaks nothing`() = runBlocking {
+        server.planner(suggestions = listOf(StandIn.suggestion("s1", "Book the band", kind = "EVENT", more = """"colour":"red"""")))
+
+        assertEquals(Load.LOADED, planner.load())
+
+        assertEquals(SuggestionKind.OTHER, planner.planner.first()!!.suggestions.single().kind)
+    }
+
+    @Test
+    fun `the suggestions of a newer load replace those of the last, and none left is none`() = runBlocking {
+        server.planner(suggestions = listOf(deposit1, studio))
+        planner.load()
+        server.planner(suggestions = listOf(steps))
+
+        assertEquals(Load.LOADED, planner.load())
+        assertEquals(listOf("s3"), planner.planner.first()!!.suggestions.map { it.id })
+
+        server.planner()
+        assertEquals(Load.LOADED, planner.load())
+        assertTrue(planner.planner.first()!!.suggestions.isEmpty())
+    }
+
+    @Test
+    fun `a server that does not know the suggestions yet has none waiting, and the rest of the planner is loaded`() = runBlocking {
+        aWedding()
+        planner.load()
+        server.problem("GET /api/suggestions", 404, "not-found")
+
+        assertEquals(Load.LOADED, planner.load())
+
+        val held = planner.planner.first()!!
+        assertTrue(held.suggestions.isEmpty())
+        assertEquals(4, held.entries.size)
+        assertEquals(2, held.guests.size)
+    }
+
+    @Test
+    fun `an older server whose 404 is no problem document is still an older server`() = runBlocking {
+        aWedding()
+        server.answer("GET /api/suggestions") { respondText("<html>Not Found</html>", 404) }
+
+        assertEquals(Load.LOADED, planner.load())
+
+        assertTrue(planner.planner.first()!!.suggestions.isEmpty())
+        assertEquals(4, planner.planner.first()!!.entries.size)
+    }
+
+    @Test
+    fun `any other failure of the suggestions fails the load, and nothing is replaced`() = runBlocking {
+        aWedding()
+        planner.load()
+        server.planner(entries = listOf(rings), suggestions = listOf(deposit1))
+
+        server.problem("GET /api/suggestions", 500, "internal")
+        assertEquals(Load.FAILED, planner.load())
+        server.problem("GET /api/suggestions", 403, "account-not-allowed")
+        assertEquals(Load.FAILED, planner.load())
+        server.answer("GET /api/suggestions") { respondText("<html>sorry</html>", 200) }
+        assertEquals(Load.FAILED, planner.load())
+        server.unreachable("GET /api/suggestions")
+        assertEquals(Load.UNREACHABLE, planner.load())
+
+        val held = planner.planner.first()!!
+        assertEquals(4, held.entries.size)
+        assertTrue(held.suggestions.isEmpty())
+    }
+
+    @Test
+    fun `a suggestion prints neither its sender, its subject, its passage nor its title`() = runBlocking {
+        server.planner(suggestions = listOf(deposit1, studio))
+        planner.load()
+        val held = planner.planner.first()!!
+        val stored = database.planner().stored()!!
+
+        val printed = "$held ${held.suggestions} ${held.suggestions.first()} ${stored.suggestions} ${stored.suggestions.first()} " +
+            "${SuggestionWire("s9", "TASK", "Pay the deposit", "n", null, null, null, null, null, null, null, null, null, null, "Jan", "jan@palace.example", "Deposit", "2026-11-18T13:05:00Z", "m1", "https://mail.google.com/", "Please pay", 50)}"
+
+        for (theirs in listOf("Jan", "palace.example", "Deposit", "deposit", "Please pay", "bank transfer", "Studio", "studio.example", "600 000", "mail.google")) {
+            assertFalse("\"$theirs\" is printed", printed.contains(theirs, ignoreCase = true))
+        }
+    }
+
+    @Test
+    fun `forgetting leaves nothing of a suggestion in the phone's files`() = runBlocking {
+        database.openHelper.writableDatabase.query("PRAGMA secure_delete = OFF").use { it.moveToFirst() }
+        server.planner(suggestions = listOf(deposit1, studio))
+        planner.load()
+        val before = folder.root.listFiles()!!.filter { it.isFile }.joinToString("") { it.readBytes().toString(Charsets.ISO_8859_1) }
+        val theirs = listOf(
+            "Jan from Palace on the Hill", "jan@palace.example", "Deposit for the hall", "Please pay the deposit by 1 December.", "Pay the deposit",
+            "By bank transfer", "Studio Light", "hello@studio.example", "mail.google.com/mail/u/0/#all/18c0ffee",
+        )
+        for (private in theirs) {
+            assertTrue("the phone does not keep \"$private\" to begin with", before.contains(private))
+        }
+
+        planner.forget()
+
+        val onDisk = folder.root.listFiles()!!.filter { it.isFile }.joinToString("") { it.readBytes().toString(Charsets.ISO_8859_1) }
+        for (private in theirs + listOf("Palace on the Hill", "palace.example", "studio.example", "18c0ffee")) {
+            assertFalse("\"$private\" is still in the phone's files", onDisk.contains(private))
         }
         assertTrue(database.planner().stored() == null)
     }

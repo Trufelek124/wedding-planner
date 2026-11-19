@@ -73,6 +73,28 @@ fun mailIntent(email: String): Intent? =
 fun mapIntent(address: String): Intent? =
     address.trim().takeIf { it.isNotEmpty() }?.let { Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(it))) }
 
+/** The one host a message of ours is opened at. */
+private const val MAIL_HOST = "mail.google.com"
+
+/**
+ * The address a suggestion's message opens at: an https address whose host is exactly mail.google.com, as the server
+ * made it. Null for anything else (http, another host, a host that only starts or ends like it, a user part before the
+ * host, a port, javascript:, intent:): such a link is not opened and draws no button. The link comes out of what the
+ * server holds about a mail, so it is checked here as well as there.
+ */
+fun mailLinkAddress(link: String): String? {
+    if (link.isEmpty() || link.any { it.isWhitespace() || it.isISOControl() || it == '\\' }) return null
+    if (!link.startsWith("https://")) return null
+    val rest = link.removePrefix("https://")
+    val authority = rest.takeWhile { it != '/' && it != '?' && it != '#' }
+    // The text up to the first slash is the host and nothing else: no user part, no port.
+    if (authority != MAIL_HOST) return null
+    return link.takeIf { Uri.parse(it).host == MAIL_HOST }
+}
+
+/** Opens the message in Gmail; null for a link that does not pass [mailLinkAddress]. */
+fun mailLinkIntent(link: String): Intent? = mailLinkAddress(link)?.let { Intent(Intent.ACTION_VIEW, Uri.parse(it)) }
+
 fun siteIntent(website: String): Intent? = websiteAddress(website)?.let { Intent(Intent.ACTION_VIEW, Uri.parse(it)) }
 
 /**

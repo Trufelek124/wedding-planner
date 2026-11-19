@@ -155,3 +155,36 @@ data class SideCountWire(val sideMemberId: String?, val count: HeadCountWire, va
 /** The head count as the server counts it: every status and every side, also with nobody in it. */
 @Serializable
 data class GuestCountsWire(val total: HeadCountWire, val byStatus: List<StatusCountWire>, val bySide: List<SideCountWire>)
+
+/**
+ * What the e-mail import proposes, as far as the phone reads it. Everything that came out of a mail (the sender, the
+ * subject, the passage, the title) is someone else's words: this is no data class, so nothing of it is printed.
+ * [kind] and [paymentKind] are names from a fixed set.
+ */
+@Serializable
+class SuggestionWire(
+    val id: String,
+    val kind: String,
+    val title: String,
+    val notes: String,
+    val startDate: String?,
+    val dueDate: String?,
+    val amount: Long?,
+    val paymentKind: String?,
+    val categoryId: String?,
+    val vendorId: String?,
+    val vendorName: String?,
+    val vendorEmail: String?,
+    val vendorPhone: String?,
+    val vendorWebsite: String?,
+    val senderName: String,
+    val senderAddress: String,
+    val subject: String,
+    val receivedAt: String,
+    val inboxMemberId: String,
+    val mailLink: String,
+    val passage: String,
+    val confidence: Int,
+) {
+    override fun toString(): String = "SuggestionWire[id=$id]"
+}

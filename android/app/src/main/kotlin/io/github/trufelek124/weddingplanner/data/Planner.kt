@@ -188,6 +188,51 @@ class Inspiration(
     override fun toString(): String = "Inspiration[id=$id]"
 }
 
+/** What accepting a suggestion makes. [OTHER] is a kind a newer server knows and this app does not. */
+enum class SuggestionKind { TASK, PAYMENT, PLAN_ITEM, VENDOR, OTHER }
+
+/**
+ * What the e-mail import proposes. Not a data class: the sender, the subject, the passage and the title came out of
+ * someone's mail and are not to be printed. All of it is plain text, whatever it looks like.
+ *
+ * @param startDate a plan item's first day
+ * @param amount in the smallest unit of the wedding's currency
+ * @param paymentKind DEPOSIT, INSTALMENT or FINAL as the server names it; null when none was read
+ * @param vendorId a vendor the planner has, found by the sender's address
+ * @param vendorName a vendor's name where none matched
+ * @param receivedAt when the message arrived; null where it cannot be read
+ * @param inboxMemberId the member whose inbox it was in
+ * @param mailLink the server's link to the message in Gmail; whether it may be opened is `mailLinkAddress` in planner/Contact.kt's to say
+ * @param passage the quotation the proposal rests on
+ * @param confidence how sure the import is, as a whole percentage
+ */
+class Suggestion(
+    val id: String,
+    val kind: SuggestionKind,
+    val title: String,
+    val notes: String,
+    val startDate: LocalDate?,
+    val dueDate: LocalDate?,
+    val amount: Long?,
+    val paymentKind: String?,
+    val categoryId: String?,
+    val vendorId: String?,
+    val vendorName: String?,
+    val vendorEmail: String?,
+    val vendorPhone: String?,
+    val vendorWebsite: String?,
+    val senderName: String,
+    val senderAddress: String,
+    val subject: String,
+    val receivedAt: Instant?,
+    val inboxMemberId: String,
+    val mailLink: String,
+    val passage: String,
+    val confidence: Int,
+) {
+    override fun toString(): String = "Suggestion[id=$id]"
+}
+
 /**
  * Something shared to the planner that the server does not have yet.
  *
@@ -303,6 +348,8 @@ class Planner(
     val guestTroubles: List<GuestTrouble> = emptyList(),
     /** The ideas on the boards, in the server's order: the newest first. */
     val inspirations: List<Inspiration> = emptyList(),
+    /** What the e-mail import proposes and nobody has decided, the newest message first. */
+    val suggestions: List<Suggestion> = emptyList(),
 ) {
     private val byId = entries.associateBy { it.id }
 

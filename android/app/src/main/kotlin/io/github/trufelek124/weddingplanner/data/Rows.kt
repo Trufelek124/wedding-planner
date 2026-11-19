@@ -264,6 +264,44 @@ class InspirationPictureRow(
     override fun toString(): String = "InspirationPictureRow[id=$id]"
 }
 
+/**
+ * What the e-mail import proposes, as the server said it: it holds a sender, a subject and a quotation of someone's
+ * mail. Not a data class, and it prints only its id. It belongs to the copy: the next load and a sign-out remove it.
+ *
+ * @param position its place in the server's own order, the newest message first
+ * @param kind TASK, PAYMENT, PLAN_ITEM or VENDOR as the server names it; a newer server may add one
+ * @param paymentKind DEPOSIT, INSTALMENT or FINAL as the server names it
+ * @param receivedAt when the message arrived, as the server writes it
+ */
+@Entity(tableName = "suggestion")
+class SuggestionRow(
+    @PrimaryKey val id: String,
+    val position: Int,
+    val kind: String,
+    val title: String,
+    val notes: String,
+    val startDate: String?,
+    val dueDate: String?,
+    val amount: Long?,
+    val paymentKind: String?,
+    val categoryId: String?,
+    val vendorId: String?,
+    val vendorName: String?,
+    val vendorEmail: String?,
+    val vendorPhone: String?,
+    val vendorWebsite: String?,
+    val senderName: String,
+    val senderAddress: String,
+    val subject: String,
+    val receivedAt: String,
+    val inboxMemberId: String,
+    val mailLink: String,
+    val passage: String,
+    val confidence: Int,
+) {
+    override fun toString(): String = "SuggestionRow[id=$id]"
+}
+
 /** Everything the phone holds, read as it was at one moment: the last load, and what waits to be sent. */
 class Stored(
     val planner: PlannerRow,
@@ -280,4 +318,5 @@ class Stored(
     val guestStatuses: List<GuestStatusRow> = emptyList(),
     val inspirations: List<InspirationRow> = emptyList(),
     val inspirationPictures: List<InspirationPictureRow> = emptyList(),
+    val suggestions: List<SuggestionRow> = emptyList(),
 )

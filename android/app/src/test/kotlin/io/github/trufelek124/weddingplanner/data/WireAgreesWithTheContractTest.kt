@@ -15,6 +15,7 @@ import io.github.trufelek124.weddingplanner.api.model.Household
 import io.github.trufelek124.weddingplanner.api.model.Home
 import io.github.trufelek124.weddingplanner.api.model.Inspiration
 import io.github.trufelek124.weddingplanner.api.model.Picture
+import io.github.trufelek124.weddingplanner.api.model.Suggestion
 import io.github.trufelek124.weddingplanner.api.model.Vendor
 import io.github.trufelek124.weddingplanner.api.model.Wedding
 import io.github.trufelek124.weddingplanner.api.model.WeddingMember
@@ -86,6 +87,9 @@ class WireAgreesWithTheContractTest {
     }
 
     @Test
+    fun `a suggestion of the e-mail import`() = agree(serializer<SuggestionWire>().descriptor, serializer<Suggestion>().descriptor)
+
+    @Test
     fun `the wedding and its two people`() {
         agree(serializer<WeddingWire>().descriptor, serializer<Wedding>().descriptor)
         agree(serializer<MemberWire>().descriptor, serializer<WeddingMember>().descriptor)
@@ -153,6 +157,28 @@ class WireAgreesWithTheContractTest {
         assertEquals(listOf("boho", "lace"), idea.tags)
         assertEquals(null, idea.addedById)
         assertEquals("p1", idea.planItemId)
+        val payment = strict.decodeFromString<Suggestion>(
+            StandIn.suggestion(
+                "s1", "Pay the deposit", kind = "PAYMENT", notes = "By bank transfer", dueDate = "2026-12-01", amount = 250000, paymentKind = "DEPOSIT",
+                categoryId = "c1", vendorId = "v1", confidence = 62,
+            ),
+        )
+        assertEquals(Suggestion.Kind.PAYMENT, payment.kind)
+        assertEquals(Suggestion.PaymentKind.DEPOSIT, payment.paymentKind)
+        assertEquals(Suggestion.State.WAITING, payment.state)
+        assertEquals(250000L, payment.amount)
+        assertEquals(62, payment.confidence)
+        assertEquals("https://mail.google.com/mail/u/0/#all/18c0ffee", payment.mailLink)
+        val proposedVendor = strict.decodeFromString<Suggestion>(
+            StandIn.suggestion(
+                "s2", "Studio Light", kind = "VENDOR", vendorName = "Studio Light", vendorEmail = "hello@studio.example", vendorPhone = "+48 600 000 001",
+                vendorWebsite = "https://studio.example", startDate = "2026-12-01", senderName = "", subject = "", inboxMemberId = StandIn.MAREK,
+            ),
+        )
+        assertEquals(Suggestion.Kind.VENDOR, proposedVendor.kind)
+        assertEquals("Studio Light", proposedVendor.vendorName)
+        assertEquals(null, proposedVendor.paymentKind)
+        assertEquals(null, proposedVendor.amount)
     }
 
     private fun agree(phone: SerialDescriptor, contract: SerialDescriptor) {

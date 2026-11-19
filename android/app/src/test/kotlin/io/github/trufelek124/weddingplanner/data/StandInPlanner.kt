@@ -105,6 +105,47 @@ object StandIn {
             """"pictures":[${held.joinToString(",")}],"version":$version,"createdAt":"2026-11-18T13:05:00Z","updatedAt":"2026-11-18T13:05:00Z"}"""
     }
 
+    /**
+     * A suggestion of the e-mail import as the server sends one: made-up mail from a made-up sender.
+     * @param kind TASK, PAYMENT, PLAN_ITEM or VENDOR
+     * @param amount in the smallest unit; null where none was read
+     * @param vendorId a vendor the planner has; [vendorName] is for one it has not
+     * @param mailLink what the server says opens the message
+     * @param more further fields, for what a newer server might add: `"addedLater":true`
+     */
+    fun suggestion(
+        id: String,
+        title: String,
+        kind: String = "TASK",
+        notes: String = "",
+        startDate: String? = null,
+        dueDate: String? = null,
+        amount: Long? = null,
+        paymentKind: String? = null,
+        categoryId: String? = null,
+        vendorId: String? = null,
+        vendorName: String? = null,
+        vendorEmail: String? = null,
+        vendorPhone: String? = null,
+        vendorWebsite: String? = null,
+        senderName: String = "Jan from Palace on the Hill",
+        senderAddress: String = "jan@palace.example",
+        subject: String = "Deposit for the hall",
+        receivedAt: String = "2026-11-18T13:05:00Z",
+        inboxMemberId: String = ANNA,
+        mailLink: String = "https://mail.google.com/mail/u/0/#all/18c0ffee",
+        passage: String = "Please pay the deposit by 1 December.",
+        confidence: Int = 62,
+        more: String = "",
+    ): String =
+        """{"id":"$id","kind":"$kind","state":"WAITING","title":"$title","notes":"$notes","startDate":${text(startDate)},"dueDate":${text(dueDate)},""" +
+            """"amount":$amount,"paymentKind":${text(paymentKind)},"categoryId":${text(categoryId)},"vendorId":${text(vendorId)},""" +
+            """"vendorName":${text(vendorName)},"vendorEmail":${text(vendorEmail)},"vendorPhone":${text(vendorPhone)},"vendorWebsite":${text(vendorWebsite)},""" +
+            """"senderName":"$senderName","senderAddress":"$senderAddress","subject":"$subject","receivedAt":"$receivedAt",""" +
+            """"inboxMemberId":"$inboxMemberId","mailLink":"$mailLink","passage":"$passage","confidence":$confidence,""" +
+            """"decidedBy":null,"decidedAt":null,"madeEntryId":null,"madeVendorId":null,"createdAt":"2026-11-18T13:06:00Z"""" +
+            (if (more.isEmpty()) "" else ",$more") + "}"
+
     /** @param categoryId the vendor's category, or null */
     fun vendor(
         id: String,
@@ -230,7 +271,9 @@ fun StandInServer.planner(
     households: List<String> = emptyList(),
     guestCounts: String = StandIn.guestCounts(),
     inspirations: List<String> = emptyList(),
+    suggestions: List<String> = emptyList(),
 ) {
+    json("GET /api/suggestions", suggestions.joinToString(",", "[", "]"))
     json("GET /api/inspirations", inspirations.joinToString(",", "[", "]"))
     json("GET /api/budget", budget)
     json("GET /api/guests", guests.joinToString(",", "[", "]"))
@@ -246,5 +289,5 @@ fun StandInServer.planner(
 
 /** The server goes away: nothing of the planner can be asked for. */
 fun StandInServer.plannerUnreachable() {
-    listOf("wedding", "home", "entries", "categories", "vendors", "boards", "budget", "guests", "households", "guests/counts", "inspirations").forEach { unreachable("GET /api/$it") }
+    listOf("wedding", "home", "entries", "categories", "vendors", "boards", "budget", "guests", "households", "guests/counts", "inspirations", "suggestions").forEach { unreachable("GET /api/$it") }
 }

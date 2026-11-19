@@ -33,12 +33,13 @@ private class MoreRow(val key: String, @StringRes val title: Int, val summary: S
  * @param foot what stands under the list: when this was loaded, who is signed in, the way out
  */
 @Composable
-fun MoreContent(planner: Planner, onBudget: () -> Unit, onVendors: () -> Unit, onGuests: () -> Unit, onInspirations: () -> Unit, modifier: Modifier = Modifier, foot: @Composable () -> Unit = {}) {
+fun MoreContent(planner: Planner, onBudget: () -> Unit, onVendors: () -> Unit, onGuests: () -> Unit, onInspirations: () -> Unit, onSuggestions: () -> Unit, modifier: Modifier = Modifier, foot: @Composable () -> Unit = {}) {
     val rows = listOf(
         MoreRow("budget", R.string.more_budget, budgetSummary(planner.budget, planner.currency), onBudget),
         MoreRow("vendors", R.string.more_vendors, vendorsSummary(planner.vendorList), onVendors),
         MoreRow("guests", R.string.more_guests, guestsSummary(planner.guestCounts, planner.guests), onGuests),
         MoreRow("inspirations", R.string.more_inspirations, inspirationsSummary(planner.inspirations, planner.shares.count { it.trouble == null }), onInspirations),
+        MoreRow("suggestions", R.string.more_suggestions, suggestionsSummary(planner.suggestions.size), onSuggestions),
     )
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
         items(rows, key = { it.key }) { row ->

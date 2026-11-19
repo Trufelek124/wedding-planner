@@ -95,6 +95,9 @@ closing comment quotes its summary lines and its exit code.
   address. A decision is sent once; `already-decided` overwrites nothing and says what was decided and by whom.
   "Change and accept" sends every value of the proposal, because the server makes what is sent and nothing else.
   How many wait is asked once in `Shell` and shared with Home and the pages (`WaitingContext`).
+- The top bar is one row from 64rem up. Below that the name and the signed-in block share a row and the entries
+  are one row that moves sideways, with the entry of the page that is shown brought into view; the entries stay a
+  plain list of links at every width, with no menu button.
 - Every colour, size and radius comes from the tokens at the top of `src/index.css`; light and dark both work.
 - What a person reads is written for that person. This includes the server's validation messages
   (`message = "Enter your partner's name."`), which the forms show next to the field.
@@ -179,6 +182,11 @@ first uses it, at the version D-005 names.
   without one shows none. A list is narrowed down by status with `StatusChips`; the guest list comes before the
   head count's breakdown, because finding a guest is what the screen is mostly opened for. While a status chosen
   on the phone is not sent, the head count says that it is as it was loaded.
+- The suggestions that wait (S02) are part of the copy (`suggestion`) and stand in an inbox behind More; Home says
+  how many wait. A server that does not know them yet (a 404 on that one route) counts as "none wait" and the
+  rest of the planner still loads. Everything that came out of a mail is plain text and never printed or logged;
+  "Open the e-mail" is drawn only for an `https` address whose host is exactly `mail.google.com`
+  (`mailLinkAddress` in `planner/Contact.kt`).
 - A phone number, an e-mail address, an address and a website open in the phone's own apps through
   `planner/Contact.kt`, and only through it. What the server holds was typed by a person: each way builds one fixed
   kind of intent, a number is dialled and never called, and a website opens only as `http` or `https` — anything

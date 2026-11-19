@@ -100,4 +100,58 @@ class ContactTest {
         assertFalse(startOrSayNo(application, Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://palace.example"))))
         assertNull(shadowOf(application).nextStartedActivity)
     }
+
+    // ---------------------------------------------------------------- the link to a message in Gmail
+
+    @Test
+    fun `a link to a message opens only as an https address at mail_google_com`() {
+        val link = "https://mail.google.com/mail/u/0/#all/18c0ffee"
+
+        assertEquals(link, mailLinkAddress(link))
+        assertEquals("https://mail.google.com/mail/u/1/?shva=1#inbox/18c0ffee", mailLinkAddress("https://mail.google.com/mail/u/1/?shva=1#inbox/18c0ffee"))
+        assertEquals("https://mail.google.com", mailLinkAddress("https://mail.google.com"))
+        val intent = mailLinkIntent(link)!!
+        assertEquals(Intent.ACTION_VIEW, intent.action)
+        assertEquals(link, intent.data.toString())
+    }
+
+    @Test
+    fun `a link to a message that is not exactly that opens nothing`() {
+        for (link in listOf(
+            "http://mail.google.com/mail/u/0/#all/18c0ffee",
+            "https://evil.example/mail/u/0/",
+            "https://mail.google.com.evil.example/mail/u/0/",
+            "https://evil.example/mail.google.com",
+            "https://evil.example/?next=https://mail.google.com/",
+            "https://mail.google.com@evil.example/mail/",
+            "https://mail.google.com:secret@evil.example/mail/",
+            "https://evil.example\\@mail.google.com/",
+            "https://evil.example#@mail.google.com/",
+            "https://user@mail.google.com/mail/",
+            "https://mail.google.com:8443/mail/",
+            "https://MAIL.GOOGLE.COM/mail/",
+            "https://google.com/mail/",
+            "https://notmail.google.com/",
+            "https://evilmail.google.com/",
+            "https://.mail.google.com/",
+            "https://mail.google.com /mail/",
+            "https://mail.google.com\n.evil.example/",
+            "https:mail.google.com/mail/",
+            "https:///mail.google.com/mail/",
+            "//mail.google.com/mail/",
+            "mail.google.com/mail/",
+            "javascript:alert(1)",
+            "javascript://mail.google.com/%0aalert(1)",
+            "intent://mail.google.com/#Intent;scheme=https;end",
+            "intent:#Intent;component=evil.example/.Main;end",
+            "file:///mail.google.com/",
+            "content://mail.google.com/",
+            "mailto:jan@palace.example",
+            "",
+            "   ",
+        )) {
+            assertNull("\"$link\" is opened", mailLinkAddress(link))
+            assertNull("\"$link\" starts something", mailLinkIntent(link))
+        }
+    }
 }

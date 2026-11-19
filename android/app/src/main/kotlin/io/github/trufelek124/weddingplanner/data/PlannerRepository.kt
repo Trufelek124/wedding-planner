@@ -449,6 +449,17 @@ class PlannerRepository(
         }
 
     /**
+     * The suggestions that wait. A server that does not know the route yet (it answers 404) has none: a phone that was
+     * updated before the server must go on showing the planner. Any other failure is the load's.
+     */
+    private suspend fun suggestionsOrNone(): List<SuggestionWire> =
+        try {
+            api().get("/api/suggestions")
+        } catch (failure: ApiFailure.Problem) {
+            if (failure.status == 404) emptyList() else throw failure
+        }
+
+    /**
      * Asks the server for everything the screens show and puts it in the place of the last load.
      * The answers belong together: unless all of them came, nothing is replaced.
      */
@@ -467,9 +478,10 @@ class PlannerRepository(
                 val households = async { api().get<List<NameWire>>("/api/households") }
                 val counts = async { api().get<GuestCountsWire>("/api/guests/counts") }
                 val inspirations = async { api().get<List<InspirationWire>>("/api/inspirations") }
+                val suggestions = async { suggestionsOrNone() }
                 storedOf(
                     clock.instant(), wedding.await(), home.await(), entries.await(), categories.await(), vendors.await(), boards.await(),
-                    budget.await(), guests.await(), households.await(), counts.await(), inspirations.await(),
+                    budget.await(), guests.await(), households.await(), counts.await(), inspirations.await(), suggestions.await(),
                 )
             }
         } catch (failure: ApiFailure) {
@@ -548,6 +560,7 @@ internal fun storedOf(
     households: List<NameWire>,
     counts: GuestCountsWire,
     inspirations: List<InspirationWire>,
+    suggestions: List<SuggestionWire>,
 ): Stored = Stored(
     planner = PlannerRow(
         loadedAt = at.toEpochMilli(),
@@ -602,6 +615,15 @@ internal fun storedOf(
     },
     inspirationPictures = inspirations.flatMap { idea ->
         idea.pictures.mapIndexed { position, picture -> InspirationPictureRow(picture.id, idea.id, position, picture.width, picture.height, picture.preview) }
+    },
+    suggestions = suggestions.mapIndexed { position, one ->
+        SuggestionRow(
+            id = one.id, position = position, kind = one.kind, title = one.title, notes = one.notes, startDate = one.startDate, dueDate = one.dueDate,
+            amount = one.amount, paymentKind = one.paymentKind, categoryId = one.categoryId, vendorId = one.vendorId, vendorName = one.vendorName,
+            vendorEmail = one.vendorEmail, vendorPhone = one.vendorPhone, vendorWebsite = one.vendorWebsite, senderName = one.senderName,
+            senderAddress = one.senderAddress, subject = one.subject, receivedAt = one.receivedAt, inboxMemberId = one.inboxMemberId,
+            mailLink = one.mailLink, passage = one.passage, confidence = one.confidence,
+        )
     },
 )
 
@@ -696,6 +718,7 @@ internal fun plannerOf(stored: Stored): Planner {
         guestCounts = countsOf(planner.guestCounts),
         guestTroubles = guestTroubles,
         inspirations = stored.inspirations.map { row -> inspirationOf(row, pictures[row.id].orEmpty()) },
+        suggestions = stored.suggestions.map(::suggestionOf),
     )
 }
 
@@ -705,6 +728,21 @@ private fun vendorOf(row: VendorRow): Vendor = Vendor(
     address = row.address, notes = row.notes, agreedPrice = row.agreedPrice, committed = row.committed, paid = row.paid,
     inspirations = row.inspirations,
 )
+
+private fun suggestionOf(row: SuggestionRow): Suggestion = Suggestion(
+    id = row.id, kind = SuggestionKind.entries.firstOrNull { it.name == row.kind } ?: SuggestionKind.OTHER, title = row.title, notes = row.notes,
+    startDate = dateOf(row.startDate), dueDate = dateOf(row.dueDate), amount = row.amount, paymentKind = row.paymentKind, categoryId = row.categoryId,
+    vendorId = row.vendorId, vendorName = row.vendorName, vendorEmail = row.vendorEmail, vendorPhone = row.vendorPhone, vendorWebsite = row.vendorWebsite,
+    senderName = row.senderName, senderAddress = row.senderAddress, subject = row.subject, receivedAt = instantOf(row.receivedAt),
+    inboxMemberId = row.inboxMemberId, mailLink = row.mailLink, passage = row.passage, confidence = row.confidence,
+)
+
+private fun instantOf(text: String): Instant? =
+    try {
+        Instant.parse(text)
+    } catch (notAnInstant: DateTimeParseException) {
+        null
+    }
 
 private fun inspirationOf(row: InspirationRow, pictures: List<InspirationPictureRow>): Inspiration = Inspiration(
     id = row.id, url = row.url, source = InspirationSource.entries.firstOrNull { it.name == row.source } ?: InspirationSource.OTHER,

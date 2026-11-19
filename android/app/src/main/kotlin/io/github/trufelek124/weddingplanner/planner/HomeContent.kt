@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -32,6 +34,7 @@ import java.time.LocalDate
  *
  * @param today the date where the wedding takes place, by the phone's clock
  * @param onBudget what pressing the glance at the money does; null where it only shows
+ * @param onSuggestions what pressing the line about the suggestions that wait does; null where it only shows
  * @param foot what stands under everything: when this was loaded, who is signed in, the way out
  */
 @Composable
@@ -41,10 +44,16 @@ fun HomeContent(
     modifier: Modifier = Modifier,
     actions: TaskActions? = null,
     onBudget: (() -> Unit)? = null,
+    onSuggestions: (() -> Unit)? = null,
     foot: @Composable () -> Unit = {},
 ) {
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
         item(key = "hero") { Hero(planner, today) }
+
+        // Where nothing waits Home says nothing about suggestions.
+        suggestionsOnHome(planner.suggestions.size)?.let { line ->
+            item(key = "suggestions") { SuggestionsWaiting(line, onSuggestions) }
+        }
 
         if (planner.overdue.isEmpty() && planner.next.isEmpty()) {
             item(key = "nothing") { NothingHere(stringResource(R.string.home_nothing_waiting)) }
@@ -86,6 +95,23 @@ private fun LazyListScope.entries(group: String, title: Int, entries: List<Entry
         EntryLine(entry, planner, actions = actions)
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
+}
+
+/** One line: how many suggestions wait; pressing it leads to the inbox. */
+@Composable
+private fun SuggestionsWaiting(line: String, onOpen: (() -> Unit)?) {
+    val open = stringResource(R.string.home_suggestions_open)
+    Text(
+        text = line,
+        style = MaterialTheme.typography.titleMedium,
+        color = if (onOpen == null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .padding(top = 16.dp)
+            .then(if (onOpen == null) Modifier else Modifier.clickable(onClickLabel = open, role = Role.Button, onClick = onOpen))
+            .padding(vertical = 8.dp),
+    )
 }
 
 @Composable

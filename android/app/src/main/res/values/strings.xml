@@ -43,11 +43,12 @@
     <string name="loaded_on">Loaded on %1$s</string>
 
     <!-- Home -->
-    <string name="home_nothing_waiting">Nothing is waiting for you. What has to happen is in the plan; single things to do are under tasks.</string>
+    <string name="home_nothing_waiting">No task is waiting for you. What has to happen is in the plan; single things to do are under tasks.</string>
     <string name="home_overdue">Overdue</string>
     <string name="home_next">Next</string>
     <string name="home_budget">Budget</string>
     <string name="home_budget_open">Open the budget</string>
+    <string name="home_suggestions_open">Open the suggestions</string>
     <string name="home_next_payments">Next payments</string>
 
     <!-- More, and the budget it leads to -->
@@ -56,6 +57,7 @@
     <string name="more_vendors">Vendors</string>
     <string name="more_guests">Guests</string>
     <string name="more_inspirations">Inspirations</string>
+    <string name="more_suggestions">Suggestions</string>
     <string name="budget_figure_budget">Budget</string>
     <string name="budget_figure_planned">Planned</string>
     <string name="budget_figure_committed">Committed</string>
@@ -116,6 +118,12 @@
     <string name="guest_change_gone">Your change to “%1$s” could not be sent: the guest no longer exists.</string>
     <string name="guest_change_refused">The server did not take your change to “%1$s”.</string>
     <string name="guest_change_let_go">Discard the change</string>
+
+    <!-- The suggestions of the e-mail import -->
+    <string name="suggestions_title">Suggestions</string>
+    <string name="suggestions_empty">Nothing waits for you.</string>
+    <string name="suggestion_quotation">From the e-mail</string>
+    <string name="suggestion_open_email">Open the e-mail</string>
 
     <!-- The inspirations -->
     <string name="inspirations_title">Inspirations</string>

@@ -255,6 +255,7 @@ abstract class CheckReleaseApk : DefaultTask() {
             "$APP.data.HomeWire\$\$serializer",
             "$APP.data.WeddingWire\$\$serializer",
             "$APP.data.InspirationWire\$\$serializer",
+            "$APP.data.SuggestionWire\$\$serializer",
             "$APP.data.WholeBudgetWire\$\$serializer",
             "$APP.data.VendorWire\$\$serializer",
             "$APP.data.GuestWire\$\$serializer",

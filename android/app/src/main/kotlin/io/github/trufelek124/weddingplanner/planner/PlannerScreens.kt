@@ -100,6 +100,8 @@ private const val INSPIRATIONS = "inspirations"
 private const val INSPIRATION = "inspiration"
 private const val INSPIRATION_ROUTE = "$INSPIRATION?id={id}"
 
+private const val SUGGESTIONS = "suggestions"
+
 private val BEHIND_MORE = listOf(
     BehindMore(BUDGET, R.string.budget_title),
     BehindMore(VENDORS, R.string.vendors_title),
@@ -108,6 +110,7 @@ private val BEHIND_MORE = listOf(
     BehindMore(GUEST_ROUTE, R.string.guest_title) { planner, id -> planner.guest(id)?.name },
     BehindMore(INSPIRATIONS, R.string.inspirations_title),
     BehindMore(INSPIRATION_ROUTE, R.string.inspiration_title) { planner, id -> planner.inspiration(id)?.let(::inspirationName) },
+    BehindMore(SUGGESTIONS, R.string.suggestions_title),
 )
 
 /** Where a task is added or changed: "task?id=…" for an existing one, "task?parent=…" for a new one under a step. */
@@ -351,7 +354,7 @@ private fun Places(
                 val today = todayAt(planner, clock.instant())
                 NavHost(navController = navigation, startDestination = Place.HOME.route) {
                     composable(Place.HOME.route) {
-                        HomeContent(planner, today = today, actions = actions, onBudget = { navigation.navigate(BUDGET) }) {
+                        HomeContent(planner, today = today, actions = actions, onBudget = { navigation.navigate(BUDGET) }, onSuggestions = { navigation.navigate(SUGGESTIONS) }) {
                             Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 loaded()
                                 SignedInAs(userName, unsent = planner.unsent, onSignOut = onSignOut)
@@ -361,7 +364,7 @@ private fun Places(
                     composable(Place.PLAN.route) { PlanContent(planner, today = today, actions = actions, foot = loaded) }
                     composable(Place.TASKS.route) { TasksContent(planner, actions = actions, foot = loadedUnderTheButton) }
                     composable(Place.MORE.route) {
-                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }, onVendors = { navigation.navigate(VENDORS) }, onGuests = { navigation.navigate(GUESTS) }, onInspirations = { navigation.navigate(INSPIRATIONS) }) {
+                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }, onVendors = { navigation.navigate(VENDORS) }, onGuests = { navigation.navigate(GUESTS) }, onInspirations = { navigation.navigate(INSPIRATIONS) }, onSuggestions = { navigation.navigate(SUGGESTIONS) }) {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 loaded()
                                 SignedInAs(userName, unsent = planner.unsent, onSignOut = onSignOut)
@@ -369,6 +372,7 @@ private fun Places(
                         }
                     }
                     composable(BUDGET) { BudgetContent(planner, foot = loaded) }
+                    composable(SUGGESTIONS) { SuggestionsContent(planner, zone = clock.zone, foot = loaded) }
                     composable(VENDORS) {
                         VendorsContent(planner, onOpen = { navigation.navigate("$VENDOR?id=${Uri.encode(it.id)}") }, foot = loaded)
                     }
