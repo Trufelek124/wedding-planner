@@ -93,8 +93,8 @@
   "docs/specs/S02-suggestions.md": {
    "publicId": "WP-DOC-9",
    "id": "65ac27c4-3684-42ab-bb57-4a75e01b3457",
-   "sha256": "78d1d247092661ccf993a7a5ea3f1673f92743ace174a8a0758962523758ae35",
-   "commit": "fa183f0"
+   "sha256": "881be7ed2cd27cd08b83aa775d8e2c8b53123c26c139829e0f89ac52783b9553",
+   "commit": "357457d"
   },
   "docs/specs/S03-mail-connection-and-sync.md": {
    "publicId": "WP-DOC-10",
@@ -123,8 +123,8 @@
   "docs/specs/S05-added-by-itself.md": {
    "publicId": "WP-DOC-14",
    "id": "9ab35bf5-cc64-4bf9-92ed-818922ab00f0",
-   "sha256": "45101c04376e7bb447b29b7a22bdeb413ee7a3df53c4e7e97a90dd837ecd7186",
-   "commit": "5d759ef"
+   "sha256": "5f7867daacd89839d27aecebe5276d17dac4a226d56e733898f60b9f45c79d58",
+   "commit": "357457d"
   },
   "docs/decisions.md#D-008": {
    "publicId": "WP-DOC-15",
