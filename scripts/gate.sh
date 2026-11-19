@@ -48,6 +48,18 @@ backend() {
 }
 
 web() {
+  # The web app is built and tested on Node 22, the version the image builds it with (Dockerfile). Under a
+  # newer one four tests of picture uploads never finish: said here, in one sentence, instead of there.
+  local node
+  node=$(node --version 2>/dev/null || echo "not there at all")
+  case "$node" in
+    v22.*) ;;
+    *)
+      echo "web      FAILED: Node 22 is needed, and the node on the PATH is $node. For one command: PATH=\"<the folder of a Node 22>/bin:\$PATH\" scripts/..."
+      echo "gate: FAILED at web / setup"
+      exit 1
+      ;;
+  esac
   if [ ! -d "$ROOT/web/node_modules" ] || [ "$ROOT/web/package-lock.json" -nt "$ROOT/web/node_modules/.package-lock.json" ]; then
     step web "install" npm ci --no-fund --no-audit
   fi
