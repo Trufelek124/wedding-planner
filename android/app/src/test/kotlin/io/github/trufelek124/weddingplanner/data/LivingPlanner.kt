@@ -35,13 +35,13 @@ class LivingPlanner(
 ) {
 
     /** What the server has, by id, in the order of its list. */
-    val entries = LinkedHashMap<String, JsonObject>()
+    val entries: MutableMap<String, JsonObject> = HeldInOrder()
 
     /** The guests the server has, by id, in the order of its list. */
-    val guests = LinkedHashMap<String, JsonObject>()
+    val guests: MutableMap<String, JsonObject> = HeldInOrder()
 
     /** The suggestions the server has, by id, in the order of its list: with their state, which decides whether the list shows them. */
-    val suggestionStates = LinkedHashMap<String, JsonObject>()
+    val suggestionStates: MutableMap<String, JsonObject> = HeldInOrder()
 
     init {
         suggestions.forEach { suggestion -> Json.parseToJsonElement(suggestion).jsonObject.let { suggestionStates[it.getValue("id").jsonPrimitive.content] = it } }
@@ -120,6 +120,7 @@ class LivingPlanner(
     private fun list(entries: Collection<JsonObject>): String = entries.joinToString(",", "[", "]")
 
     /** Called with every request before it is answered: a test holds an answer up here to change something while it is on its way. */
+    @Volatile
     var holdUp: (suspend (HttpRequestData) -> Unit)? = null
 
     private suspend fun MockRequestHandleScope.answer(request: HttpRequestData): HttpResponseData? {
@@ -219,4 +220,33 @@ class LivingPlanner(
         } else {
             JsonObject(entry + ("priorityReason" to JsonPrimitive("SET_BY_HAND")))
         }
+}
+
+/**
+ * What the stand-in server holds, in the order it was put there. The server answers on threads of its own while a
+ * test looks at what it holds: every reading and writing is under one lock, and what a test goes through
+ * (`values`, `keys`, `entries`) is a copy made under it, so that going through it never meets a change half-way.
+ */
+private class HeldInOrder<K, V> : AbstractMutableMap<K, V>() {
+
+    private val held = LinkedHashMap<K, V>()
+
+    override val size: Int get() = synchronized(held) { held.size }
+
+    override fun get(key: K): V? = synchronized(held) { held[key] }
+
+    override fun containsKey(key: K): Boolean = synchronized(held) { held.containsKey(key) }
+
+    override fun put(key: K, value: V): V? = synchronized(held) { held.put(key, value) }
+
+    override fun remove(key: K): V? = synchronized(held) { held.remove(key) }
+
+    override fun clear() = synchronized(held) { held.clear() }
+
+    override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
+        get() = synchronized(held) { LinkedHashMap(held).entries }
+
+    override val keys: MutableSet<K> get() = synchronized(held) { LinkedHashSet(held.keys) }
+
+    override val values: MutableCollection<V> get() = synchronized(held) { ArrayList(held.values) }
 }
