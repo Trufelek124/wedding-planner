@@ -486,5 +486,10 @@ started the planner where nothing ran, said nothing and changed nothing at the n
 and said which commit, started a container that had been stopped by hand, and left everything alone, with one
 line, when the registry refused. The owner published from the Mac with the script that day.
 
+The same day the workflow published for the first time: a push to `main` ran the checks on GitHub's machine,
+built the image for `linux/arm64` on an ARM machine and pushed it under the commit and as `latest`. Two earlier
+runs had stopped in the checks — one in a single test that passed in the runs before and after it, one because
+Maven Central refused the machine ("too many requests"), which is why the workflow now keeps what it downloads.
+
 Not done yet: the launchd job on the owner's Mac; the nightly backup on the server and a restore from one of its
 files; and the owner rolling back from this text alone.
