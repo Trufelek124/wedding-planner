@@ -14,7 +14,7 @@ guests, vendors or mail. Configuration that names the owner's systems lives in e
 | `web/` | Vite 8, React 19, TypeScript 5.9 (not newer: the lint tooling does not support TypeScript 7 yet). The backend serves the built files from the directory named by `APP_WEB_DIR` and answers the web app's pages with `index.html` |
 | `android/` | Kotlin 2.4 and Jetpack Compose on the Android Gradle plugin 9.5 (its built-in Kotlin: no `kotlin-android` plugin). Application id `io.github.trufelek124.weddingplanner`, minSdk 28. Screens are tested on the JVM with Robolectric, which renders on Android 36 until it supports 37 |
 | `Dockerfile`, `deploy/` | The image (backend with the web app inside) and a compose file to try it with PostgreSQL 18. `docs/deployment.md` says what the container needs |
-| `docs/specs/` | Specs, `S<nn>-<slug>.md`. A change the owner can notice that no spec covers gets a spec first. S02 is the suggestions and S03 the Gmail connection and sync (with D-006): read them before touching the e-mail import |
+| `docs/specs/` | Specs, `S<nn>-<slug>.md`. A change the owner can notice that no spec covers gets a spec first. S02 is the suggestions, S03 the Gmail connection and sync (with D-006) and S04 reading the mail with the two AI steps (with D-007): read them before touching the e-mail import |
 | `docs/decisions.md` | Numbered decisions, one `## D-nnn — title` section each. Read the ones that touch your task |
 | `docs/state.md` | One screen on where the project stands — arrives with WP-TS-2 |
 | `docs/backlog/` | Backlog batches that were imported into the tracker |

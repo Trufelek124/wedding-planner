@@ -16,6 +16,11 @@
    "link": "EP7-S1"
   },
   {
+   "path": "docs/specs/S04-reading-the-mail.md",
+   "type": "REQUIREMENTS",
+   "link": "EP7-S2"
+  },
+  {
    "path": "docs/deployment.md",
    "type": "DEPLOYMENT",
    "link": "EP3-S1"

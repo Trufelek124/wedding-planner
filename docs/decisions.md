@@ -389,3 +389,61 @@ against Google; this records what Google's own documentation said on 2026-11-19 
 - Google for Developers, "Synchronize clients with Gmail" and `users.history.list`: how to keep up, and that a
   marker that has grown too old is answered with 404 and a full look;
   https://developers.google.com/workspace/gmail/api/guides/sync
+
+## D-007 — The AI steps: two models, answers of a fixed shape, no tools
+
+**Date:** 2026-11-19 · **Task:** WP-TS-74 · **Applies to:** reading the mail (S04, WP-US-21)
+
+### Context
+
+S01 section 6 fixes two steps — a small model that sees the beginning of every message and decides whether it
+concerns the wedding, a larger one that reads those messages in full and proposes entries — and that Claude is
+called through the Anthropic API, by the backend only. Left open were which models, how an answer is made to
+have a shape the server can rely on, what a message can make the models do, and what it costs. Nothing was
+tried against the real service: there is no key and no server yet.
+
+### What was compared
+
+| Question | Chosen | The alternative, and why not |
+|---|---|---|
+| Triage | **Claude Haiku 5.5** (`claude-haiku-5-5`), at low effort | The larger model for both steps: every message of two mailboxes would cost forty times as much for a yes or no |
+| Extraction | **Claude Opus 5.5** (`claude-opus-5-5`), at medium effort | A middle model: cheaper, but this is the step where a wrong day or amount lands in front of the owners, and only a few messages in a hundred reach it |
+| The shape of an answer | The API's **structured output**: the answer must fit a schema, and the server checks it again | Asking for JSON in words: sometimes it is not. A tool the model is forced to call: no longer offered for these models |
+| What the models can do | **Nothing but answer**: no tools are given | Tools for looking up vendors or tasks: a message could then steer what is looked up, and nothing here needs it |
+| Calling the service | Anthropic's own **Java SDK** | Plain HTTP: retries, errors and the answer's types would be written again by hand |
+| When the larger model declines a message | The service's own **fallback to another model** is switched on for extraction; if that declines too, the message is "could not be read" | Stopping at the first refusal: messages about contracts and money would be skipped more often than needed |
+| Reading the first three months | **One message at a time**, as it is read later | The service's batch interface at half the price: answers within a day instead of at once, and a second way of reading to build and test. Worth it only if the cost below turns out much higher |
+
+### Decision
+
+1. **Triage: `claude-haiku-5-5`. Extraction: `claude-opus-5-5`.** Both are settings of the server; the decision
+   is their starting values.
+2. **Structured output and no tools**, for both. What a message says can at most become a proposal that waits
+   for a person (S04 section 5).
+3. **The Java SDK** (`com.anthropic:anthropic-java`), with its own retries; a refusal, an answer that was cut
+   off and an answer that does not fit are each a verdict, not an error to try again.
+4. **The server keeps count** of calls and tokens per day and model, shows an estimate of the cost, and stops
+   at a monthly limit (S04 section 8). The account's own spending limit is the second brake.
+5. **The models' instructions are in the repository**, in English, and say that the messages are in Polish,
+   Ukrainian or English and that a title is written in the language of the message.
+
+### What it should cost — an estimate, to be replaced by what is measured
+
+Prices on 2026-11-19, per million tokens: Haiku 5.5 0.10 USD in and 0.50 out; Opus 5.5 4 USD in and 20 out.
+
+| | Per message | Per 1,000 messages |
+|---|---|---|
+| Triage, every message | about 700 tokens in, 100 out | about 0.12 USD |
+| Extraction, if 5 in 100 concern the wedding | about 6,000 tokens in, 1,500 out | about 2.70 USD |
+
+So about **3 USD for a thousand messages**, nearly all of it extraction, and perhaps 15 USD for a first look over
+two mailboxes with 5,000 messages between them. The share of messages that concern the wedding moves this more
+than anything else; the monthly limit starts at 20 USD for that reason.
+
+### What it costs otherwise, and what would change the decision
+
+- **Not tried against the service.** How often triage is right in Polish and Ukrainian, how often a day or an
+  amount is read correctly, and the real cost are measured with the sample set of S04 section 10 when the owner
+  provides a key. If triage misses wedding mail, the larger model or more of the message is the first thing to try.
+- With these models the instructions are short; the service's cache for repeated instructions is not relied on.
+- If the first look costs several times the estimate, the batch interface is the next step.

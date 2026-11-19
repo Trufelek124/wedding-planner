@@ -624,6 +624,42 @@
    "publicId": "WP-TS-73",
    "id": "83d1db61-a46d-4acd-b4ea-03a07b499903",
    "title": "Android: Home in the bar leads Home from a screen that was opened from Home"
+  },
+  "EP7-S2-T1": {
+   "type": "task",
+   "publicId": "WP-TS-74",
+   "id": "01eedaac-750b-4bdc-b47b-6827e72524f9",
+   "title": "Spec and decision: reading the mail with two AI steps"
+  },
+  "EP7-S2-T2": {
+   "type": "task",
+   "publicId": "WP-TS-75",
+   "id": "3697b4f6-3247-4167-b6d7-a102f435fa1f",
+   "title": "Backend: the mail module hands a noted message over to be read"
+  },
+  "EP7-S2-T3": {
+   "type": "task",
+   "publicId": "WP-TS-76",
+   "id": "58cbd95f-f010-4729-9441-d32e58120f28",
+   "title": "Backend: triage and extraction, and proposals handed in as suggestions"
+  },
+  "EP7-S2-T4": {
+   "type": "task",
+   "publicId": "WP-TS-77",
+   "id": "96bac7f5-8a65-4a6b-ba92-abb561acf4cf",
+   "title": "The e-mail page shows the reading and what it costs"
+  },
+  "EP7-S2-T5": {
+   "type": "task",
+   "publicId": "WP-TS-78",
+   "id": "5ded36b4-a7a4-400e-9607-62cb43defad0",
+   "title": "A fixed set of sample messages and a tool that measures the two steps"
+  },
+  "EP7-S2-T6": {
+   "type": "task",
+   "publicId": "WP-TS-79",
+   "id": "5b2f8372-79ed-48c8-81c0-f2d82bbe600d",
+   "title": "Owner: give the server a key for the AI service, with a spending limit on the account"
   }
  }
 }

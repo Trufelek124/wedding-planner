@@ -1,0 +1,111 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP7-S2-T1",
+   "story": "EP7-S2",
+   "title": "Spec and decision: reading the mail with two AI steps",
+   "description": "Before anything is built: a spec that says what happens to a noted message - triage, extraction, what leaves the server, what the models' answers may and may not do, what is kept, what happens when something fails, what it costs and the brake - and a decision on the models, the shape of their answers and the SDK. Nothing is tried against the AI service: there is no key yet. Done when docs/specs/S04-reading-the-mail.md and D-007 are committed and mirrored.",
+   "dependsOn": [],
+   "type": "ARCHITECTURE",
+   "mandatory": true,
+   "requiredRoles": [
+    "ARCHITECT"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S2-T2",
+   "story": "EP7-S2",
+   "title": "Backend: the mail module hands a noted message over to be read",
+   "description": "The mail source gains 'give me this message with its thread': sender, subject, when it arrived, its text, and the text of the earlier messages of the thread, read from Gmail with limits on size; a message without text, too large or gone is said as such. The mail module offers the import, through its own package, the messages not read yet (newest first), a message's content, and marking a message with its verdict. Nothing of a message is stored or logged. Done when the backend's tests cover it against the stand-in for Gmail and the gate passes.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S2-T3",
+   "story": "EP7-S2",
+   "title": "Backend: triage and extraction, and proposals handed in as suggestions",
+   "description": "A new module reads the noted messages as S04 says: triage with the small model, extraction with the larger one, both through Anthropic's Java SDK with answers of a fixed shape and no tools; the server checks what comes back (shape, the passage standing in the message, limits per message and per day), matches a vendor and a category by exact name or address, hands the proposals in as suggestions and marks the message with its verdict. Failures as S04 section 7; calls and tokens counted per day and model; the monthly and the daily limit; off unless the server has a key. Tests use a stand-in for the AI service and never call the real one. Done when the backend's tests cover S04 sections 2 to 9 and the gate passes.",
+   "dependsOn": [
+    "EP7-S2-T1",
+    "EP7-S2-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S2-T4",
+   "story": "EP7-S2",
+   "title": "The e-mail page shows the reading and what it costs",
+   "description": "GET /api/mail also answers how many messages wait to be read, were read, concerned the wedding and could not be read, how many suggestions came of it, the estimated cost this month and in all, and whether the reading is off, paused by a limit, or stopped because the AI service does not accept the key. The web's e-mail page shows it in plain words. Done when the backend's and the web's tests cover it and the page was looked at as rendered pictures.",
+   "dependsOn": [
+    "EP7-S2-T3"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "typescript",
+    "react"
+   ]
+  },
+  {
+   "key": "EP7-S2-T5",
+   "story": "EP7-S2",
+   "title": "A fixed set of sample messages and a tool that measures the two steps",
+   "description": "Invented messages in Polish, Ukrainian and English with what triage should answer and what extraction should propose, kept in the repository; and a tool outside the gate that runs the two steps over them with the real AI service, reports how often each was right, per language, and what the run cost. Running it needs the owner's key and the owner's word: it costs money. Done when the set and the tool are in the repository and the tool was checked against the stand-in; the first real run and its numbers are the owner's to order.",
+   "dependsOn": [
+    "EP7-S2-T3"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S2-T6",
+   "story": "EP7-S2",
+   "title": "Owner: give the server a key for the AI service, with a spending limit on the account",
+   "description": "When the server exists (docs/deployment.md has the settings, S04 sections 8 to 10 the reasons): create an API key in the Anthropic account, set a spending limit on the account, put the key into the server's environment file, and watch the e-mail page for the first days: what is read, what it proposes and what it costs. Order the first run of the sample set when convenient.",
+   "dependsOn": [
+    "EP7-S2-T3",
+    "EP7-S2-T4"
+   ],
+   "type": "OTHER",
+   "mandatory": true,
+   "requiredRoles": [
+    "PRODUCT_OWNER"
+   ],
+   "requiredSkills": [
+    "operations"
+   ]
+  }
+ ]
+}
