@@ -296,11 +296,15 @@ private fun Places(
                             onClick = {
                                 // A screen behind More: pressing More there leads back to the list, not to the screen again.
                                 val leavingIt = behind != null && place == here
+                                // Home is where everything starts: what was opened from it (the budget from its glance,
+                                // the suggestions from its line) is kept by the navigation as "what stood above Home" and
+                                // would be put straight back. Pressing Home means Home itself.
+                                val toHome = place == Place.HOME
                                 navigation.navigate(place.route) {
                                     // One of each screen, and Back from any of them leads to Home.
                                     popUpTo(navigation.graph.findStartDestination().id) { saveState = !leavingIt }
                                     launchSingleTop = true
-                                    restoreState = !leavingIt
+                                    restoreState = !leavingIt && !toHome
                                 }
                             },
                             icon = { Icon(painterResource(place.icon), contentDescription = null) },

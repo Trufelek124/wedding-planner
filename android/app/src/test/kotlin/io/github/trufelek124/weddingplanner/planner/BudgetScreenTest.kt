@@ -331,6 +331,28 @@ class BudgetScreenTest : SignedInPhoneTest() {
         compose.onNode(hasText("Budget") and hasClickAction()).assertIsDisplayed()
     }
 
+    @Test
+    fun `Home in the bar leads Home from the budget, however the budget was reached`() {
+        open()
+        openBudgetFromMore()
+
+        compose.onNode(hasText("Home") and isSelectable()).performClick()
+
+        waitFor("213 days to go")
+        compose.onNode(hasText("Home") and isSelectable()).assertIsSelected()
+        compose.onNodeWithText("By category").assertDoesNotExist()
+
+        // And from the budget that Home's own glance at the money led to.
+        scrollTo(sayingOpenTheBudget)
+        compose.onNode(sayingOpenTheBudget).performClick()
+        waitForTheBudget()
+        compose.onNode(hasText("Home") and isSelectable()).performClick()
+
+        waitFor("213 days to go")
+        compose.onNode(hasText("Home") and isSelectable()).assertIsSelected()
+        compose.onNodeWithText("By category").assertDoesNotExist()
+    }
+
     // ---------------------------------------------------------------- loading again, and without a connection
 
     @Test
