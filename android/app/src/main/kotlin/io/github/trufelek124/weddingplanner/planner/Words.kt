@@ -122,8 +122,9 @@ data class Fact(val text: String, val strong: Boolean = false)
  * and who does it.
  *
  * @param withPlanItem false where the task already stands under its plan item
+ * @param withVendor false where the entry already stands under its vendor
  */
-fun factsOf(entry: Entry, planner: Planner, withPlanItem: Boolean = true): List<Fact> = listOfNotNull(
+fun factsOf(entry: Entry, planner: Planner, withPlanItem: Boolean = true, withVendor: Boolean = true): List<Fact> = listOfNotNull(
     waitingInWords(entry.waiting)?.let { Fact(it, strong = true) },
     statusLabel(entry.status).takeIf { entry.kind == Kind.PLAN_ITEM || entry.status != Status.NOT_STARTED }?.let(::Fact),
     // The level is a word and says why; the weight only helps the eye find what is urgent. A task that
@@ -134,7 +135,7 @@ fun factsOf(entry: Entry, planner: Planner, withPlanItem: Boolean = true): List<
     whenInWords(entry)?.let(::Fact),
     entry.parentId.takeIf { withPlanItem }?.let { planner.entry(it)?.title }?.let(::Fact),
     entry.categoryId?.let { planner.categories[it] }?.let(::Fact),
-    entry.vendorId?.let { planner.vendors[it] }?.let(::Fact),
+    entry.vendorId.takeIf { withVendor }?.let { planner.vendors[it] }?.let(::Fact),
     planner.peopleOf(entry)?.let(::Fact),
 )
 

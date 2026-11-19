@@ -47,8 +47,15 @@ class TaskActions(
  * @param actions null where the list only shows
  */
 @Composable
-fun EntryLine(entry: Entry, planner: Planner, modifier: Modifier = Modifier, withPlanItem: Boolean = true, actions: TaskActions? = null) {
-    TaskLine(entry, factsOf(entry, planner, withPlanItem), modifier, actions)
+fun EntryLine(
+    entry: Entry,
+    planner: Planner,
+    modifier: Modifier = Modifier,
+    withPlanItem: Boolean = true,
+    actions: TaskActions? = null,
+    withVendor: Boolean = true,
+) {
+    TaskLine(entry, factsOf(entry, planner, withPlanItem, withVendor), modifier, actions)
 }
 
 /** A line with the facts given: for a list that says less about each task than the full line does. */

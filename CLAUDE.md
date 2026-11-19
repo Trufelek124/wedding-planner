@@ -145,8 +145,14 @@ first uses it, at the version D-005 names.
   pages and its `labels.ts`; money is `money()` in `money/Money.kt`, on whole numbers of the smallest unit as on the
   web. Screen texts are in `strings.xml`.
 - The bar at the bottom has four places: Home, Plan, Tasks and More. What has no place of its own is a row in More
-  (`planner/MoreContent.kt`) and a route in `PlannerScreens.kt`, shown with the arrow back at the top and More still
-  chosen below. The budget is only shown on the phone; it is set on the web (S01 §4).
+  (`planner/MoreContent.kt`) and an entry in `BEHIND_MORE` in `PlannerScreens.kt`, which gives it the arrow back at
+  the top and keeps More chosen below. The budget and the vendors are only shown on the phone; they are set on the
+  web (S01 §4).
+- A phone number, an e-mail address, an address and a website open in the phone's own apps through
+  `planner/Contact.kt`, and only through it. What the server holds was typed by a person: each way builds one fixed
+  kind of intent, a number is dialled and never called, and a website opens only as `http` or `https` — anything
+  else is shown as text. Whether an app can take it is not asked beforehand; it is started, and the screen says so
+  when none can.
 - A copy that an older version of the app made lacks what a newer one keeps until it is loaded again. A screen
   leaves out what such a copy cannot know and never shows it as nothing (`categoriesKnown` in `BudgetWords.kt`).
 - The plan's timeline (`planner/timeline/`) is drawn by us, like the web's chart (D-001): where a bar lies is

@@ -1,5 +1,7 @@
 package io.github.trufelek124.weddingplanner.planner
 
+import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -67,8 +69,26 @@ private enum class Place(val route: String, val title: Int, val label: Int, val 
     MORE("more", R.string.nav_more, R.string.nav_more, R.drawable.ic_more),
 }
 
-/** The budget: reached from More and from Home's glance at the money. It belongs to More, which stays selected. */
+/**
+ * A screen behind More: reached from its list (the budget also from Home's glance at the money), with
+ * a back arrow in the top bar, and More stays the place that is selected. Pressing More on it leads to the list.
+ *
+ * @param title what the top bar says; null where it is the name of what is shown
+ */
+private class BehindMore(val route: String, @StringRes val title: Int?)
+
 private const val BUDGET = "budget"
+private const val VENDORS = "vendors"
+
+/** One vendor: "vendor?id=…". */
+private const val VENDOR = "vendor"
+private const val VENDOR_ROUTE = "$VENDOR?id={id}"
+
+private val BEHIND_MORE = listOf(
+    BehindMore(BUDGET, R.string.budget_title),
+    BehindMore(VENDORS, R.string.vendors_title),
+    BehindMore(VENDOR_ROUTE, null),
+)
 
 /** Where a task is added or changed: "task?id=…" for an existing one, "task?parent=…" for a new one under a step. */
 private const val TASK = "task"
@@ -176,8 +196,8 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
     val navigation = rememberNavController()
     val current by navigation.currentBackStackEntryAsState()
     val route = current?.destination?.route
-    val onTheBudget = route == BUDGET
-    val here = if (onTheBudget) Place.MORE else Place.entries.firstOrNull { it.route == route } ?: Place.HOME
+    val behind = BEHIND_MORE.firstOrNull { it.route == route }
+    val here = if (behind != null) Place.MORE else Place.entries.firstOrNull { it.route == route } ?: Place.HOME
     val onTheForm = route == TASK_ROUTE
     val changingATask = onTheForm && current?.arguments?.getString("id") != null
     val loadedOn = moment(planner.loadedAt, clock.zone)
@@ -193,15 +213,19 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
             TopAppBar(
                 title = {
                     val title = when {
-                        onTheForm -> if (changingATask) R.string.task_change else R.string.task_add
-                        onTheBudget -> R.string.budget_title
-                        else -> here.title
+                        onTheForm -> stringResource(if (changingATask) R.string.task_change else R.string.task_add)
+                        // One vendor is named by its name; a vendor that is gone has none.
+                        behind != null ->
+                            behind.title?.let { stringResource(it) }
+                                ?: current?.arguments?.getString("id")?.let(planner::vendor)?.name
+                                ?: stringResource(R.string.vendor_title)
+                        else -> stringResource(here.title)
                     }
-                    Text(stringResource(title), modifier = Modifier.semantics { heading() })
+                    Text(title, modifier = Modifier.semantics { heading() })
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 navigationIcon = {
-                    if (onTheForm || onTheBudget) {
+                    if (onTheForm || behind != null) {
                         IconButton(onClick = { navigation.popBackStack() }) {
                             Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back))
                         }
@@ -224,13 +248,13 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                         NavigationBarItem(
                             selected = place == here,
                             onClick = {
-                                // The budget is More's: pressing More there leads back to the list, not to the budget again.
-                                val leavingTheBudget = onTheBudget && place == here
+                                // A screen behind More: pressing More there leads back to the list, not to the screen again.
+                                val leavingIt = behind != null && place == here
                                 navigation.navigate(place.route) {
                                     // One of each screen, and Back from any of them leads to Home.
-                                    popUpTo(navigation.graph.findStartDestination().id) { saveState = !leavingTheBudget }
+                                    popUpTo(navigation.graph.findStartDestination().id) { saveState = !leavingIt }
                                     launchSingleTop = true
-                                    restoreState = !leavingTheBudget
+                                    restoreState = !leavingIt
                                 }
                             },
                             icon = { Icon(painterResource(place.icon), contentDescription = null) },
@@ -294,7 +318,7 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                     composable(Place.PLAN.route) { PlanContent(planner, today = today, actions = actions, foot = loaded) }
                     composable(Place.TASKS.route) { TasksContent(planner, actions = actions, foot = loadedUnderTheButton) }
                     composable(Place.MORE.route) {
-                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }) {
+                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }, onVendors = { navigation.navigate(VENDORS) }) {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 loaded()
                                 SignedInAs(userName, unsent = planner.unsent, onSignOut = onSignOut)
@@ -302,6 +326,21 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                         }
                     }
                     composable(BUDGET) { BudgetContent(planner, foot = loaded) }
+                    composable(VENDORS) {
+                        VendorsContent(planner, onOpen = { navigation.navigate("$VENDOR?id=${Uri.encode(it.id)}") }, foot = loaded)
+                    }
+                    composable(
+                        route = VENDOR_ROUTE,
+                        arguments = listOf(navArgument("id") { type = NavType.StringType }),
+                    ) { entry ->
+                        val vendor = entry.arguments?.getString("id")?.let(planner::vendor)
+                        if (vendor == null) {
+                            // Removed in the web app and loaded again since.
+                            VendorGone(onBack = { navigation.popBackStack() })
+                        } else {
+                            VendorContent(planner, vendor, actions = actions, foot = loaded)
+                        }
+                    }
                     composable(
                         route = TASK_ROUTE,
                         arguments = listOf(
