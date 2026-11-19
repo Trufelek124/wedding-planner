@@ -156,8 +156,8 @@ class PlannerRepositoryTest {
         // Every call carried the access token.
         assertTrue(server.calls.all { it.authorization == "Bearer access-1" })
         // The wedding, Home, the entries, the categories, the vendors, the boards, the budget, the guests,
-        // the households and the head count: one request each.
-        assertEquals(10, server.calls.size)
+        // the households, the head count and the inspirations: one request each.
+        assertEquals(11, server.calls.size)
     }
 
     @Test
@@ -285,6 +285,122 @@ class PlannerRepositoryTest {
         assertEquals(listOf("Pay the deposit", "Go to the tasting", "Book the venue", "Choose the rings"), held.entries.map { it.title })
         assertEquals("Anna & Marek", held.members.joinToString(" & ") { it.displayName })
         assertEquals(Instant.parse("2026-11-18T13:05:00Z"), held.loadedAt)
+    }
+
+    // ---------------------------------------------------------------- the inspirations
+
+    private val lace = StandIn.inspiration(
+        "i1", url = "https://www.instagram.com/p/Cabc123/", boardId = "b1", note = "Soft, with a train", pictures = 1, previews = 1, source = "INSTAGRAM",
+        title = "Lace sleeves", previewTitle = "A page title", previewStatus = "FETCHED", tags = listOf("boho", "lace"), planItemId = "p1", vendorId = "v1",
+        addedById = StandIn.MAREK, version = 4,
+    )
+    private val bare = StandIn.inspiration("i2", addedById = null)
+
+    @Test
+    fun `holds the inspirations as they were loaded, in the server's order, with their pictures`() = runBlocking {
+        server.planner(inspirations = listOf(lace, bare))
+
+        assertEquals(Load.LOADED, planner.load())
+
+        val held = planner.planner.first()!!
+        assertEquals(listOf("i1", "i2"), held.inspirations.map { it.id })
+        val idea = held.inspiration("i1")!!
+        assertEquals("https://www.instagram.com/p/Cabc123/", idea.url)
+        assertEquals(InspirationSource.INSTAGRAM, idea.source)
+        assertEquals("Lace sleeves", idea.title)
+        assertEquals("A page title", idea.previewTitle)
+        assertFalse(idea.previewPending)
+        assertEquals("Soft, with a train", idea.note)
+        assertEquals(listOf("boho", "lace"), idea.tags)
+        assertEquals("b1", idea.boardId)
+        assertEquals("p1", idea.planItemId)
+        assertEquals("v1", idea.vendorId)
+        assertEquals(StandIn.MAREK, idea.addedById)
+        // The pictures come in the order the server named them: the one a person sent after the one fetched from the link.
+        assertEquals(listOf(true, false), idea.pictures.map { it.preview })
+        assertEquals(listOf(800, 800), idea.pictures.map { it.width })
+        assertEquals(600, idea.pictures.first().height)
+        val other = held.inspiration("i2")!!
+        assertNull(other.url)
+        assertEquals(InspirationSource.PHOTO, other.source)
+        assertNull(other.addedById)
+        assertTrue(other.pictures.isEmpty())
+        assertTrue(other.tags.isEmpty())
+        assertNull(held.inspiration("nobody"))
+    }
+
+    @Test
+    fun `a preview that is still being fetched is pending`() = runBlocking {
+        server.planner(inspirations = listOf(StandIn.inspiration("i1", url = "https://www.instagram.com/p/Cabc123/"), StandIn.inspiration("i2", url = "https://www.instagram.com/p/Cdef456/", previewStatus = "FETCHED")))
+
+        planner.load()
+
+        val held = planner.planner.first()!!
+        assertTrue(held.inspiration("i1")!!.previewPending)
+        assertFalse(held.inspiration("i2")!!.previewPending)
+    }
+
+    @Test
+    fun `a source a newer server knows is OTHER, and a field it adds breaks nothing`() = runBlocking {
+        server.planner(inspirations = listOf(StandIn.inspiration("i1", url = "https://www.example.com/x", source = "BLUESKY").dropLast(1) + ""","colour":"red"}"""))
+
+        assertEquals(Load.LOADED, planner.load())
+
+        assertEquals(InspirationSource.OTHER, planner.planner.first()!!.inspiration("i1")!!.source)
+    }
+
+    @Test
+    fun `the inspirations of a newer load replace those of the last, and what waits to be sent stays`() = runBlocking {
+        server.planner(inspirations = listOf(lace, bare))
+        planner.load()
+        val waiting = (planner.keepShare(Share(link = "https://vm.tiktok.com/ZMabc/", boardId = null, note = ""), emptyList()) as Kept.Yes).inspirationId
+        server.planner(inspirations = listOf(StandIn.inspiration("i3", url = "https://www.instagram.com/p/Cdef456/", note = "Later", tags = listOf("silk"))))
+
+        assertEquals(Load.LOADED, planner.load())
+
+        val held = planner.planner.first()!!
+        assertEquals(listOf("i3"), held.inspirations.map { it.id })
+        assertEquals(listOf("silk"), held.inspirations.single().tags)
+        assertTrue(held.pictureCountsAre(0))
+        assertEquals(listOf(waiting), held.shares.map { it.id })
+        // The pictures of an idea that is gone are gone with it.
+        val rows = database.planner().stored()!!
+        assertEquals(emptyList<String>(), rows.inspirationPictures.map { it.inspirationId })
+    }
+
+    private fun Planner.pictureCountsAre(count: Int) = inspirations.all { it.pictures.size == count }
+
+    @Test
+    fun `an idea kept for later prints neither its link, its title, its note nor its tags`() = runBlocking {
+        server.planner(inspirations = listOf(lace))
+        planner.load()
+        val held = planner.planner.first()!!
+
+        val printed = "$held ${held.inspirations} ${held.inspirations.single().pictures} ${database.planner().stored()!!.inspirations} ${database.planner().stored()!!.inspirationPictures}"
+
+        for (private in listOf("instagram", "Lace", "page title", "Soft", "train", "boho")) {
+            assertFalse(private, printed.contains(private, ignoreCase = true))
+        }
+        assertFalse(WaitingShare("s1", "https://secret.example/x", 0, null).toString().contains("secret"))
+    }
+
+    @Test
+    fun `forgetting leaves nothing of an inspiration in the phone's files`() = runBlocking {
+        database.openHelper.writableDatabase.query("PRAGMA secure_delete = OFF").use { it.moveToFirst() }
+        server.planner(inspirations = listOf(lace))
+        planner.load()
+        val before = folder.root.listFiles()!!.filter { it.isFile }.joinToString("") { it.readBytes().toString(Charsets.ISO_8859_1) }
+        for (private in listOf("Cabc123", "Lace sleeves", "A page title", "Soft, with a train", "boho")) {
+            assertTrue("the phone does not keep \"$private\" to begin with", before.contains(private))
+        }
+
+        planner.forget()
+
+        val onDisk = folder.root.listFiles()!!.filter { it.isFile }.joinToString("") { it.readBytes().toString(Charsets.ISO_8859_1) }
+        for (private in listOf("Cabc123", "instagram.com", "Lace sleeves", "A page title", "Soft, with a train", "train", "boho", "lace")) {
+            assertFalse(private, onDisk.contains(private))
+        }
+        assertTrue(database.planner().stored() == null)
     }
 
     @Test

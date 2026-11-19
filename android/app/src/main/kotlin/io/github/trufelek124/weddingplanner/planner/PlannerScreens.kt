@@ -94,12 +94,20 @@ private const val GUESTS = "guests"
 private const val GUEST = "guest"
 private const val GUEST_ROUTE = "$GUEST?id={id}"
 
+private const val INSPIRATIONS = "inspirations"
+
+/** One idea: "inspiration?id=…". */
+private const val INSPIRATION = "inspiration"
+private const val INSPIRATION_ROUTE = "$INSPIRATION?id={id}"
+
 private val BEHIND_MORE = listOf(
     BehindMore(BUDGET, R.string.budget_title),
     BehindMore(VENDORS, R.string.vendors_title),
     BehindMore(VENDOR_ROUTE, R.string.vendor_title) { planner, id -> planner.vendor(id)?.name },
     BehindMore(GUESTS, R.string.guests_title),
     BehindMore(GUEST_ROUTE, R.string.guest_title) { planner, id -> planner.guest(id)?.name },
+    BehindMore(INSPIRATIONS, R.string.inspirations_title),
+    BehindMore(INSPIRATION_ROUTE, R.string.inspiration_title) { planner, id -> planner.inspiration(id)?.let(::inspirationName) },
 )
 
 /** Where a task is added or changed: "task?id=…" for an existing one, "task?parent=…" for a new one under a step. */
@@ -336,7 +344,7 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                     composable(Place.PLAN.route) { PlanContent(planner, today = today, actions = actions, foot = loaded) }
                     composable(Place.TASKS.route) { TasksContent(planner, actions = actions, foot = loadedUnderTheButton) }
                     composable(Place.MORE.route) {
-                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }, onVendors = { navigation.navigate(VENDORS) }, onGuests = { navigation.navigate(GUESTS) }) {
+                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }, onVendors = { navigation.navigate(VENDORS) }, onGuests = { navigation.navigate(GUESTS) }, onInspirations = { navigation.navigate(INSPIRATIONS) }) {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 loaded()
                                 SignedInAs(userName, unsent = planner.unsent, onSignOut = onSignOut)
@@ -372,6 +380,21 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                             GuestGone(onBack = { navigation.popBackStack() })
                         } else {
                             GuestContent(planner, guest, onChoose = { changes.setGuestStatus(guest.id, it) }, foot = loaded)
+                        }
+                    }
+                    composable(INSPIRATIONS) {
+                        InspirationsContent(planner, onOpen = { navigation.navigate("$INSPIRATION?id=${Uri.encode(it.id)}") }, foot = loaded)
+                    }
+                    composable(
+                        route = INSPIRATION_ROUTE,
+                        arguments = listOf(navArgument("id") { type = NavType.StringType }),
+                    ) { entry ->
+                        val idea = entry.arguments?.getString("id")?.let(planner::inspiration)
+                        if (idea == null) {
+                            // Removed in the web app and loaded again since.
+                            InspirationGone(onBack = { navigation.popBackStack() })
+                        } else {
+                            InspirationContent(planner, idea, onVendor = { navigation.navigate("$VENDOR?id=${Uri.encode(it.id)}") }, foot = loaded)
                         }
                     }
                     composable(

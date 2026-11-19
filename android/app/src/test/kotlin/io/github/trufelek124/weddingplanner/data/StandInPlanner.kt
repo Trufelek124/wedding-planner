@@ -71,14 +71,36 @@ object StandIn {
 
     fun board(id: String, name: String, inspirations: Int = 0): String = """{"id":"$id","name":"$name","inspirationCount":$inspirations}"""
 
-    /** An inspiration as the server answers with one. @param pictures how many pictures a person sent with it */
-    fun inspiration(id: String, url: String? = null, boardId: String? = null, note: String = "", pictures: Int = 0, previews: Int = 0): String {
+    /**
+     * An inspiration as the server answers with one. @param pictures how many pictures a person sent with it
+     * @param source the source as the server names it; INSTAGRAM for a link, PHOTO without one, unless said
+     * @param previewStatus NONE, PENDING or FETCHED; PENDING for a link, NONE without one, unless said
+     * @param addedById the member who added it; Anna unless said
+     */
+    fun inspiration(
+        id: String,
+        url: String? = null,
+        boardId: String? = null,
+        note: String = "",
+        pictures: Int = 0,
+        previews: Int = 0,
+        source: String? = null,
+        title: String = "",
+        previewTitle: String = "",
+        previewStatus: String? = null,
+        tags: List<String> = emptyList(),
+        planItemId: String? = null,
+        vendorId: String? = null,
+        addedById: String? = ANNA,
+        version: Int = 0,
+    ): String {
         val held = (List(previews) { true } + List(pictures) { false }).mapIndexed { number, preview ->
             """{"id":"pic-$number","contentType":"image/jpeg","width":800,"height":600,"preview":$preview}"""
         }
-        return """{"id":"$id","url":${text(url)},"source":"${if (url == null) "PHOTO" else "INSTAGRAM"}","title":"","note":"$note","tags":[],""" +
-            """"boardId":${text(boardId)},"planItemId":null,"vendorId":null,"addedById":"$ANNA","previewStatus":"${if (url == null) "NONE" else "PENDING"}",""" +
-            """"previewTitle":"","pictures":[${held.joinToString(",")}],"version":0,"createdAt":"2026-11-18T13:05:00Z","updatedAt":"2026-11-18T13:05:00Z"}"""
+        return """{"id":"$id","url":${text(url)},"source":"${source ?: if (url == null) "PHOTO" else "INSTAGRAM"}","title":"$title","note":"$note","tags":${list(tags)},""" +
+            """"boardId":${text(boardId)},"planItemId":${text(planItemId)},"vendorId":${text(vendorId)},"addedById":${text(addedById)},""" +
+            """"previewStatus":"${previewStatus ?: if (url == null) "NONE" else "PENDING"}","previewTitle":"$previewTitle",""" +
+            """"pictures":[${held.joinToString(",")}],"version":$version,"createdAt":"2026-11-18T13:05:00Z","updatedAt":"2026-11-18T13:05:00Z"}"""
     }
 
     /** @param categoryId the vendor's category, or null */
@@ -205,7 +227,9 @@ fun StandInServer.planner(
     guests: List<String> = emptyList(),
     households: List<String> = emptyList(),
     guestCounts: String = StandIn.guestCounts(),
+    inspirations: List<String> = emptyList(),
 ) {
+    json("GET /api/inspirations", inspirations.joinToString(",", "[", "]"))
     json("GET /api/budget", budget)
     json("GET /api/guests", guests.joinToString(",", "[", "]"))
     json("GET /api/households", households.joinToString(",", "[", "]"))
@@ -220,5 +244,5 @@ fun StandInServer.planner(
 
 /** The server goes away: nothing of the planner can be asked for. */
 fun StandInServer.plannerUnreachable() {
-    listOf("wedding", "home", "entries", "categories", "vendors", "boards", "budget", "guests", "households", "guests/counts").forEach { unreachable("GET /api/$it") }
+    listOf("wedding", "home", "entries", "categories", "vendors", "boards", "budget", "guests", "households", "guests/counts", "inspirations").forEach { unreachable("GET /api/$it") }
 }

@@ -192,7 +192,10 @@ data class ShareRow(
     val pictures: Int,
     /** In words for the person, why the server did not take it; null while it waits to be sent. */
     val trouble: String? = null,
-)
+) {
+    /** A link and a note are the couple's own: nothing of them gets printed. */
+    override fun toString(): String = "ShareRow[inspirationId=$inspirationId]"
+}
 
 /**
  * A guest's status changed on the phone that the server does not have yet. Like a waiting change it
@@ -217,6 +220,50 @@ class GuestStatusRow(
     override fun toString(): String = "GuestStatusRow[guestId=$guestId]"
 }
 
+/**
+ * An idea kept on a board, as the server said it: a link, pictures, a note, tags. Not a data class:
+ * the link, the title, the note and the tags are the couple's own and are not to be printed. It belongs
+ * to the copy, as the vendors do, and goes with the next load and with a sign-out.
+ *
+ * @param position its place in the server's own order, newest first
+ * @param source INSTAGRAM, TIKTOK, PINTEREST, WEB or PHOTO as the server names it; a newer server may add one
+ * @param previewStatus NONE, PENDING or FETCHED
+ * @param tags a JSON array of text
+ */
+@Entity(tableName = "inspiration")
+class InspirationRow(
+    @PrimaryKey val id: String,
+    val position: Int,
+    val url: String?,
+    val source: String,
+    val title: String,
+    val previewTitle: String,
+    val previewStatus: String,
+    val note: String,
+    val tags: String,
+    val boardId: String?,
+    val planItemId: String?,
+    val vendorId: String?,
+    val addedById: String?,
+) {
+    override fun toString(): String = "InspirationRow[id=$id]"
+}
+
+/** A picture of an idea: what the phone needs to make room for it. Its file is fetched when it is shown. */
+@Entity(tableName = "inspiration_picture", primaryKeys = ["inspirationId", "id"])
+class InspirationPictureRow(
+    val id: String,
+    val inspirationId: String,
+    /** Its place among the idea's pictures, the first being the one the card shows. */
+    val position: Int,
+    val width: Int?,
+    val height: Int?,
+    /** True when the server fetched it from the link; false when a person sent it. */
+    val preview: Boolean,
+) {
+    override fun toString(): String = "InspirationPictureRow[id=$id]"
+}
+
 /** Everything the phone holds, read as it was at one moment: the last load, and what waits to be sent. */
 class Stored(
     val planner: PlannerRow,
@@ -231,4 +278,6 @@ class Stored(
     val guests: List<GuestRow> = emptyList(),
     val households: List<HouseholdRow> = emptyList(),
     val guestStatuses: List<GuestStatusRow> = emptyList(),
+    val inspirations: List<InspirationRow> = emptyList(),
+    val inspirationPictures: List<InspirationPictureRow> = emptyList(),
 )

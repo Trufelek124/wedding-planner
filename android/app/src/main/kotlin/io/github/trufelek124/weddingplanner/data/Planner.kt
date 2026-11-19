@@ -152,14 +152,54 @@ data class GuestCounts(val total: HeadCount, val byStatus: List<StatusCount>, va
 /** A board inspirations are collected on. */
 data class Board(val id: String, val name: String)
 
+/** Where an idea comes from. [OTHER] is a source a newer server knows and this app does not. */
+enum class InspirationSource { INSTAGRAM, TIKTOK, PINTEREST, WEB, PHOTO, OTHER }
+
+/** A picture of an idea. Its file is not on the phone: only what the card needs to make room for it. */
+class Picture(val id: String, val width: Int?, val height: Int?, val preview: Boolean) {
+    override fun toString(): String = "Picture[id=$id]"
+}
+
+/**
+ * An idea kept on a board. Not a data class: its link, title, note and tags are the couple's own and are not
+ * to be printed.
+ *
+ * @param url the link it was saved from; null for an idea made of pictures
+ * @param title the title a person gave it; empty when none
+ * @param previewTitle the title of the page the link leads to, once the server has fetched it; empty before
+ * @param previewPending the server is still fetching the link's picture and title
+ * @param pictures the pictures it holds, the one the card shows first
+ */
+class Inspiration(
+    val id: String,
+    val url: String?,
+    val source: InspirationSource,
+    val title: String,
+    val previewTitle: String,
+    val previewPending: Boolean,
+    val note: String,
+    val tags: List<String>,
+    val boardId: String?,
+    val planItemId: String?,
+    val vendorId: String?,
+    val addedById: String?,
+    val pictures: List<Picture>,
+) {
+    override fun toString(): String = "Inspiration[id=$id]"
+}
+
 /**
  * Something shared to the planner that the server does not have yet.
  *
  * @param link the link that was shared; null when pictures were
  * @param pictures how many pictures were shared
  * @param trouble in words, why the server did not take it; null while it waits to be sent
+ * @param boardId the board it was shared to; null for none
  */
-data class WaitingShare(val id: String, val link: String?, val pictures: Int, val trouble: String?)
+data class WaitingShare(val id: String, val link: String?, val pictures: Int, val trouble: String?, val boardId: String? = null) {
+    /** A link is the couple's own: nothing of it gets printed. */
+    override fun toString(): String = "WaitingShare[id=$id]"
+}
 
 /** A plan item or a task, as the screens show it. */
 data class Entry(
@@ -261,6 +301,8 @@ class Planner(
     val guestCounts: GuestCounts? = null,
     /** Statuses chosen on the phone that the server did not take, or whose guest it no longer has. */
     val guestTroubles: List<GuestTrouble> = emptyList(),
+    /** The ideas on the boards, in the server's order: the newest first. */
+    val inspirations: List<Inspiration> = emptyList(),
 ) {
     private val byId = entries.associateBy { it.id }
 
@@ -275,6 +317,8 @@ class Planner(
     fun vendor(id: String): Vendor? = vendorList.firstOrNull { it.id == id }
 
     fun guest(id: String): Guest? = guests.firstOrNull { it.id == id }
+
+    fun inspiration(id: String): Inspiration? = inspirations.firstOrNull { it.id == id }
 
     /** The plan items, tasks and payments that concern a vendor, in the list's order. */
     fun entriesOf(vendor: Vendor): List<Entry> = entries.filter { it.vendorId == vendor.id }

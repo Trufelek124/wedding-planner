@@ -58,13 +58,30 @@ class MemberWire(val id: String, val displayName: String, val you: Boolean)
 @Serializable
 class WeddingWire(val date: String?, val currency: String, val timeZone: String, val members: List<MemberWire>)
 
-/** An inspiration as far as the phone needs it after saving one: which it is, and what pictures it already holds. */
+/**
+ * An idea on a board, as far as the phone reads it. The link, the title, the note and the tags are the couple's
+ * own: this is no data class, so nothing of them is printed. [source] and [previewStatus] are names from a fixed set.
+ */
 @Serializable
-class InspirationWire(val id: String, val pictures: List<PictureWire>)
+class InspirationWire(
+    val id: String,
+    val url: String?,
+    val source: String,
+    val title: String,
+    val previewTitle: String,
+    val previewStatus: String,
+    val note: String,
+    val tags: List<String>,
+    val boardId: String?,
+    val planItemId: String?,
+    val vendorId: String?,
+    val addedById: String?,
+    val pictures: List<PictureWire>,
+)
 
 /** @param preview true when the server fetched it from the link; false when a person sent it */
 @Serializable
-class PictureWire(val preview: Boolean)
+class PictureWire(val id: String, val width: Int?, val height: Int?, val preview: Boolean)
 
 /** The whole budget: what the couple means to spend, and every category against its plan. */
 @Serializable

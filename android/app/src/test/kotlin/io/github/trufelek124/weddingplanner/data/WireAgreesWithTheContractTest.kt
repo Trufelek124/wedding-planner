@@ -142,6 +142,17 @@ class WireAgreesWithTheContractTest {
         assertEquals("Dress", strict.decodeFromString<Board>(StandIn.board("b1", "Dress")).name)
         assertEquals(3, strict.decodeFromString<Inspiration>(StandIn.inspiration("i1", url = "https://example.com/x", boardId = "b1", pictures = 2, previews = 1)).pictures.size)
         assertEquals(0, strict.decodeFromString<Inspiration>(StandIn.inspiration("i2")).pictures.size)
+        val idea = strict.decodeFromString<Inspiration>(
+            StandIn.inspiration(
+                "i3", url = "https://palace.example/ideas", source = "WEB", title = "Lace", previewTitle = "A page", previewStatus = "FETCHED", note = "Soft",
+                tags = listOf("boho", "lace"), boardId = "b1", planItemId = "p1", vendorId = "v1", addedById = null, pictures = 1, version = 2,
+            ),
+        )
+        assertEquals(Inspiration.Source.WEB, idea.source)
+        assertEquals(Inspiration.PreviewStatus.FETCHED, idea.previewStatus)
+        assertEquals(listOf("boho", "lace"), idea.tags)
+        assertEquals(null, idea.addedById)
+        assertEquals("p1", idea.planItemId)
     }
 
     private fun agree(phone: SerialDescriptor, contract: SerialDescriptor) {

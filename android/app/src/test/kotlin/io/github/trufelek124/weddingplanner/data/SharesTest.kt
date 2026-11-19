@@ -92,7 +92,7 @@ class SharesTest {
     fun `a shared link waits, and is saved as an inspiration with the id the phone gave it`() = runBlocking {
         val id = kept(Share(link = "https://www.instagram.com/p/Cabc123/", boardId = "b1", note = "Lace sleeves"))
 
-        assertEquals(listOf(WaitingShare(id, "https://www.instagram.com/p/Cabc123/", 0, null)), held().shares)
+        assertEquals(listOf(WaitingShare(id, "https://www.instagram.com/p/Cabc123/", 0, null, "b1")), held().shares)
         assertEquals(1, planner.stillToSend())
         assertTrue(server.calls.isEmpty())
 
@@ -139,7 +139,7 @@ class SharesTest {
         val id = kept(Share(link = null, boardId = "b2", note = "From the florist"), listOf(picture("first-picture"), picture("second-picture")))
 
         assertEquals(listOf("first-picture", "second-picture"), filesKept().sortedBy { it.name }.map { it.readText() })
-        assertEquals(listOf(WaitingShare(id, null, 2, null)), held().shares)
+        assertEquals(listOf(WaitingShare(id, null, 2, null, "b2")), held().shares)
 
         server.json("POST /api/inspirations", StandIn.inspiration(id, boardId = "b2", note = "From the florist"))
         server.json("POST /api/inspirations/$id/pictures", StandIn.inspiration(id, boardId = "b2", pictures = 2))
@@ -207,7 +207,7 @@ class SharesTest {
 
         planner.sync()
 
-        assertEquals(listOf(WaitingShare(id, "https://www.instagram.com/p/Cabc123/", 0, "Choose one of your boards.")), held().shares)
+        assertEquals(listOf(WaitingShare(id, "https://www.instagram.com/p/Cabc123/", 0, "Choose one of your boards.", "b9")), held().shares)
         assertEquals(0, planner.stillToSend())
         server.calls.clear()
         planner.sync()

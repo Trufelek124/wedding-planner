@@ -18,7 +18,7 @@ abstract class PlannerDao {
     @Transaction
     open suspend fun stored(): Stored? {
         val planner = planner() ?: return null
-        return Stored(planner, entries(), categories(), vendors(), members(), changes(), boards(), shares(), budgetLines(), guests(), households(), guestStatuses())
+        return Stored(planner, entries(), categories(), vendors(), members(), changes(), boards(), shares(), budgetLines(), guests(), households(), guestStatuses(), inspirations(), inspirationPictures())
     }
 
     /** Puts a new load in the place of the last one, all of it or nothing. The changes waiting to be sent stay. */
@@ -34,6 +34,8 @@ abstract class PlannerDao {
         putBudgetLines(stored.budgetLines)
         putGuests(stored.guests)
         putHouseholds(stored.households)
+        putInspirations(stored.inspirations)
+        putInspirationPictures(stored.inspirationPictures)
     }
 
     /** Removes everything, the waiting changes included: for a sign-out. */
@@ -56,6 +58,8 @@ abstract class PlannerDao {
         deleteBudgetLines()
         deleteGuests()
         deleteHouseholds()
+        deleteInspirations()
+        deleteInspirationPictures()
     }
 
     /** The server took a change: its answer replaces the phone's copy of the entry, and the change is no longer waiting. */
@@ -195,6 +199,24 @@ abstract class PlannerDao {
     @Query("DELETE FROM household")
     abstract suspend fun deleteHouseholds()
 
+    @Query("SELECT * FROM inspiration ORDER BY position")
+    abstract suspend fun inspirations(): List<InspirationRow>
+
+    @Query("SELECT * FROM inspiration_picture ORDER BY inspirationId, position")
+    abstract suspend fun inspirationPictures(): List<InspirationPictureRow>
+
+    @Insert
+    abstract suspend fun putInspirations(inspirations: List<InspirationRow>)
+
+    @Insert
+    abstract suspend fun putInspirationPictures(pictures: List<InspirationPictureRow>)
+
+    @Query("DELETE FROM inspiration")
+    abstract suspend fun deleteInspirations()
+
+    @Query("DELETE FROM inspiration_picture")
+    abstract suspend fun deleteInspirationPictures()
+
     @Query("SELECT * FROM waiting_share ORDER BY seq")
     abstract suspend fun shares(): List<ShareRow>
 
@@ -223,11 +245,11 @@ abstract class PlannerDao {
 @Database(
     entities = [
         PlannerRow::class, EntryRow::class, CategoryRow::class, VendorRow::class, MemberRow::class, ChangeRow::class, BoardRow::class,
-        ShareRow::class, BudgetLineRow::class, GuestRow::class, HouseholdRow::class, GuestStatusRow::class,
+        ShareRow::class, BudgetLineRow::class, GuestRow::class, HouseholdRow::class, GuestStatusRow::class, InspirationRow::class, InspirationPictureRow::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6)],
 )
 abstract class PlannerDatabase : RoomDatabase() {
 

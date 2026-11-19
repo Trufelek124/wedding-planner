@@ -146,9 +146,14 @@ first uses it, at the version D-005 names.
   web. Screen texts are in `strings.xml`.
 - The bar at the bottom has four places: Home, Plan, Tasks and More. What has no place of its own is a row in More
   (`planner/MoreContent.kt`) and an entry in `BEHIND_MORE` in `PlannerScreens.kt`, which gives it its title (the
-  name of the vendor or guest it shows), the arrow back at the top, and keeps More chosen below. The budget, the
-  vendors and the guests are only shown on the phone and are set on the web; the one thing that can be changed is a
-  guest's status (S01 §4).
+  name of the vendor, guest or idea it shows), the arrow back at the top, and keeps More chosen below. The budget,
+  the vendors, the guests and the inspirations are only shown on the phone and are set on the web; what can be
+  changed there is a guest's status, and an inspiration is added through the share sheet (S01 §4).
+- The inspirations are part of the copy (`inspiration`, `inspiration_picture`) and stand on a board behind More,
+  narrowed down by board and by tag; what was shared on the phone and still waits stands first. A card's face is a
+  slot: words where there is no picture to show. What a waiting share's link is called before the server has seen
+  it repeats the server's rule (`sourceOfLink` in `planner/InspirationWords.kt`, `Links.sourceOf` in the backend):
+  change both together. An idea's link opens through `planner/Contact.kt` like every other address.
 - A guest's status chosen on the phone waits in a table of its own (`waiting_guest_status`, one row per guest; a
   further choice replaces it) and is sent by `sync()` after the tasks and before the shares. The server takes it
   whatever version it has, so there is no "changed meanwhile" here: only "the guest is gone" and "not taken", which

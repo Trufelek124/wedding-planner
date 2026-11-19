@@ -238,4 +238,76 @@ class DatabaseCarriesOverTest {
             database.close()
         }
     }
+
+    @Test
+    fun `a share and a guest status of version 5 are still waiting, the inspirations are empty until loaded, and the new tables can be written`() = runBlocking {
+        val file = folder.root.resolve("planner.db")
+        aDatabaseOfVersion(5, file) { old ->
+            old.execSQL(
+                """INSERT INTO planner (id, loadedAt, weddingDate, currency, timeZone, daysLeft, today, budgetTotal, budgetPlanned, budgetCommitted,
+                   budgetPaid, overdueIds, nextIds, nextPaymentIds)
+                   VALUES (1, 1795093500000, '2027-06-19', 'PLN', 'Europe/Warsaw', 213, '2026-11-18', NULL, 0, 0, 0, '', '', '')""",
+            )
+            old.execSQL("INSERT INTO board (id, position, name) VALUES ('b1', 0, 'Dress')")
+            old.execSQL(
+                """INSERT INTO guest (id, position, name, status, sideMemberId, householdId, plusOne, children, heads, dietaryNeeds,
+                   needsAccommodation, phone, email, notes)
+                   VALUES ('g1', 0, 'Aunt Krystyna', 'INVITED', NULL, NULL, 0, 0, 1, '', 0, '', '', '')""",
+            )
+            old.execSQL("INSERT INTO waiting_guest_status (guestId, status, name, revision, trouble) VALUES ('g1', 'CONFIRMED', 'Aunt Krystyna', 0, NULL)")
+            old.execSQL("INSERT INTO waiting_share (inspirationId, url, boardId, note, pictures, trouble) VALUES ('i1', 'https://www.instagram.com/p/Cabc123/', 'b1', 'Soft', 0, NULL)")
+            old.execSQL("INSERT INTO waiting_share (inspirationId, url, boardId, note, pictures, trouble) VALUES ('i2', NULL, NULL, '', 2, 'Too large.')")
+        }
+
+        val database = Room.databaseBuilder(context, PlannerDatabase::class.java, file.path).build()
+        try {
+            val stored = database.planner().stored()!!
+            val shown = plannerOf(stored)
+
+            // What waited, waits.
+            assertEquals(listOf("i1", "i2"), shown.shares.map { it.id })
+            assertEquals("b1", shown.shares.first().boardId)
+            assertEquals("Too large.", shown.shares.last().trouble)
+            assertEquals(GuestStatus.CONFIRMED, shown.guest("g1")!!.status)
+            assertEquals(Waiting.TO_BE_SENT, shown.guest("g1")!!.waiting)
+            assertEquals(listOf("Dress"), shown.boards.map { it.name })
+            // What came with version 6 is not there until the next load.
+            assertTrue(stored.inspirations.isEmpty())
+            assertTrue(stored.inspirationPictures.isEmpty())
+            assertTrue(shown.inspirations.isEmpty())
+
+            // The new tables can be written and read, and a load puts the copy in the place of the last one while the shares stay.
+            database.planner().replace(
+                Stored(
+                    planner = stored.planner,
+                    entries = stored.entries,
+                    categories = stored.categories,
+                    vendors = stored.vendors,
+                    members = stored.members,
+                    guests = stored.guests,
+                    boards = stored.boards,
+                    inspirations = listOf(
+                        InspirationRow("i9", 0, "https://www.instagram.com/p/Cdef456/", "INSTAGRAM", "Lace", "", "PENDING", "Soft", """["boho","lace"]""", "b1", null, null, null),
+                    ),
+                    inspirationPictures = listOf(InspirationPictureRow("p1", "i9", 0, 800, null, true)),
+                ),
+            )
+            val after = plannerOf(database.planner().stored()!!)
+            val idea = after.inspiration("i9")!!
+            assertEquals(listOf("boho", "lace"), idea.tags)
+            assertTrue(idea.previewPending)
+            assertEquals(listOf(800), idea.pictures.map { it.width })
+            assertEquals(listOf<Int?>(null), idea.pictures.map { it.height })
+            assertEquals(2, after.shares.size)
+            assertEquals(GuestStatus.CONFIRMED, after.guest("g1")!!.status)
+            assertEquals(Waiting.TO_BE_SENT, after.guest("g1")!!.waiting)
+
+            database.planner().forgetTheCopy()
+            assertTrue(database.planner().inspirations().isEmpty())
+            assertTrue(database.planner().inspirationPictures().isEmpty())
+            assertEquals(2, database.planner().shares().size)
+        } finally {
+            database.close()
+        }
+    }
 }

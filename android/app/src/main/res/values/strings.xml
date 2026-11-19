@@ -55,6 +55,7 @@
     <string name="budget_title">Budget</string>
     <string name="more_vendors">Vendors</string>
     <string name="more_guests">Guests</string>
+    <string name="more_inspirations">Inspirations</string>
     <string name="budget_figure_budget">Budget</string>
     <string name="budget_figure_planned">Planned</string>
     <string name="budget_figure_committed">Committed</string>
@@ -115,6 +116,24 @@
     <string name="guest_change_gone">Your change to “%1$s” could not be sent: the guest no longer exists.</string>
     <string name="guest_change_refused">The server did not take your change to “%1$s”.</string>
     <string name="guest_change_let_go">Discard the change</string>
+
+    <!-- The inspirations -->
+    <string name="inspirations_title">Inspirations</string>
+    <string name="inspiration_title">Inspiration</string>
+    <string name="inspirations_all_boards">All boards</string>
+    <string name="inspirations_any_tag">Any tag</string>
+    <string name="inspirations_empty">Nothing kept yet. Share a link or a picture to Wedding planner from another app, or add one in the web app.</string>
+    <string name="inspirations_no_match">Nothing here matches. Choose another board or tag.</string>
+    <string name="inspiration_open">open this idea</string>
+    <string name="inspiration_not_there">This idea is no longer there.</string>
+    <string name="inspiration_from">Comes from</string>
+    <string name="inspiration_board">Board</string>
+    <string name="inspiration_no_board">On no board</string>
+    <string name="inspiration_plan_item">Plan item</string>
+    <string name="inspiration_vendor">Vendor</string>
+    <string name="inspiration_note">Note</string>
+    <string name="inspiration_tags">Tags</string>
+    <string name="inspiration_link">Link</string>
 
     <!-- The plan and the tasks -->
     <string name="filter_to_do">To do</string>

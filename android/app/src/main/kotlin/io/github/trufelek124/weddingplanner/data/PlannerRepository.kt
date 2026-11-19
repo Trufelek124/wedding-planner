@@ -23,6 +23,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -459,9 +461,10 @@ class PlannerRepository(
                 val guests = async { api().get<List<GuestWire>>("/api/guests") }
                 val households = async { api().get<List<NameWire>>("/api/households") }
                 val counts = async { api().get<GuestCountsWire>("/api/guests/counts") }
+                val inspirations = async { api().get<List<InspirationWire>>("/api/inspirations") }
                 storedOf(
                     clock.instant(), wedding.await(), home.await(), entries.await(), categories.await(), vendors.await(), boards.await(),
-                    budget.await(), guests.await(), households.await(), counts.await(),
+                    budget.await(), guests.await(), households.await(), counts.await(), inspirations.await(),
                 )
             }
         } catch (failure: ApiFailure) {
@@ -533,6 +536,7 @@ internal fun storedOf(
     guests: List<GuestWire>,
     households: List<NameWire>,
     counts: GuestCountsWire,
+    inspirations: List<InspirationWire>,
 ): Stored = Stored(
     planner = PlannerRow(
         loadedAt = at.toEpochMilli(),
@@ -578,6 +582,16 @@ internal fun storedOf(
     households = households.mapIndexed { position, household -> HouseholdRow(household.id, position, household.name) },
     members = wedding.members.mapIndexed { position, member -> MemberRow(member.id, position, member.displayName, member.you) },
     boards = boards.mapIndexed { position, board -> BoardRow(board.id, position, board.name) },
+    inspirations = inspirations.mapIndexed { position, idea ->
+        InspirationRow(
+            id = idea.id, position = position, url = idea.url, source = idea.source, title = idea.title, previewTitle = idea.previewTitle,
+            previewStatus = idea.previewStatus, note = idea.note, tags = Json.encodeToString(ListSerializer(String.serializer()), idea.tags),
+            boardId = idea.boardId, planItemId = idea.planItemId, vendorId = idea.vendorId, addedById = idea.addedById,
+        )
+    },
+    inspirationPictures = inspirations.flatMap { idea ->
+        idea.pictures.mapIndexed { position, picture -> InspirationPictureRow(picture.id, idea.id, position, picture.width, picture.height, picture.preview) }
+    },
 )
 
 /** An entry as the server sent it, for the phone's table. */
@@ -644,6 +658,7 @@ internal fun plannerOf(stored: Stored): Planner {
     val byId = all.associateBy { it.id }
     fun listed(ids: String): List<Entry> = ids.split(SEPARATOR).mapNotNull { byId[it] }
     val planner = stored.planner
+    val pictures = stored.inspirationPictures.groupBy { it.inspirationId }
     return Planner(
         loadedAt = Instant.ofEpochMilli(planner.loadedAt),
         weddingDate = dateOf(planner.weddingDate),
@@ -661,7 +676,7 @@ internal fun plannerOf(stored: Stored): Planner {
         budget = Budget(planner.budgetTotal, planner.budgetPlanned, planner.budgetCommitted, planner.budgetPaid),
         gone = gone,
         boards = stored.boards.map { Board(it.id, it.name) },
-        shares = stored.shares.map { WaitingShare(it.inspirationId, it.url, it.pictures, it.trouble) },
+        shares = stored.shares.map { WaitingShare(it.inspirationId, it.url, it.pictures, it.trouble, it.boardId) },
         budgetLines = stored.budgetLines.map { BudgetLine(it.categoryId, it.name, it.planned, it.committed, it.paid, it.payments) },
         uncategorised = BudgetRest(planner.uncategorisedCommitted, planner.uncategorisedPaid, planner.uncategorisedPayments),
         vendorList = stored.vendors.map(::vendorOf),
@@ -669,6 +684,7 @@ internal fun plannerOf(stored: Stored): Planner {
         households = stored.households.map { Household(it.id, it.name) },
         guestCounts = countsOf(planner.guestCounts),
         guestTroubles = guestTroubles,
+        inspirations = stored.inspirations.map { row -> inspirationOf(row, pictures[row.id].orEmpty()) },
     )
 }
 
@@ -678,6 +694,21 @@ private fun vendorOf(row: VendorRow): Vendor = Vendor(
     address = row.address, notes = row.notes, agreedPrice = row.agreedPrice, committed = row.committed, paid = row.paid,
     inspirations = row.inspirations,
 )
+
+private fun inspirationOf(row: InspirationRow, pictures: List<InspirationPictureRow>): Inspiration = Inspiration(
+    id = row.id, url = row.url, source = InspirationSource.entries.firstOrNull { it.name == row.source } ?: InspirationSource.OTHER,
+    title = row.title, previewTitle = row.previewTitle, previewPending = row.previewStatus == "PENDING", note = row.note, tags = tagsOf(row.tags),
+    boardId = row.boardId, planItemId = row.planItemId, vendorId = row.vendorId, addedById = row.addedById,
+    pictures = pictures.sortedBy { it.position }.map { Picture(it.id, it.width, it.height, it.preview) },
+)
+
+/** The tags as they were stored; none for what cannot be read. */
+private fun tagsOf(stored: String): List<String> =
+    try {
+        Json.decodeFromString(ListSerializer(String.serializer()), stored)
+    } catch (unreadable: SerializationException) {
+        emptyList()
+    }
 
 private fun guestOf(row: GuestRow): Guest = Guest(
     id = row.id, name = row.name, status = GuestStatus.entries.firstOrNull { it.name == row.status } ?: GuestStatus.OTHER,

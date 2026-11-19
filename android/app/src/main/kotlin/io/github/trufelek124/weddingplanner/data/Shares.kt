@@ -17,7 +17,10 @@ import kotlinx.serialization.json.put
  */
 
 /** @param link the link that was shared; null when pictures were */
-data class Share(val link: String?, val boardId: String?, val note: String)
+data class Share(val link: String?, val boardId: String?, val note: String) {
+    /** A link and a note are the couple's own: nothing of them gets printed. */
+    override fun toString(): String = "Share"
+}
 
 /** What keeping a share on the phone came to. */
 sealed interface Kept {
