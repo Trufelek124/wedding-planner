@@ -38,6 +38,7 @@ sealed class ApiFailure(message: String, cause: Throwable? = null) : IOException
         const val PREFIX = "urn:wedding-planner:problem:"
         const val BAD_REQUEST = "bad-request"
         const val CHANGED_MEANWHILE = "changed-meanwhile"
+        const val ALREADY_DECIDED = "already-decided"
         const val UNAUTHENTICATED = "unauthenticated"
         const val ACCOUNT_NOT_ALLOWED = "account-not-allowed"
         const val WEDDING_NOT_SET_UP = "wedding-not-set-up"

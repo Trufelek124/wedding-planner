@@ -51,7 +51,7 @@ fun HomeContent(
         item(key = "hero") { Hero(planner, today) }
 
         // Where nothing waits Home says nothing about suggestions.
-        suggestionsOnHome(planner.suggestions.size)?.let { line ->
+        suggestionsOnHome(planner.suggestionsToDecide)?.let { line ->
             item(key = "suggestions") { SuggestionsWaiting(line, onSuggestions) }
         }
 

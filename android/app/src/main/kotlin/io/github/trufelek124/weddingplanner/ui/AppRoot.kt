@@ -88,6 +88,8 @@ fun AppRoot(container: AppContainer, debugBuild: Boolean = BuildConfig.DEBUG) {
                 changes = Changes(
                     setStatus = model::setStatus, add = model::add, edit = model::edit, letGo = model::letGo, letGoOfShare = model::letGoOfShare,
                     setGuestStatus = model::setGuestStatus, letGoOfGuestChange = model::letGoOfGuestChange,
+                    decideSuggestion = model::decideSuggestion, takeBackSuggestionDecision = model::takeBackSuggestionDecision,
+                    letGoOfSuggestionDecision = model::letGoOfSuggestionDecision,
                 ),
                 onLoad = model::load,
                 onSignOut = model::signOut,

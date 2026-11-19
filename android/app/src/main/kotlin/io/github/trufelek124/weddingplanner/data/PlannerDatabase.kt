@@ -18,7 +18,7 @@ abstract class PlannerDao {
     @Transaction
     open suspend fun stored(): Stored? {
         val planner = planner() ?: return null
-        return Stored(planner, entries(), categories(), vendors(), members(), changes(), boards(), shares(), budgetLines(), guests(), households(), guestStatuses(), inspirations(), inspirationPictures(), suggestions())
+        return Stored(planner, entries(), categories(), vendors(), members(), changes(), boards(), shares(), budgetLines(), guests(), households(), guestStatuses(), inspirations(), inspirationPictures(), suggestions(), suggestionDecisions())
     }
 
     /** Puts a new load in the place of the last one, all of it or nothing. The changes waiting to be sent stay. */
@@ -46,6 +46,7 @@ abstract class PlannerDao {
         deleteChanges()
         deleteShares()
         deleteGuestStatuses()
+        deleteSuggestionDecisions()
     }
 
     @Transaction
@@ -228,6 +229,34 @@ abstract class PlannerDao {
     @Query("DELETE FROM suggestion")
     abstract suspend fun deleteSuggestions()
 
+    @Query("SELECT * FROM suggestion WHERE id = :id")
+    abstract suspend fun suggestion(id: String): SuggestionRow?
+
+    @Query("DELETE FROM suggestion WHERE id = :id")
+    abstract suspend fun deleteSuggestion(id: String)
+
+    /** The server took the decision: it is no longer waiting, and the suggestion no longer waits for anyone. */
+    @Transaction
+    open suspend fun decisionSent(suggestionId: String) {
+        deleteSuggestionDecision(suggestionId)
+        deleteSuggestion(suggestionId)
+    }
+
+    @Query("SELECT * FROM waiting_suggestion_decision ORDER BY suggestionId")
+    abstract suspend fun suggestionDecisions(): List<SuggestionDecisionRow>
+
+    @Query("SELECT * FROM waiting_suggestion_decision WHERE suggestionId = :suggestionId")
+    abstract suspend fun suggestionDecisionOf(suggestionId: String): SuggestionDecisionRow?
+
+    @Upsert
+    abstract suspend fun putSuggestionDecision(decision: SuggestionDecisionRow)
+
+    @Query("DELETE FROM waiting_suggestion_decision WHERE suggestionId = :suggestionId")
+    abstract suspend fun deleteSuggestionDecision(suggestionId: String)
+
+    @Query("DELETE FROM waiting_suggestion_decision")
+    abstract suspend fun deleteSuggestionDecisions()
+
     @Query("SELECT * FROM waiting_share ORDER BY seq")
     abstract suspend fun shares(): List<ShareRow>
 
@@ -257,11 +286,11 @@ abstract class PlannerDao {
     entities = [
         PlannerRow::class, EntryRow::class, CategoryRow::class, VendorRow::class, MemberRow::class, ChangeRow::class, BoardRow::class,
         ShareRow::class, BudgetLineRow::class, GuestRow::class, HouseholdRow::class, GuestStatusRow::class, InspirationRow::class, InspirationPictureRow::class,
-        SuggestionRow::class,
+        SuggestionRow::class, SuggestionDecisionRow::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6), AutoMigration(from = 6, to = 7)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6), AutoMigration(from = 6, to = 7), AutoMigration(from = 7, to = 8)],
 )
 abstract class PlannerDatabase : RoomDatabase() {
 

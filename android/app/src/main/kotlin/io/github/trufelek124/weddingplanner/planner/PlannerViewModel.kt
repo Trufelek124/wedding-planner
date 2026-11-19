@@ -2,6 +2,7 @@ package io.github.trufelek124.weddingplanner.planner
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.trufelek124.weddingplanner.data.Decision
 import io.github.trufelek124.weddingplanner.data.Entry
 import io.github.trufelek124.weddingplanner.data.GuestStatus
 import io.github.trufelek124.weddingplanner.data.Load
@@ -9,6 +10,7 @@ import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.data.PlannerRepository
 import io.github.trufelek124.weddingplanner.data.SendLater
 import io.github.trufelek124.weddingplanner.data.Status
+import io.github.trufelek124.weddingplanner.data.TakenBack
 import io.github.trufelek124.weddingplanner.data.TaskFields
 import io.github.trufelek124.weddingplanner.session.Session
 import io.github.trufelek124.weddingplanner.session.SessionState
@@ -27,12 +29,14 @@ import kotlinx.coroutines.withContext
  * @param planner what the phone holds, with its own waiting changes in it; null while nothing was ever loaded
  * @param loading the person asked for the server to be asked, or the phone is loading for the first time
  * @param trouble why the server last could not be brought up to date with; null when it worked
+ * @param notTakenBack the suggestions whose decision the person tried to take back while it was on its way
  */
 data class PlannerUi(
     val read: Boolean = false,
     val planner: Planner? = null,
     val loading: Boolean = false,
     val trouble: Load? = null,
+    val notTakenBack: Set<String> = emptySet(),
 )
 
 /**
@@ -73,6 +77,25 @@ class PlannerViewModel(
 
     /** Chooses a guest's status. */
     fun setGuestStatus(guestId: String, status: GuestStatus) = change { repository.setGuestStatus(guestId, status) }
+
+    /** Accepts or rejects a suggestion, as proposed. */
+    fun decideSuggestion(suggestionId: String, decision: Decision) = change {
+        changes.update { it.copy(notTakenBack = it.notTakenBack - suggestionId) }
+        repository.decideSuggestion(suggestionId, decision)
+    }
+
+    /** Takes back a decision that was not sent yet; one that is on its way stands, and the screen says so. */
+    fun takeBackSuggestionDecision(suggestionId: String) {
+        viewModelScope.launch {
+            val result = repository.takeBackSuggestionDecision(suggestionId)
+            changes.update { it.copy(notTakenBack = if (result == TakenBack.ON_ITS_WAY) it.notTakenBack + suggestionId else it.notTakenBack - suggestionId) }
+        }
+    }
+
+    /** Gives up a decision the server did not take: what the server has stands. */
+    fun letGoOfSuggestionDecision(suggestionId: String) {
+        viewModelScope.launch { repository.letGoOfSuggestionDecision(suggestionId) }
+    }
 
     /** Gives up a guest's status that could not be sent: what the server has stands. */
     fun letGoOfGuestChange(guestId: String) {
@@ -135,7 +158,8 @@ class PlannerViewModel(
                 result == Load.SIGNED_OUT -> Load.FAILED
                 else -> result
             }
-            changes.update { it.copy(loading = false, trouble = trouble) }
+            // Whatever was on its way has landed or is waiting again: what was said of it no longer holds.
+            changes.update { it.copy(loading = false, trouble = trouble, notTakenBack = emptySet()) }
         }
     }
 }

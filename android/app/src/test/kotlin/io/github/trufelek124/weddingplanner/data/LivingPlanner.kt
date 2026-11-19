@@ -40,7 +40,11 @@ class LivingPlanner(
     /** The guests the server has, by id, in the order of its list. */
     val guests = LinkedHashMap<String, JsonObject>()
 
+    /** The suggestions the server has, by id, in the order of its list: with their state, which decides whether the list shows them. */
+    val suggestionStates = LinkedHashMap<String, JsonObject>()
+
     init {
+        suggestions.forEach { suggestion -> Json.parseToJsonElement(suggestion).jsonObject.let { suggestionStates[it.getValue("id").jsonPrimitive.content] = it } }
         guests.forEach { guest -> Json.parseToJsonElement(guest).jsonObject.let { this.guests[it.getValue("id").jsonPrimitive.content] = it } }
         entries.forEach(::put)
         server.json("GET /api/wedding", StandIn.wedding())
@@ -58,6 +62,37 @@ class LivingPlanner(
     /** Someone removes a guest on the web. */
     fun removeGuest(id: String) {
         guests.remove(id)
+    }
+
+    /** The other owner decides a suggestion on another device; the phone's own decision, when it arrives, finds it decided. */
+    fun decideElsewhere(id: String, state: String) {
+        suggestionStates[id]?.let { suggestionStates[id] = JsonObject(it + ("state" to JsonPrimitive(state))) }
+    }
+
+    /** Someone removes a suggestion. */
+    fun removeSuggestion(id: String) {
+        suggestionStates.remove(id)
+    }
+
+    /** WAITING, ACCEPTED or REJECTED; null for one the server does not have. */
+    fun suggestionStateOf(id: String): String? = suggestionStates[id]?.getValue("state")?.jsonPrimitive?.content
+
+    /** The entry that accepting a suggestion made, by the id the suggestion names. */
+    fun madeFor(suggestionId: String): JsonObject? = entries["made-$suggestionId"]
+
+    /** Accepting makes what the suggestion proposes: a task, a payment or a step of the plan. A vendor is not made here. */
+    private fun made(suggestion: JsonObject) {
+        fun text(key: String) = suggestion.getValue(key).let { if (it == JsonNull) null else it.jsonPrimitive.content }
+        val kind = suggestion.getValue("kind").jsonPrimitive.content
+        val id = "made-" + suggestion.getValue("id").jsonPrimitive.content
+        val title = suggestion.getValue("title").jsonPrimitive.content
+        val entry = when (kind) {
+            "TASK" -> StandIn.entry(id, title, dueDate = text("dueDate"))
+            "PAYMENT" -> StandIn.entry(id, title, dueDate = text("dueDate"), amount = text("amount")?.toLong(), paymentKind = text("paymentKind"))
+            "PLAN_ITEM" -> StandIn.entry(id, title, kind = "PLAN_ITEM", startDate = text("startDate"), dueDate = text("dueDate"))
+            else -> return
+        }
+        put(entry)
     }
 
     fun guestStatusOf(id: String): String? = guests[id]?.getValue("status")?.jsonPrimitive?.content
@@ -106,7 +141,26 @@ class LivingPlanner(
                 guests[kept.getValue("id").jsonPrimitive.content] = now
                 respondJson(now.toString())
             }
-            method == "GET" && path == "/api/suggestions" -> respondJson(suggestions.joinToString(",", "[", "]"))
+            method == "GET" && path == "/api/suggestions" ->
+                respondJson(suggestionStates.values.filter { it.getValue("state").jsonPrimitive.content == "WAITING" }.joinToString(",", "[", "]"))
+            method == "POST" && path.startsWith("/api/suggestions/") && (path.endsWith("/accept") || path.endsWith("/reject")) -> {
+                val kept = suggestionStates[path.removePrefix("/api/suggestions/").substringBefore("/")] ?: return respondProblem(404, "not-found")
+                // Accepting and rejecting as proposed: no body.
+                val sentBody = request.body.toByteArray()
+                if (sentBody.isNotEmpty()) return respondProblem(400, "bad-request")
+                val state = if (path.endsWith("/accept")) "ACCEPTED" else "REJECTED"
+                val now = kept.getValue("state").jsonPrimitive.content
+                when {
+                    now == state -> respondJson(kept.toString())
+                    now != "WAITING" -> respondProblem(409, "already-decided")
+                    else -> {
+                        val decided = JsonObject(kept + ("state" to JsonPrimitive(state)))
+                        suggestionStates[kept.getValue("id").jsonPrimitive.content] = decided
+                        if (state == "ACCEPTED") made(kept)
+                        respondJson(decided.toString())
+                    }
+                }
+            }
             method == "GET" && path == "/api/inspirations" -> respondJson(inspirations.joinToString(",", "[", "]"))
             method == "GET" && path == "/api/households" -> respondJson(households.joinToString(",", "[", "]"))
             method == "GET" && path == "/api/guests/counts" -> respondJson(counted())

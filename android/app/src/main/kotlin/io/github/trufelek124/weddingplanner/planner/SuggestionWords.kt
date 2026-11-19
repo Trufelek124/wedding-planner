@@ -1,8 +1,11 @@
 package io.github.trufelek124.weddingplanner.planner
 
+import io.github.trufelek124.weddingplanner.data.Decision
 import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.data.Suggestion
 import io.github.trufelek124.weddingplanner.data.SuggestionKind
+import io.github.trufelek124.weddingplanner.data.SuggestionTrouble
+import io.github.trufelek124.weddingplanner.data.SuggestionTroubleKind
 import io.github.trufelek124.weddingplanner.money.money
 import java.time.ZoneId
 
@@ -133,3 +136,44 @@ fun suggestionInWords(suggestion: Suggestion, planner: Planner, zone: ZoneId): S
     parts += confidenceInWords(suggestion.confidence)
     return parts.joinToString(". ")
 }
+
+/** What the buttons of a card say: the same for every card, and what each does to which suggestion is in its description. */
+fun decideButton(decision: Decision): String = if (decision == Decision.ACCEPT) "Accept" else "Reject"
+
+/** What a screen reader says for a button of a card: it names the suggestion, so that the buttons of two cards differ. */
+fun decideDescription(decision: Decision, suggestion: Suggestion): String = "${decideButton(decision)} “${suggestionName(suggestion)}”"
+
+/** What a decision made on the phone is called on the card, before it is sent. */
+fun decidedInWords(decision: Decision): String = if (decision == Decision.ACCEPT) "Accepted" else "Rejected"
+
+const val TAKE_BACK = "Take back"
+
+fun takeBackDescription(suggestion: Suggestion): String = "Take back your decision on “${suggestionName(suggestion)}”"
+
+/** Said under a decision that cannot be taken back any more: it is being sent. */
+const val ON_ITS_WAY = "It is being sent and cannot be taken back."
+
+/**
+ * What a decision that could not be sent says, with the suggestion's title: what was decided otherwise, that the
+ * suggestion is gone, or that the server did not take it and where the proposal can be changed.
+ */
+fun suggestionTroubleInWords(trouble: SuggestionTrouble): String {
+    val title = trouble.title.trim().ifEmpty { "Suggestion without a title" }
+    val accepted = trouble.decision == Decision.ACCEPT
+    return when (trouble.kind) {
+        // The phone sent the opposite of what the server holds.
+        SuggestionTroubleKind.DECIDED_OTHERWISE ->
+            "“$title” was already ${if (accepted) "rejected" else "accepted"}. Your ${if (accepted) "acceptance" else "rejection"} was not kept."
+        SuggestionTroubleKind.GONE -> "“$title” no longer exists, so your ${if (accepted) "acceptance" else "rejection"} was not sent."
+        SuggestionTroubleKind.REFUSED ->
+            if (accepted) {
+                "The server did not take your acceptance of “$title”. The proposal can be changed in the web app."
+            } else {
+                "The server did not take your rejection of “$title”."
+            }
+    }
+}
+
+/** The button of a notice that lets go of the phone's decision. */
+fun suggestionTroubleButton(trouble: SuggestionTrouble): String =
+    if (trouble.kind == SuggestionTroubleKind.REFUSED) "Discard the decision" else "OK"

@@ -51,10 +51,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.trufelek124.weddingplanner.R
+import io.github.trufelek124.weddingplanner.data.Decision
 import io.github.trufelek124.weddingplanner.data.Entry
 import io.github.trufelek124.weddingplanner.data.Gone
 import io.github.trufelek124.weddingplanner.data.GuestStatus
 import io.github.trufelek124.weddingplanner.data.GuestTrouble
+import io.github.trufelek124.weddingplanner.data.SuggestionTrouble
 import io.github.trufelek124.weddingplanner.data.Kind
 import io.github.trufelek124.weddingplanner.data.Load
 import io.github.trufelek124.weddingplanner.data.Planner
@@ -126,6 +128,9 @@ class Changes(
     val letGoOfShare: (shareId: String) -> Unit = {},
     val setGuestStatus: (guestId: String, GuestStatus) -> Unit = { _, _ -> },
     val letGoOfGuestChange: (guestId: String) -> Unit = {},
+    val decideSuggestion: (suggestionId: String, Decision) -> Unit = { _, _ -> },
+    val takeBackSuggestionDecision: (suggestionId: String) -> Unit = {},
+    val letGoOfSuggestionDecision: (suggestionId: String) -> Unit = {},
 )
 
 /**
@@ -341,6 +346,11 @@ private fun Places(
                 for (share in planner.shares.filter { it.trouble != null }) {
                     NotSaved(share, onDiscard = { changes.letGoOfShare(share.id) })
                 }
+                if (route == SUGGESTIONS) {
+                    for (trouble in planner.suggestionTroubles) {
+                        SuggestionDecisionNotSent(trouble, onLetGo = { changes.letGoOfSuggestionDecision(trouble.suggestionId) })
+                    }
+                }
                 if (route == GUESTS || route == GUEST_ROUTE) {
                     for (trouble in planner.guestTroubles) {
                         GuestChangeNotSent(trouble, onLetGo = { changes.letGoOfGuestChange(trouble.guestId) })
@@ -372,7 +382,18 @@ private fun Places(
                         }
                     }
                     composable(BUDGET) { BudgetContent(planner, foot = loaded) }
-                    composable(SUGGESTIONS) { SuggestionsContent(planner, zone = clock.zone, foot = loaded) }
+                    composable(SUGGESTIONS) {
+                        SuggestionsContent(
+                            planner, zone = clock.zone, foot = loaded,
+                            actions = { suggestion ->
+                                SuggestionActions(
+                                    suggestion, notTakenBack = suggestion.id in ui.notTakenBack,
+                                    onDecide = { changes.decideSuggestion(suggestion.id, it) },
+                                    onTakeBack = { changes.takeBackSuggestionDecision(suggestion.id) },
+                                )
+                            },
+                        )
+                    }
                     composable(VENDORS) {
                         VendorsContent(planner, onOpen = { navigation.navigate("$VENDOR?id=${Uri.encode(it.id)}") }, foot = loaded)
                     }
@@ -511,6 +532,14 @@ private fun NoLongerThere(gone: Gone, onOk: () -> Unit) {
 private fun GuestChangeNotSent(trouble: GuestTrouble, onLetGo: () -> Unit) {
     Notice(stringResource(if (trouble.gone) R.string.guest_change_gone else R.string.guest_change_refused, trouble.name)) {
         QuietButton(stringResource(if (trouble.gone) R.string.change_gone_ok else R.string.guest_change_let_go), onClick = onLetGo)
+    }
+}
+
+/** A decision made for a suggestion that could not be sent: the suggestion is named, and the decision can only be let go of. */
+@Composable
+private fun SuggestionDecisionNotSent(trouble: SuggestionTrouble, onLetGo: () -> Unit) {
+    Notice(suggestionTroubleInWords(trouble)) {
+        QuietButton(suggestionTroubleButton(trouble), onClick = onLetGo)
     }
 }
 

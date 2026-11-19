@@ -1,9 +1,12 @@
 package io.github.trufelek124.weddingplanner.planner
 
+import io.github.trufelek124.weddingplanner.data.Decision
 import io.github.trufelek124.weddingplanner.data.Member
 import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.data.Suggestion
 import io.github.trufelek124.weddingplanner.data.SuggestionKind
+import io.github.trufelek124.weddingplanner.data.SuggestionTrouble
+import io.github.trufelek124.weddingplanner.data.SuggestionTroubleKind
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -209,5 +212,61 @@ class SuggestionWordsTest {
         val printed = suggestion(vendorName = "Studio Light", notes = "Bank transfer").toString()
 
         assertEquals("Suggestion[id=s1]", printed)
+    }
+
+    @Test
+    fun `the buttons say what they do to which suggestion`() {
+        assertEquals("Accept", decideButton(Decision.ACCEPT))
+        assertEquals("Reject", decideButton(Decision.REJECT))
+        assertEquals("Accept “Pay the deposit”", decideDescription(Decision.ACCEPT, suggestion()))
+        assertEquals("Reject “Pay the deposit”", decideDescription(Decision.REJECT, suggestion()))
+        assertEquals("Take back your decision on “Pay the deposit”", takeBackDescription(suggestion()))
+        // A mail that gave no title still gives the button a name.
+        assertEquals("Accept “Suggestion without a title”", decideDescription(Decision.ACCEPT, suggestion(title = " ")))
+        assertEquals("Accepted", decidedInWords(Decision.ACCEPT))
+        assertEquals("Rejected", decidedInWords(Decision.REJECT))
+    }
+
+    private fun trouble(kind: SuggestionTroubleKind, decision: Decision, title: String = "Pay the deposit") = SuggestionTrouble("s1", title, kind, decision)
+
+    @Test
+    fun `when the other decision was made first the notice says which, the opposite of what the phone sent`() {
+        assertEquals(
+            "“Pay the deposit” was already rejected. Your acceptance was not kept.",
+            suggestionTroubleInWords(trouble(SuggestionTroubleKind.DECIDED_OTHERWISE, Decision.ACCEPT)),
+        )
+        assertEquals(
+            "“Pay the deposit” was already accepted. Your rejection was not kept.",
+            suggestionTroubleInWords(trouble(SuggestionTroubleKind.DECIDED_OTHERWISE, Decision.REJECT)),
+        )
+        assertEquals("OK", suggestionTroubleButton(trouble(SuggestionTroubleKind.DECIDED_OTHERWISE, Decision.ACCEPT)))
+    }
+
+    @Test
+    fun `a suggestion that is gone is said to be, and a refused acceptance points to the web`() {
+        assertEquals(
+            "“Pay the deposit” no longer exists, so your acceptance was not sent.",
+            suggestionTroubleInWords(trouble(SuggestionTroubleKind.GONE, Decision.ACCEPT)),
+        )
+        assertEquals(
+            "“Pay the deposit” no longer exists, so your rejection was not sent.",
+            suggestionTroubleInWords(trouble(SuggestionTroubleKind.GONE, Decision.REJECT)),
+        )
+        assertEquals("OK", suggestionTroubleButton(trouble(SuggestionTroubleKind.GONE, Decision.REJECT)))
+        assertEquals(
+            "The server did not take your acceptance of “Pay the deposit”. The proposal can be changed in the web app.",
+            suggestionTroubleInWords(trouble(SuggestionTroubleKind.REFUSED, Decision.ACCEPT)),
+        )
+        assertEquals(
+            "The server did not take your rejection of “Pay the deposit”.",
+            suggestionTroubleInWords(trouble(SuggestionTroubleKind.REFUSED, Decision.REJECT)),
+        )
+        assertEquals("Discard the decision", suggestionTroubleButton(trouble(SuggestionTroubleKind.REFUSED, Decision.ACCEPT)))
+        assertTrue(suggestionTroubleInWords(trouble(SuggestionTroubleKind.GONE, Decision.ACCEPT, title = "")).contains("“Suggestion without a title”"))
+    }
+
+    @Test
+    fun `a trouble prints only the id of its suggestion`() {
+        assertEquals("SuggestionTrouble[suggestionId=s1]", trouble(SuggestionTroubleKind.GONE, Decision.ACCEPT).toString())
     }
 }

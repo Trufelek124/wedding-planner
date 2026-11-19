@@ -44,8 +44,8 @@ import org.robolectric.shadows.ShadowLog
 
 /**
  * The inbox of what the e-mail import proposes: kept on the phone with the rest of the planner, read from More and
- * from Home, a card for each. Accepting and rejecting come with the next task; here a card has a place for them and
- * nothing in it. All of the mail, the senders and the people here is made up.
+ * from Home, a card for each. Accepting and rejecting are in `SuggestionDecisionsScreenTest`. All of the mail, the
+ * senders and the people here is made up.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -278,11 +278,13 @@ class SuggestionsScreenTest : SignedInPhoneTest() {
         compose.onNode(hasText("From <b>Jan</b> [x](y) (jan@palace.example)")).assertIsDisplayed()
         compose.onNode(hasText("Subject: <u>Hello</u> http://evil.example/subject")).assertIsDisplayed()
         compose.onNode(hasText("Click <a href=\"http://evil.example\">here</a>, [x](y) or http://evil.example\nthen **pay**")).assertIsDisplayed()
-        // The only thing that can be pressed in a card is the button that opens the message.
+        // The only things that can be pressed in a card are the button that opens the message and the two that decide.
         compose.onAllNodes(hasText("evil.example", substring = true) and hasClickAction()).assertCountEquals(0)
         compose.onAllNodes(hasText("<", substring = true) and hasClickAction()).assertCountEquals(0)
-        compose.onAllNodes(hasClickAction() and !hasText("Open the e-mail") and !isSelectable() and !hasContentDescription("Back") and !hasContentDescription("Load again"))
-            .assertCountEquals(0)
+        compose.onAllNodes(
+            hasClickAction() and !hasText("Open the e-mail") and !hasText("Accept") and !hasText("Reject") and !isSelectable() and !hasContentDescription("Back") and
+                !hasContentDescription("Load again"),
+        ).assertCountEquals(0)
     }
 
     // ---------------------------------------------------------------- Open the e-mail
@@ -364,7 +366,7 @@ class SuggestionsScreenTest : SignedInPhoneTest() {
     // ---------------------------------------------------------------- the place for what can be done
 
     @Test
-    fun `a card has a place for what can be done with it, which is empty here`() {
+    fun `a card has a place for what can be done with it`() {
         server.planner(suggestions = listOf(payment, task))
         runBlocking { phone.container.planner.load() }
         val held = runBlocking { phone.container.planner.planner.first()!! }
@@ -374,15 +376,6 @@ class SuggestionsScreenTest : SignedInPhoneTest() {
 
         compose.onNodeWithText("Actions for s1").assertIsDisplayed()
         compose.onNodeWithText("Actions for s2").assertIsDisplayed()
-    }
-
-    @Test
-    fun `there is neither Accept nor Reject on a card yet`() {
-        open()
-        openSuggestions()
-
-        compose.onNode(hasText("Accept", substring = true)).assertDoesNotExist()
-        compose.onNode(hasText("Reject", substring = true)).assertDoesNotExist()
     }
 
     // ---------------------------------------------------------------- empty, back, without a connection, an older server

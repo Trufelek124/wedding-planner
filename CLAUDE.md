@@ -187,6 +187,13 @@ first uses it, at the version D-005 names.
   rest of the planner still loads. Everything that came out of a mail is plain text and never printed or logged;
   "Open the e-mail" is drawn only for an `https` address whose host is exactly `mail.google.com`
   (`mailLinkAddress` in `planner/Contact.kt`).
+- Accepting or rejecting a suggestion on the phone waits in a table of its own (`waiting_suggestion_decision`, one
+  row per suggestion) and is sent by `sync()` after the tasks and the guests' statuses and before the shares, as
+  proposed: the request has no body. A decision stands on the server, so the phone is strict about it: one that
+  waits can be taken back or replaced by the other, one that is on its way (`decisionsOnTheWay`) can be neither.
+  Decided otherwise by the other owner, gone, or not taken by the server are said with the suggestion's title and
+  never sent again by themselves. If the answer to a sent decision is lost, the phone cannot know that it landed:
+  taking it back then only changes the phone, and the next load shows what the server has.
 - A phone number, an e-mail address, an address and a website open in the phone's own apps through
   `planner/Contact.kt`, and only through it. What the server holds was typed by a person: each way builds one fixed
   kind of intent, a number is dialled and never called, and a website opens only as `http` or `https` — anything

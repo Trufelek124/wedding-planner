@@ -302,6 +302,29 @@ class SuggestionRow(
     override fun toString(): String = "SuggestionRow[id=$id]"
 }
 
+/**
+ * A suggestion accepted or rejected on the phone that the server does not have yet. Like a waiting change it exists
+ * nowhere else until it is sent. At most one per suggestion: the other decision replaces it while it waits. Not a data
+ * class: it holds a title that came out of someone's mail, which is not to be printed.
+ */
+@Entity(tableName = "waiting_suggestion_decision")
+class SuggestionDecisionRow(
+    @PrimaryKey val suggestionId: String,
+    /** ACCEPT or REJECT, by its name. */
+    val decision: String,
+    /** The suggestion's title when it was decided, to name it should it be gone from the copy. */
+    val title: String,
+    /** Counts the times the other decision replaced this one. */
+    val revision: Int = 0,
+    /** Why the server did not take it: DECIDED_OTHERWISE, GONE or REFUSED. Null while it waits to be sent. */
+    val trouble: String? = null,
+) {
+    fun copy(decision: String = this.decision, revision: Int = this.revision, trouble: String? = this.trouble): SuggestionDecisionRow =
+        SuggestionDecisionRow(suggestionId, decision, title, revision, trouble)
+
+    override fun toString(): String = "SuggestionDecisionRow[suggestionId=$suggestionId]"
+}
+
 /** Everything the phone holds, read as it was at one moment: the last load, and what waits to be sent. */
 class Stored(
     val planner: PlannerRow,
@@ -319,4 +342,5 @@ class Stored(
     val inspirations: List<InspirationRow> = emptyList(),
     val inspirationPictures: List<InspirationPictureRow> = emptyList(),
     val suggestions: List<SuggestionRow> = emptyList(),
+    val suggestionDecisions: List<SuggestionDecisionRow> = emptyList(),
 )

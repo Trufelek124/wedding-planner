@@ -205,6 +205,10 @@ enum class SuggestionKind { TASK, PAYMENT, PLAN_ITEM, VENDOR, OTHER }
  * @param mailLink the server's link to the message in Gmail; whether it may be opened is `mailLinkAddress` in planner/Contact.kt's to say
  * @param passage the quotation the proposal rests on
  * @param confidence how sure the import is, as a whole percentage
+ * @param decided what was decided on this phone and the server does not have yet; null while nobody decided
+ * @param waiting where the decision stands: set with [decided]
+ * @param needsLook a decision made on this phone cannot be sent as it is: the card says nothing of it and offers none
+ *   until the notice has been dealt with
  */
 class Suggestion(
     val id: String,
@@ -229,8 +233,40 @@ class Suggestion(
     val mailLink: String,
     val passage: String,
     val confidence: Int,
+    val decided: Decision? = null,
+    val waiting: Waiting? = null,
+    val needsLook: Boolean = false,
 ) {
     override fun toString(): String = "Suggestion[id=$id]"
+}
+
+/** What a person decides about a suggestion. */
+enum class Decision { ACCEPT, REJECT;
+
+    /** The decision the other owner would have made. */
+    val other: Decision get() = if (this == ACCEPT) REJECT else ACCEPT
+}
+
+/** Why a decision made on the phone could not be sent as it is. */
+enum class SuggestionTroubleKind {
+    /** The other decision was made first: the phone's is let go of. */
+    DECIDED_OTHERWISE,
+
+    /** The suggestion no longer exists on the server. */
+    GONE,
+
+    /** The server did not take an acceptance: a vendor that is gone, an amount that is not valid. */
+    REFUSED,
+}
+
+/**
+ * A decision made on the phone that cannot be sent and has to be looked at: it can only be let go of. Not a data
+ * class: it holds the title of a suggestion, which came out of someone's mail.
+ *
+ * @param decision what the phone sent, or was to send
+ */
+class SuggestionTrouble(val suggestionId: String, val title: String, val kind: SuggestionTroubleKind, val decision: Decision) {
+    override fun toString(): String = "SuggestionTrouble[suggestionId=$suggestionId]"
 }
 
 /**
@@ -350,6 +386,10 @@ class Planner(
     val inspirations: List<Inspiration> = emptyList(),
     /** What the e-mail import proposes and nobody has decided, the newest message first. */
     val suggestions: List<Suggestion> = emptyList(),
+    /** Decisions made on the phone that cannot be sent as they are. */
+    val suggestionTroubles: List<SuggestionTrouble> = emptyList(),
+    /** How many decisions of suggestions exist only on this phone, those that could not be sent included. */
+    val suggestionDecisions: Int = 0,
 ) {
     private val byId = entries.associateBy { it.id }
 
@@ -374,13 +414,18 @@ class Planner(
     fun memberName(id: String): String? = members.firstOrNull { it.id == id }?.displayName
 
     /** How many changes made on this phone are on their way to the server. */
-    val waiting: Int get() = entries.count { it.waiting == Waiting.TO_BE_SENT } + guests.count { it.waiting == Waiting.TO_BE_SENT }
+    val waiting: Int
+        get() = entries.count { it.waiting == Waiting.TO_BE_SENT } + guests.count { it.waiting == Waiting.TO_BE_SENT } +
+            suggestions.count { it.waiting == Waiting.TO_BE_SENT }
+
+    /** How many suggestions still wait for a decision: those decided on this phone are not counted, they are as good as decided. */
+    val suggestionsToDecide: Int get() = suggestions.count { it.decided == null }
 
     /** How many guests show a status chosen on this phone that the server does not have: the head count does not know of them. */
     val guestsChanged: Int get() = guests.count { it.waiting != null }
 
     /** How many changes exist only on this phone, those that could not be sent included: what a sign-out would lose. */
-    val unsent: Int get() = entries.count { it.waiting != null } + gone.size + shares.size + guestsChanged + guestTroubles.count { it.gone }
+    val unsent: Int get() = entries.count { it.waiting != null } + gone.size + shares.size + guestsChanged + guestTroubles.count { it.gone } + suggestionDecisions
 
     /** "Anna & Marek": the members who do it, in the wedding's order; null when nobody is named. */
     fun peopleOf(entry: Entry): String? =

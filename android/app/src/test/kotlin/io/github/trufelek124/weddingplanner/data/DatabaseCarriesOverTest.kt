@@ -391,4 +391,64 @@ class DatabaseCarriesOverTest {
             database.close()
         }
     }
+
+    @Test
+    fun `what version 7 held is still there, nothing waits to be decided, and a decision can wait beside the suggestions`() = runBlocking {
+        val file = folder.root.resolve("planner.db")
+        aDatabaseOfVersion(7, file) { old ->
+            old.execSQL(
+                """INSERT INTO planner (id, loadedAt, weddingDate, currency, timeZone, daysLeft, today, budgetTotal, budgetPlanned, budgetCommitted,
+                   budgetPaid, overdueIds, nextIds, nextPaymentIds)
+                   VALUES (1, 1795093500000, '2027-06-19', 'PLN', 'Europe/Warsaw', 213, '2026-11-18', NULL, 0, 0, 0, '', '', '')""",
+            )
+            old.execSQL("INSERT INTO member (id, position, displayName, you) VALUES ('m1', 0, 'Anna', 1)")
+            old.execSQL(
+                """INSERT INTO guest (id, position, name, status, sideMemberId, householdId, plusOne, children, heads, dietaryNeeds,
+                   needsAccommodation, phone, email, notes)
+                   VALUES ('g1', 0, 'Aunt Krystyna', 'INVITED', NULL, NULL, 0, 0, 1, '', 0, '', '', '')""",
+            )
+            old.execSQL("INSERT INTO waiting_guest_status (guestId, status, name, revision, trouble) VALUES ('g1', 'CONFIRMED', 'Aunt Krystyna', 0, NULL)")
+            old.execSQL(
+                """INSERT INTO suggestion (id, position, kind, title, notes, startDate, dueDate, amount, paymentKind, categoryId, vendorId, vendorName,
+                   vendorEmail, vendorPhone, vendorWebsite, senderName, senderAddress, subject, receivedAt, inboxMemberId, mailLink, passage, confidence)
+                   VALUES ('s1', 0, 'TASK', 'Send the guest list', '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                   'Ewa from the Registry Office', 'ewa@registry.example', 'Guest list', '2026-11-17T09:30:00Z', 'm1',
+                   'https://mail.google.com/mail/u/0/#all/18c0ffef', 'We need the guest list two weeks before.', 80)""",
+            )
+        }
+
+        val database = Room.databaseBuilder(context, PlannerDatabase::class.java, file.path).build()
+        try {
+            val stored = database.planner().stored()!!
+            val shown = plannerOf(stored)
+
+            // What was there, is there; what waited, waits; and no suggestion is decided.
+            assertEquals(listOf("s1"), shown.suggestions.map { it.id })
+            assertEquals(null, shown.suggestions.single().decided)
+            assertEquals(Waiting.TO_BE_SENT, shown.guest("g1")!!.waiting)
+            assertTrue(stored.suggestionDecisions.isEmpty())
+            assertTrue(shown.suggestionTroubles.isEmpty())
+            assertEquals(1, shown.suggestionsToDecide)
+            assertEquals(1, shown.unsent)
+
+            // The new table can be written and read, and a load puts the copy in the place of the last one while the decision stays.
+            database.planner().putSuggestionDecision(SuggestionDecisionRow("s1", "ACCEPT", "Send the guest list"))
+            database.planner().putSuggestionDecision(SuggestionDecisionRow("s9", "REJECT", "Rehearsal dinner", revision = 2, trouble = "GONE"))
+            database.planner().replace(
+                Stored(planner = stored.planner, entries = stored.entries, categories = stored.categories, vendors = stored.vendors, members = stored.members, guests = stored.guests),
+            )
+            val after = plannerOf(database.planner().stored()!!)
+            assertTrue(after.suggestions.isEmpty())
+            assertEquals(listOf("s9"), after.suggestionTroubles.map { it.suggestionId })
+            assertEquals(SuggestionTroubleKind.GONE, after.suggestionTroubles.single().kind)
+            assertEquals(2, after.suggestionDecisions)
+            assertEquals(Waiting.TO_BE_SENT, after.guest("g1")!!.waiting)
+
+            database.planner().forget()
+            assertTrue(database.planner().suggestionDecisions().isEmpty())
+            assertTrue(database.planner().guestStatuses().isEmpty())
+        } finally {
+            database.close()
+        }
+    }
 }
