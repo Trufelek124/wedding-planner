@@ -1,0 +1,83 @@
+{
+ "projectCode": "WP",
+ "stories": [
+  {
+   "key": "EP4-S5",
+   "epic": "EP4",
+   "title": "Android: the inspirations board",
+   "description": "The inspirations the couple collects are on the phone as they are on the web: a board of ideas with their pictures, narrowed down by board and tag, each leading to the original. They are kept on the phone with the rest of the planner. Adding one stays with the share sheet, which is already there.",
+   "goal": "Look through the collected ideas on the phone, also where there is no connection.",
+   "rationale": "The product scope (S01 section 4) says everything the web shows is readable on the phone. Inspirations are saved from the phone through the share sheet, but so far they can only be looked at on the web.",
+   "expectedBehavior": "More has a row Inspirations. The board shows each idea with its picture, its name, where it comes from, its board, what it belongs to, its note and its tags; it is narrowed down by board and by tag. An idea opens on a screen of its own with all its pictures, and its link opens in the phone's own apps. What was shared on this phone and is not sent yet stands on the board as waiting. Without a connection the board shows what was loaded last, with the pictures the phone already holds.",
+   "priority": "HIGH",
+   "rank": 41,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "The inspirations are readable on the phone with the same facts as on the web, narrowed down by board and by tag.",
+     "source": "S01 section 4"
+    },
+    {
+     "text": "Their pictures are shown: the small ones on the board, the whole ones on an idea's own screen.",
+     "source": "S01 section 7"
+    },
+    {
+     "text": "What was loaded last stays readable without a connection, with the pictures the phone already holds, and shows when it was loaded.",
+     "source": "S01 section 4"
+    },
+    {
+     "text": "An idea's link opens the original in the phone's own apps.",
+     "source": "S01 section 7"
+    },
+    {
+     "text": "Signing out removes the inspirations and their pictures from the phone, and nothing of them is written to the log.",
+     "source": "CLAUDE.md, The Android app"
+    }
+   ]
+  }
+ ],
+ "tasks": [
+  {
+   "key": "EP4-S5-T1",
+   "story": "EP4-S5",
+   "title": "Android: the inspirations board, kept on the phone",
+   "description": "The phone loads the inspirations with the rest of the planner and keeps them. More has a row Inspirations; the board shows each idea with its name, where it comes from, its board, the plan item or vendor it belongs to, how many pictures it has, its note and its tags, narrowed down by board and by tag. An idea opens on a screen of its own, and its link opens the original in the phone's own apps. What was shared on this phone and is not sent yet stands on the board as waiting. Where a picture belongs the board says so in words for now; the pictures come with the next task. Done when the story's criteria 1, 3, 4 and 5 are covered for these facts by tests on the JVM and the screens were looked at as rendered pictures.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  },
+  {
+   "key": "EP4-S5-T2",
+   "story": "EP4-S5",
+   "title": "Android: the pictures of the inspirations",
+   "description": "The pictures of an inspiration are fetched with the access token and kept in the app's own folder: the small version on the board, the whole one on the idea's own screen. A picture the phone holds is shown without a connection; one it does not hold is said in words. After a load the board's small pictures are fetched in the background so that the board is whole when the connection is gone. A picture is never read into memory larger than the screen needs. Pictures of ideas that are gone are removed, and signing out removes all of them. The pictures of a share that still waits are shown from the phone's own copies. Done when the story's criteria 2, 3 and 5 are covered for the pictures by tests on the JVM and the screens were looked at as rendered pictures.",
+   "dependsOn": [
+    "EP4-S5-T1"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android",
+    "jetpack-compose"
+   ]
+  }
+ ]
+}
