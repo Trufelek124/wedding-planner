@@ -433,8 +433,9 @@ class MailSyncLooksIntegrationTest extends MailSyncTestBase {
         List<String> columns = jdbc.queryForList(
                 "SELECT column_name FROM information_schema.columns WHERE table_name = 'mail_message' ORDER BY column_name", String.class);
         assertThat(columns).containsExactlyInAnyOrder("member_id", "message_id", "thread_id", "noted_at",
-                // The order of noting and the verdict: still nothing of the message itself (S04 section 6).
-                "look", "newness", "verdict", "unread_reason", "proposals", "read_at");
+                // The order of noting and the verdict, and the key a letter is known by (a hash, never the identifier it was made
+                // from): still nothing of the message itself (S04 section 6).
+                "look", "newness", "verdict", "unread_reason", "proposals", "read_at", "letter_key");
         String row = jdbc.queryForObject("SELECT row_to_json(t)::text FROM mail_message t", String.class);
         assertThat(row).contains("m-secret-looking").contains("thread-secret-looking");
         assertThat(row).doesNotContain("INBOX").doesNotContain("IMPORTANT").doesNotContain("CATEGORY").doesNotContain("Label_17")

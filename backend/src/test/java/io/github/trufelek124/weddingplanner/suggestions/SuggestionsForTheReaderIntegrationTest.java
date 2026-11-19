@@ -12,6 +12,7 @@ import io.github.trufelek124.weddingplanner.suggestions.Suggestions.Proposed;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -134,8 +135,53 @@ class SuggestionsForTheReaderIntegrationTest extends PostgresIntegrationTest {
 
     @Test
     void whatWasProposedHidesItselfFromToString() {
-        assertThat(new Proposed("m1-secret-key", "Deposit for the Palace on the Hill").toString())
+        assertThat(new Proposed("m1-secret-key", Kind.PAYMENT, "Deposit for the Palace on the Hill", LocalDate.parse("2026-12-01"), null, 250_000L).toString())
                 .doesNotContain("secret").doesNotContain("Palace");
+    }
+
+    // ---------------------------------------------------------------- what was proposed lately
+
+    private UUID handInPayment(String key, UUID inbox, String title, LocalDate start, LocalDate due, Long amount) {
+        return suggestions.handIn(new Proposal(
+                weddingId, key, Kind.PAYMENT, title, "", start, due, amount, null, null, null, null, null, null, null,
+                "Jan from Palace on the Hill", "jan@palace-hill.example", "Your tasting", Instant.parse("2026-11-12T09:30:00Z"),
+                inbox, ANNAS_LINK, "We could meet on Friday.", 80));
+    }
+
+    @Test
+    void whatWasProposedSinceAMomentComesNewestFirstWithWhatIsNeededToRecogniseItWhateverBecameOfIt() throws Exception {
+        UUID old = handIn("m1-old-1", annaId, ANNAS_LINK);
+        jdbc.update("UPDATE suggestion SET created_at = created_at - interval '5 days' WHERE id = ?", old);
+        Instant since = TestClock.now().minusSeconds(1);
+        UUID first = handInPayment("m1-new-1", piotrId, "Pay the deposit", null, LocalDate.parse("2026-12-01"), 500_000L);
+        later();
+        UUID second = handIn("m1-new-2", annaId, ANNAS_LINK);
+        later();
+        handInPayment("m1-new-3", annaId, "Pay the hall", LocalDate.parse("2026-11-20"), null, null);
+        assertThat(http.postJsonAs(anna, "/api/suggestions/" + second + "/reject", "").statusCode()).isEqualTo(200);
+        assertThat(http.postJsonAs(piotr, "/api/suggestions/" + first + "/accept", "").statusCode()).isEqualTo(200);
+
+        List<Proposed> lately = suggestions.proposedSince(weddingId, since, 10);
+
+        assertThat(lately.stream().map(Proposed::sourceKey).toList()).as("the newest first, the old one left out, rejected and accepted too")
+                .containsExactly("m1-new-3", "m1-new-2", "m1-new-1");
+        assertThat(lately.get(0)).isEqualTo(new Proposed("m1-new-3", Kind.PAYMENT, "Pay the hall", LocalDate.parse("2026-11-20"), null, null));
+        assertThat(lately.get(1)).isEqualTo(new Proposed("m1-new-2", Kind.TASK, title(second), null, null, null));
+        assertThat(lately.get(2)).isEqualTo(new Proposed("m1-new-1", Kind.PAYMENT, "Pay the deposit", null, LocalDate.parse("2026-12-01"), 500_000L));
+        assertThat(suggestions.proposedSince(weddingId, since, 2).stream().map(Proposed::sourceKey).toList()).containsExactly("m1-new-3", "m1-new-2");
+        assertThat(suggestions.proposedSince(weddingId, since.minus(Duration.ofDays(30)), 10)).as("from the old one on").hasSize(4);
+        assertThat(suggestions.proposedSince(UUID.randomUUID(), since, 10)).as("another wedding").isEmpty();
+        assertThat(suggestions.proposedSince(weddingId, TestClock.now().plusSeconds(60), 10)).as("nothing yet that new").isEmpty();
+        assertThat(old).isNotNull();
+        assertThatThrownBy(() -> suggestions.proposedSince(weddingId, since, 0)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void whatWasProposedUnderAKeyGivesTheSameFacts() {
+        handInPayment("m1-abc-1", annaId, "Pay the deposit", LocalDate.parse("2026-11-01"), LocalDate.parse("2026-12-01"), 500_000L);
+
+        assertThat(suggestions.proposedUnder(weddingId, "m1-abc-", 5)).containsExactly(new Proposed(
+                "m1-abc-1", Kind.PAYMENT, "Pay the deposit", LocalDate.parse("2026-11-01"), LocalDate.parse("2026-12-01"), 500_000L));
     }
 
     // ---------------------------------------------------------------- how many came into being

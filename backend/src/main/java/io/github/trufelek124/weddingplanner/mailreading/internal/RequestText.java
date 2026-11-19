@@ -18,6 +18,9 @@ final class RequestText {
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    private static final String ALREADY_PROPOSED =
+            "already proposed, one per line (first from this thread, then lately from other mail): kind | title | day | amount";
+
     private RequestText() {}
 
     /** What is left of the earlier messages once they are fitted into the room, and how many had to go. */
@@ -59,11 +62,11 @@ final class RequestText {
                     .append(" oldest earlier message(s) were left out because they did not fit.\n");
         }
         out.append('\n');
-        begin(out, marker, "already proposed from this thread, one title per line");
+        begin(out, marker, ALREADY_PROPOSED);
         for (String title : message.alreadyProposed()) {
             out.append(oneLine(title)).append('\n');
         }
-        end(out, marker, "already proposed from this thread, one title per line");
+        end(out, marker, ALREADY_PROPOSED);
         out.append('\n');
         if (!fitted.kept().isEmpty()) {
             begin(out, marker, "earlier messages of the thread, the oldest first");

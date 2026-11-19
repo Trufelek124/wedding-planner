@@ -113,7 +113,22 @@ class GmailLettersTest {
         assertThat(new Text("Secret text", false).toString()).doesNotContain("Secret");
         assertThat(new MailSource.Earlier(new Person("S", "s@x.example"), java.time.Instant.EPOCH, new Text("Secret", false)).toString())
                 .doesNotContain("Secret").doesNotContain("s@x");
-        assertThat(new MailSource.Letter(new Person("S", "s@x.example"), "Secret subject", java.time.Instant.EPOCH, new Text("Secret", false), java.util.List.of()).toString())
+        assertThat(new MailSource.Letter(new Person("S", "s@x.example"), "Secret subject", java.time.Instant.EPOCH, new Text("Secret", false), java.util.List.of(), "secret-id@x.example").toString())
                 .doesNotContain("Secret").doesNotContain("s@x");
+    }
+
+    @Test
+    void theIdentifierTheSenderGaveIsWhatIsBetweenTheAnglesAndNothingElseIsChanged() {
+        assertThat(GmailLetters.identifierOf("<abc.123@vendor.example>")).isEqualTo("abc.123@vendor.example");
+        assertThat(GmailLetters.identifierOf("abc.123@vendor.example")).isEqualTo("abc.123@vendor.example");
+        assertThat(GmailLetters.identifierOf("  <abc.123@vendor.example>\t ")).isEqualTo("abc.123@vendor.example");
+        assertThat(GmailLetters.identifierOf("< abc.123@vendor.example >")).isEqualTo("abc.123@vendor.example");
+        assertThat(GmailLetters.identifierOf("<ABC.123@Vendor.example>")).as("the case stays").isEqualTo("ABC.123@Vendor.example");
+        assertThat(GmailLetters.identifierOf("<a b@x>")).as("what is inside stays").isEqualTo("a b@x");
+        assertThat(GmailLetters.identifierOf("<<a@x>>")).as("one pair only").isEqualTo("<a@x>");
+        assertThat(GmailLetters.identifierOf("")).isEmpty();
+        assertThat(GmailLetters.identifierOf("   ")).isEmpty();
+        assertThat(GmailLetters.identifierOf("<>")).isEmpty();
+        assertThat(GmailLetters.identifierOf(" < > ")).isEmpty();
     }
 }

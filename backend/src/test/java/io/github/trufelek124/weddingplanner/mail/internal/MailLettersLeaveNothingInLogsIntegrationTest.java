@@ -45,9 +45,10 @@ class MailLettersLeaveNothingInLogsIntegrationTest extends MailLettersTestBase {
         connectPiotr();
         List<String> secrets = new ArrayList<>(List.of(
                 "Sender-Secret-Qx", "sender-secret@qx.example", "Subject-Secret-Qx", "Body-Secret-Qx", "Earlier-Secret-Qx",
-                "Html-Secret-Qx", "Hidden-Script-Qx", "Attachment-Secret-Qx", "Polish-Secret-Qx", "Ukrainian-Secret-Qx"));
+                "Html-Secret-Qx", "Hidden-Script-Qx", "Attachment-Secret-Qx", "Polish-Secret-Qx", "Ukrainian-Secret-Qx", "Header-Secret-Qx"));
         String sender = "Sender-Secret-Qx <sender-secret@qx.example>";
-        annasBox().write("msg-plain-qx", "thr-plain-qx", daysAgo(3), sender, "Subject-Secret-Qx", plain("Earlier-Secret-Qx"), "INBOX");
+        annasBox().writeWithMessageId("msg-plain-qx", "thr-plain-qx", daysAgo(3), sender, "Subject-Secret-Qx", plain("Earlier-Secret-Qx"),
+                "<Header-Secret-Qx@qx.example>", "INBOX");
         annasBox().write("msg-now-qx", "thr-plain-qx", daysAgo(2), sender, "Re: Subject-Secret-Qx", plain("Body-Secret-Qx"), "INBOX");
         annasBox().write("msg-html-qx", "thr-html-qx", daysAgo(2), sender, "Subject-Secret-Qx",
                 Mime.html("<p>Html-Secret-Qx</p><script>Hidden-Script-Qx</script>"), "INBOX");
@@ -86,10 +87,12 @@ class MailLettersLeaveNothingInLogsIntegrationTest extends MailLettersTestBase {
         google.withdraw(google.refreshTokenOf(PIOTR_MAILBOX));
         TestClock.advance(Duration.ofHours(2));
         contents.add(reading.read(piotrs("msg-ua-qx", "thr-ua-qx")));
-        for (MessageHandle handle : handles) {
-            reading.keysOf(handle);
-            reading.mark(handle, new AboutTheWedding(1));
+        for (int i = 0; i < handles.size(); i++) {
+            reading.keysOf(handles.get(i));
+            // The letter's key is kept with the verdict; the header it was made from is not.
+            reading.mark(handles.get(i), new AboutTheWedding(1), contents.get(i) instanceof Letter letter ? letter.key() : "");
         }
+        assertThat(reading.copyWasRead(handles.get(0), "l1-" + "A".repeat(43))).isFalse();
         reading.counts(weddingId());
         // The link holds the mailbox's address: made and thrown away, it leaves nothing in the log.
         String link = reading.linkTo(annas("msg-now-qx", "thr-plain-qx")).orElseThrow();
@@ -109,13 +112,14 @@ class MailLettersLeaveNothingInLogsIntegrationTest extends MailLettersTestBase {
             assertThat(log).as("the log, a secret of " + secret.length() + " characters starting " + secret.substring(0, 6)).doesNotContain(secret);
             assertThat(printed).as("toString, a secret starting " + secret.substring(0, 6)).doesNotContain(secret);
         }
-        for (String secret : secrets.subList(0, 10)) {
+        for (String secret : secrets.subList(0, 11)) {
             assertThat(table).as("the table, a secret starting " + secret.substring(0, 6)).doesNotContain(secret);
         }
         // The table holds the two identifiers and the order and the verdict; nothing of a message but those.
         assertThat(jdbc.queryForList(
                 "SELECT column_name FROM information_schema.columns WHERE table_name = 'mail_message'", String.class))
-                .containsExactlyInAnyOrder("member_id", "message_id", "thread_id", "noted_at", "look", "newness", "verdict", "unread_reason", "proposals", "read_at");
+                .containsExactlyInAnyOrder("member_id", "message_id", "thread_id", "noted_at", "look", "newness", "verdict", "unread_reason", "proposals", "read_at", "letter_key");
+        assertThat(table).as("only the key of a letter is there").contains("\"letter_key\":\"l1-");
         assertThat(log).doesNotContain("Subject-Secret").doesNotContain("-Qx");
     }
 }

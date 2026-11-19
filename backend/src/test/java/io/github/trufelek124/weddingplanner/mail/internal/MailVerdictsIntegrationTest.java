@@ -106,7 +106,7 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
     void eachVerdictIsStoredWithItsOwnDetailAndCounted() throws Exception {
         threeLooks();
         List<MessageHandle> waiting = reading.waiting(100);
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(6, 0, 0, 0, 0));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(6, 0, 0, 0, 0, 0));
 
         reading.mark(waiting.get(0), new NotAboutTheWedding());
         reading.mark(waiting.get(1), new AboutTheWedding(3));
@@ -114,7 +114,7 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
         reading.mark(waiting.get(3), new CouldNotBeRead(Reason.DECLINED));
         reading.mark(waiting.get(4), new CouldNotBeRead(Reason.TOO_MANY_PROPOSALS));
 
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(1, 5, 2, 2, 3));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(1, 5, 2, 2, 3, 0));
         assertThat(stored("a4")).containsEntry("verdict", "NOT_WEDDING").containsEntry("unread_reason", null).containsEntry("proposals", null);
         assertThat(stored("a3")).containsEntry("verdict", "WEDDING").containsEntry("unread_reason", null).containsEntry("proposals", 3);
         assertThat(stored("p2")).containsEntry("verdict", "WEDDING").containsEntry("proposals", 0);
@@ -148,7 +148,7 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
         assertThat(reading.mark(message, new CouldNotBeRead(Reason.GONE))).isFalse();
 
         assertThat(stored(message.messageId())).isEqualTo(once);
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(5, 1, 1, 0, 2));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(5, 1, 1, 0, 2, 0));
     }
 
     @Test
@@ -189,8 +189,8 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
                 new NotAboutTheWedding())).as("the other member's mailbox").isFalse();
         assertThat(reading.mark(new MessageHandle(message.weddingId(), message.memberId(), "nobody-knows", "t"),
                 new NotAboutTheWedding())).as("a message that is not noted").isFalse();
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(6, 0, 0, 0, 0));
-        assertThat(reading.counts(UUID.randomUUID())).as("another wedding has its own count").isEqualTo(new Counts(0, 0, 0, 0, 0));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(6, 0, 0, 0, 0, 0));
+        assertThat(reading.counts(UUID.randomUUID())).as("another wedding has its own count").isEqualTo(new Counts(0, 0, 0, 0, 0, 0));
     }
 
     @Test
@@ -205,7 +205,7 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
         assertThat(reading.mark(beingRead, new AboutTheWedding(1))).as("a no-op, not an error").isFalse();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM mail_message WHERE member_id = ?", Integer.class, anna())).isZero();
         assertThat(waitingIds(100)).containsExactly("p2", "p1");
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(2, 0, 0, 0, 0));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(2, 0, 0, 0, 0, 0));
     }
 
     // ---------------------------------------------------------------- the key
@@ -404,7 +404,7 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
         reading.mark(waiting.get(3), new NotAboutTheWedding());
         reading.mark(waiting.get(4), new CouldNotBeRead(Reason.TOO_MANY_PROPOSALS));
 
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(1, 5, 3, 1, 5));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(1, 5, 3, 1, 5, 0));
         assertThat(reading.counts(UUID.randomUUID()).proposals()).as("another wedding").isZero();
     }
 

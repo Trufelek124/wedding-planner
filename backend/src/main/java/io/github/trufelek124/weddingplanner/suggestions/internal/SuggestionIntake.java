@@ -123,6 +123,15 @@ class SuggestionIntake implements Suggestions {
 
     @Override
     @Transactional
+    public List<Proposed> proposedSince(UUID weddingId, Instant since, int most) {
+        if (most <= 0) {
+            throw new IllegalArgumentException("most");
+        }
+        return suggestions.proposedSince(weddingId, since, most);
+    }
+
+    @Override
+    @Transactional
     public int madeSince(UUID weddingId, UUID inboxMemberId, Instant since) {
         return suggestions.madeSince(weddingId, inboxMemberId, since);
     }

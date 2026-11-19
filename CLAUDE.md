@@ -346,6 +346,12 @@ uses another only through the types in that module's own package, and never in a
     done twice proposes nothing twice. The brakes are in the settings: a monthly limit on the estimated cost, a
     daily limit of messages, fifty new suggestions from one mailbox in a day; a busy service makes it wait, a key
     that is not accepted stops it until the server is started again.
+  - **One letter in both mailboxes is read once.** `mail` gives a letter a key worked out from the identifier its
+    sender gave it (the `Message-ID` header, as a one-way hash with the wedding in it; the header's value is never
+    kept or logged) and keeps the key with the verdict. The copy that is reached second is marked "a copy of one
+    that was read" before anything else is asked: no step, no link, no proposal. Extraction is told what was
+    already proposed — from the thread first, then lately from any mail of the wedding, one line each with kind,
+    title, day and amount — so that a forwarded copy proposes nothing again.
   - `reading_usage` counts calls and tokens per day, step and model, and nothing of a message. **Nothing of a
     message, an answer or the key is kept or logged**; of an exception only its kind.
   - What the e-mail page says of the reading, `mail` asks through an interface of its own that this module

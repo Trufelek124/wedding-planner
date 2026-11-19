@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -82,6 +83,12 @@ abstract class RoundTestBase extends MailTestBase {
         round.forget();
     }
 
+    /** What was counted is not left for the test of another class, which may count on an empty table. */
+    @AfterEach
+    void noCountLeftBehind() {
+        jdbc.update("DELETE FROM reading_usage");
+    }
+
     // ---------------------------------------------------------------- the rules a test runs under
 
     static Rules.Price price(String in, String out) {
@@ -137,6 +144,11 @@ abstract class RoundTestBase extends MailTestBase {
 
     void annaGets(String id, String thread, long daysAgo, String subject, String text) {
         google.mailbox(ANNA_MAILBOX).write(id, thread, daysAgo(daysAgo), JAN, subject, Mime.plain(text), "INBOX");
+    }
+
+    /** A message with the identifier its sender gave it ({@code Message-ID}, written as given; none when null), in this mailbox. */
+    void gets(String mailbox, String id, String thread, long daysAgo, String from, String subject, String text, String messageIdHeader) {
+        google.mailbox(mailbox).writeWithMessageId(id, thread, daysAgo(daysAgo), from, subject, Mime.plain(text), messageIdHeader, "INBOX");
     }
 
     void piotrGets(String id, String subject, String text) {

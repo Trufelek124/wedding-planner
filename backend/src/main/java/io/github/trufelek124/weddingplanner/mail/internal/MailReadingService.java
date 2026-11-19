@@ -92,7 +92,7 @@ class MailReadingService implements MailReading {
         try {
             Fetch fetched = source.letter(message.memberId(), message.messageId(), message.threadId());
             return switch (fetched) {
-                case Found found -> letter(found);
+                case Found found -> letter(message.weddingId(), found);
                 case Gone gone -> new Unavailable(Why.GONE);
                 case NoText none -> new Unavailable(Why.NO_TEXT);
                 case TooLarge large -> new Unavailable(Why.TOO_LARGE);
@@ -111,14 +111,15 @@ class MailReadingService implements MailReading {
         }
     }
 
-    private static Letter letter(Found found) {
+    private static Letter letter(UUID weddingId, Found found) {
         MailSource.Letter letter = found.letter();
         return new Letter(
                 person(letter.from()),
                 letter.subject(),
                 letter.arrived(),
                 text(letter.text()),
-                letter.earlier().stream().map(MailReadingService::earlier).toList());
+                letter.earlier().stream().map(MailReadingService::earlier).toList(),
+                letterKey(weddingId, letter.identifier()));
     }
 
     private static EarlierMessage earlier(Earlier earlier) {
@@ -154,22 +155,49 @@ class MailReadingService implements MailReading {
         }
     }
 
+    /**
+     * What a letter is known by: a hash of the wedding and the identifier its sender gave it, so that the same letter in
+     * both mailboxes has one key, another wedding's letter with the same identifier has another, and nothing in it is the
+     * identifier. Empty when the message gave none.
+     */
+    private static String letterKey(UUID weddingId, String identifier) {
+        return identifier.isEmpty() ? "" : key("l1", weddingId, identifier);
+    }
+
+    private static final Pattern LETTER_KEY = Pattern.compile("l1-[A-Za-z0-9_-]{43}");
+
+    @Override
+    public boolean copyWasRead(MessageHandle message, String letterKey) {
+        if (letterKey == null || letterKey.isEmpty()) {
+            return false;
+        }
+        return messages.copyWasRead(message.weddingId(), message.memberId(), message.messageId(), letterKey);
+    }
+
     // ---------------------------------------------------------------- verdicts
 
     @Override
-    public boolean mark(MessageHandle message, Verdict verdict) {
+    public boolean mark(MessageHandle message, Verdict verdict, String letterKey) {
+        if (letterKey == null || (!letterKey.isEmpty() && !LETTER_KEY.matcher(letterKey).matches())) {
+            throw new IllegalArgumentException("letterKey");
+        }
+        if (verdict instanceof CopyOfOneRead && letterKey.isEmpty()) {
+            throw new IllegalArgumentException("letterKey");
+        }
         MessageRepository.Verdict stored = switch (verdict) {
             case NotAboutTheWedding none -> new MessageRepository.Verdict("NOT_WEDDING", null, null);
             case AboutTheWedding about -> new MessageRepository.Verdict("WEDDING", null, about.proposals());
             case CouldNotBeRead failed -> new MessageRepository.Verdict("UNREADABLE", failed.reason().name(), null);
+            case CopyOfOneRead copy -> new MessageRepository.Verdict("COPY", null, null);
         };
-        return messages.mark(message.weddingId(), message.memberId(), message.messageId(), stored, clock.instant());
+        return messages.mark(message.weddingId(), message.memberId(), message.messageId(), stored,
+                letterKey.isEmpty() ? null : letterKey, clock.instant());
     }
 
     @Override
     public Counts counts(UUID weddingId) {
         MessageRepository.Counts counts = messages.counts(weddingId);
         return new Counts(
-                counts.waiting(), counts.read(), counts.aboutTheWedding(), counts.couldNotBeRead(), counts.proposals());
+                counts.waiting(), counts.read(), counts.aboutTheWedding(), counts.couldNotBeRead(), counts.proposals(), counts.copies());
     }
 }

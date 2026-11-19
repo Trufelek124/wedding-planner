@@ -5,6 +5,7 @@ import io.github.trufelek124.weddingplanner.api.FieldProblem;
 import io.github.trufelek124.weddingplanner.mail.MailReading;
 import io.github.trufelek124.weddingplanner.mail.MailReading.AboutTheWedding;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Content;
+import io.github.trufelek124.weddingplanner.mail.MailReading.CopyOfOneRead;
 import io.github.trufelek124.weddingplanner.mail.MailReading.CouldNotBeRead;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Letter;
 import io.github.trufelek124.weddingplanner.mail.MailReading.MessageHandle;
@@ -74,8 +75,11 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
     static final Duration FIRST_WAIT = Duration.ofMinutes(1);
     static final Duration LONGEST_WAIT = Duration.ofHours(1);
     static final int MOST_PUT_OFF = 1_000;
-    /** How many titles already proposed from the thread the extraction is told of. */
+    /** How many proposals already made from the thread the extraction is told of. */
     static final int TITLES_TOLD = 20;
+    /** How many proposals lately made from other mail of the wedding it is told of, and how far back "lately" goes. */
+    static final int LATELY_TOLD = 30;
+    static final Duration LATELY = Duration.ofDays(30);
 
     private final ReadingSteps steps;
     private final Rules rules;
@@ -328,6 +332,13 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
             return unavailable(handle, unavailable.why(), round);
         }
         Letter letter = (Letter) content;
+        // A letter that went to both mailboxes is read once (S04 section 2): the copy reached second is sent nowhere.
+        if (mail.copyWasRead(handle, letter.key())) {
+            mark(handle, new CopyOfOneRead(), letter.key());
+            log.info("Read a message of member {}: a copy of a letter that was read already (nothing was asked of the AI service)",
+                    handle.memberId());
+            return Result.MARKED;
+        }
         Sender from = new Sender(orEmpty(letter.from().name()), orEmpty(letter.from().address()));
         String subject = orEmpty(letter.subject());
 
@@ -344,13 +355,13 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
         Outcome<MailTriage.Triaged> triaged = steps.triage(new MailTriage.Input(from, subject, letter.arrived(), letter.text().text()));
         count(UsageRepository.Step.TRIAGE, triaged.used());
         if (triaged instanceof Outcome.Unanswered<MailTriage.Triaged> failed) {
-            return stopped(handle, failed.why(), "triage", round);
+            return stopped(handle, failed.why(), "triage", letter.key(), round);
         }
         served();
         MailTriage.Triaged verdict = ((Outcome.Answered<MailTriage.Triaged>) triaged).answer();
         // A "no" that is not sure enough is read on as a "yes": missing a message about the wedding is worse.
         if (!verdict.concernsTheWedding() && verdict.sure() >= rules.triageSure()) {
-            mark(handle, new NotAboutTheWedding());
+            mark(handle, new NotAboutTheWedding(), letter.key());
             log.info("Read a message of member {}: not about the wedding (triage)", handle.memberId());
             return Result.MARKED;
         }
@@ -358,11 +369,7 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
         // Step two.
         MailReading.Keys keys = mail.keysOf(handle);
         String ownKeys = keys.thread() + "/" + keys.message() + "/";
-        List<String> alreadyProposed = suggestions.proposedUnder(handle.weddingId(), keys.thread() + "/", TITLES_TOLD + 5).stream()
-                .filter(proposed -> !proposed.sourceKey().startsWith(ownKeys))
-                .limit(TITLES_TOLD)
-                .map(Suggestions.Proposed::title)
-                .toList();
+        List<String> alreadyProposed = alreadyProposed(handle, keys.thread() + "/", ownKeys, facts.get().currency());
         LocalDate today = LocalDate.now(clock.withZone(facts.get().timeZone()));
         List<MailExtraction.EarlierMessage> earlier = letter.earlier().stream()
                 .map(message -> new MailExtraction.EarlierMessage(
@@ -372,7 +379,7 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
                 from, subject, letter.arrived(), letter.text().text(), earlier, today, facts.get().weddingDate(), alreadyProposed));
         count(UsageRepository.Step.EXTRACTION, extracted.used());
         if (extracted instanceof Outcome.Unanswered<MailExtraction.Extracted> failed) {
-            return stopped(handle, failed.why(), "extraction", round);
+            return stopped(handle, failed.why(), "extraction", letter.key(), round);
         }
         served();
 
@@ -396,10 +403,49 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
             }
         }
         // Marking is the last thing: a message that stops before it is done again and proposes nothing twice.
-        mark(handle, new AboutTheWedding(handedIn));
+        mark(handle, new AboutTheWedding(handedIn), letter.key());
         log.info("Read a message of member {}: about the wedding, {} proposals of {} handed in (triage, extraction)", handle.memberId(), handedIn,
                 proposals.size());
         return Result.MARKED;
+    }
+
+    /**
+     * What the extraction is told was proposed, one line each, without anything twice and without what this message itself
+     * proposed (an earlier try of it): first what came from this thread, then what came from any mail of the wedding in the
+     * last {@link #LATELY}, at most {@link #LATELY_TOLD}.
+     */
+    private List<String> alreadyProposed(MessageHandle handle, String threadKeys, String ownKeys, String currency) {
+        Set<String> told = new HashSet<>();
+        List<String> lines = new ArrayList<>();
+        suggestions.proposedUnder(handle.weddingId(), threadKeys, TITLES_TOLD + MOST_OWN).stream()
+                .filter(proposed -> !proposed.sourceKey().startsWith(ownKeys))
+                .limit(TITLES_TOLD)
+                .forEach(proposed -> {
+                    told.add(proposed.sourceKey());
+                    lines.add(line(proposed, currency));
+                });
+        suggestions.proposedSince(handle.weddingId(), clock.instant().minus(LATELY), LATELY_TOLD + TITLES_TOLD + MOST_OWN).stream()
+                .filter(proposed -> !proposed.sourceKey().startsWith(ownKeys) && !told.contains(proposed.sourceKey()))
+                .limit(LATELY_TOLD)
+                .forEach(proposed -> lines.add(line(proposed, currency)));
+        return lines;
+    }
+
+    /** More than one message can propose (eight with documents): room for those that are filtered out afterwards. */
+    private static final int MOST_OWN = 10;
+
+    /** {@code PAYMENT | Wpłacić zaliczkę za salę | due 2026-12-01 | 5000.00 PLN}: the day and the amount only where there is one. */
+    static String line(Suggestions.Proposed proposed, String currency) {
+        StringBuilder line = new StringBuilder(proposed.kind().name()).append(" | ").append(proposed.title());
+        if (proposed.dueDate() != null) {
+            line.append(" | due ").append(proposed.dueDate());
+        } else if (proposed.startDate() != null) {
+            line.append(" | starts ").append(proposed.startDate());
+        }
+        if (proposed.amount() != null) {
+            line.append(" | ").append(Money.written(proposed.amount(), currency));
+        }
+        return line.toString();
     }
 
     private Result unavailable(MessageHandle handle, MailReading.Why why, Round round) {
@@ -429,19 +475,19 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
     }
 
     /** A step did not answer. */
-    private Result stopped(MessageHandle handle, Outcome.Why why, String step, Round round) {
+    private Result stopped(MessageHandle handle, Outcome.Why why, String step, String letterKey, Round round) {
         switch (why) {
             case DECLINED -> {
                 served();
-                return couldNotBeRead(handle, Reason.DECLINED, step);
+                return couldNotBeRead(handle, Reason.DECLINED, step, letterKey);
             }
             case CANNOT_BE_USED -> {
                 served();
-                return couldNotBeRead(handle, Reason.UNUSABLE_ANSWER, step);
+                return couldNotBeRead(handle, Reason.UNUSABLE_ANSWER, step, letterKey);
             }
             case TOO_MANY_PROPOSALS -> {
                 served();
-                return couldNotBeRead(handle, step.equals("extraction") ? Reason.TOO_MANY_PROPOSALS : Reason.UNUSABLE_ANSWER, step);
+                return couldNotBeRead(handle, step.equals("extraction") ? Reason.TOO_MANY_PROPOSALS : Reason.UNUSABLE_ANSWER, step, letterKey);
             }
             case TRY_LATER -> {
                 waitAWhile();
@@ -459,18 +505,19 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
         throw new IllegalStateException("why");
     }
 
+    /** No letter was had: there is no key. */
     private Result couldNotBeRead(MessageHandle handle, Reason reason) {
-        return couldNotBeRead(handle, reason, "fetching");
+        return couldNotBeRead(handle, reason, "fetching", "");
     }
 
-    private Result couldNotBeRead(MessageHandle handle, Reason reason, String step) {
-        mark(handle, new CouldNotBeRead(reason));
+    private Result couldNotBeRead(MessageHandle handle, Reason reason, String step, String letterKey) {
+        mark(handle, new CouldNotBeRead(reason), letterKey);
         log.info("Read a message of member {}: could not be read ({}, in {})", handle.memberId(), reason, step);
         return Result.MARKED;
     }
 
-    private void mark(MessageHandle handle, Verdict verdict) {
-        mail.mark(handle, verdict);
+    private void mark(MessageHandle handle, Verdict verdict, String letterKey) {
+        mail.mark(handle, verdict, letterKey);
     }
 
     private static String orEmpty(String text) {

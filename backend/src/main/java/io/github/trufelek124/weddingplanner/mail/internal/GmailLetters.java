@@ -99,7 +99,22 @@ final class GmailLetters {
         }
         return new Found(new Letter(
                 person(header(target, "From")), bounded(decodedWords(header(target, "Subject")), LONGEST_SUBJECT), arrived, cut(body),
-                earlier));
+                earlier, identifierOf(header(target, "Message-ID"))));
+    }
+
+    /**
+     * What the sender called the letter: the {@code Message-ID} header's value without the spaces and the angle brackets
+     * around it, and nothing else changed (a different case is another identifier). Empty when there is none or it is blank.
+     */
+    static String identifierOf(String header) {
+        String identifier = header.strip();
+        if (identifier.startsWith("<")) {
+            identifier = identifier.substring(1);
+        }
+        if (identifier.endsWith(">")) {
+            identifier = identifier.substring(0, identifier.length() - 1);
+        }
+        return identifier.strip();
     }
 
     private static boolean leftOut(JsonNode message) {

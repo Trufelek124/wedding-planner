@@ -55,7 +55,7 @@ class ReadingDoneTwiceIntegrationTest extends RoundTestBase {
     }
 
     @Test
-    void theTitlesAlreadyProposedFromTheThreadReachTheExtractionOfALaterMessageOfTheSameThreadAndThoseOfAnotherThreadDoNot() throws Exception {
+    void theThreadsOwnProposalsComeFirstToALaterMessageOfTheThreadThenWhatCameLatelyFromOtherMailAndAThirdThreadIsToldOfBoth() throws Exception {
         annaGets("m-first", "thread-menu", 3, "Degustacja", TEXT);
         annaGets("m-elsewhere", "thread-flowers", 3, "Kwiaty", TEXT);
         note();
@@ -78,9 +78,13 @@ class ReadingDoneTwiceIntegrationTest extends RoundTestBase {
         List<Call> extractions = service.calls().stream().filter(call -> "claude-opus-5-5".equals(call.json().get("model"))).toList();
         assertThat(extractions).hasSize(2);
         Call menuReply = extractions.stream().filter(call -> call.body().contains("Dziękujemy za odpowiedź")).findFirst().orElseThrow();
-        assertThat(menuReply.body()).contains("Menu-Title-Qz").doesNotContain("Flowers-Title-Qz");
+        // The thread's own comes first; what the other thread proposed lately follows (S04 section 3).
+        assertThat(menuReply.body()).contains("Menu-Title-Qz").contains("Flowers-Title-Qz");
+        assertThat(menuReply.body().indexOf("Menu-Title-Qz")).isLessThan(menuReply.body().indexOf("Flowers-Title-Qz"));
+        // A message of a third thread is told of both, newest first, because both came lately from the same wedding's mail.
         Call third = extractions.stream().filter(call -> !call.body().contains("Dziękujemy za odpowiedź")).findFirst().orElseThrow();
-        assertThat(third.body()).doesNotContain("Menu-Title-Qz").doesNotContain("Flowers-Title-Qz");
+        assertThat(third.body()).contains("Menu-Title-Qz").contains("Flowers-Title-Qz");
+        assertThat(third.body().indexOf("Menu-Title-Qz")).as("the newest first").isLessThan(third.body().indexOf("Flowers-Title-Qz"));
     }
 
     @Test

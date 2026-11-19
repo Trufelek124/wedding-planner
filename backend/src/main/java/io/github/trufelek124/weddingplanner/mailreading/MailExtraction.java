@@ -7,9 +7,10 @@ import java.util.Objects;
 
 /**
  * Step two: what does a message that concerns the wedding ask the owners to do? A larger model reads the whole
- * message, the earlier messages of its thread, today's date, the wedding's date and the titles already proposed from
- * the thread, and proposes at most five entries. What comes back has been checked here (S04 section 5): a proposal
- * that fails a check is left out and the others stay; more than five proposals is no answer at all.
+ * message, the earlier messages of its thread, today's date, the wedding's date and what was already proposed (from the
+ * thread, and lately from any mail of the wedding), and proposes at most five entries. What comes back has been checked
+ * here (S04 section 5): a proposal that fails a check is left out and the others stay; more than five proposals is
+ * no answer at all.
  */
 public interface MailExtraction {
 
@@ -33,7 +34,8 @@ public interface MailExtraction {
      *     {@link #MOST_CHARACTERS} together with the text, the oldest are left out, whole, and the request says so
      * @param today the date where the wedding takes place, today
      * @param weddingDate the wedding's date, or null while none is set
-     * @param alreadyProposed the titles of what was already proposed from this thread, so that none is proposed again
+     * @param alreadyProposed what was already proposed, one text per proposal: first what came from this thread, then what
+     *     came lately from other mail of the wedding, so that none is proposed again
      */
     record Input(
             Sender from,

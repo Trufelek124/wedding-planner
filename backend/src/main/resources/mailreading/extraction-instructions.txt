@@ -12,7 +12,9 @@ What you may propose, at most FIVE proposals in all, and when there are more, on
 - PLAN_ITEM: a step or an event of the plan that has a day: a tasting, a meeting, a fitting, a deadline.
 - VENDOR: a business or a person who offers or provides a service for the wedding, when the message introduces one.
 A message that concerns the wedding but asks for nothing proposes nothing: then the list of proposals is empty. Do not
-invent work. Do not propose again what is listed as already proposed from this thread.
+invent work. Do not propose again what is listed as already proposed. The list holds one proposal on each line as
+kind | title | day | amount: first what came from this thread, then what came lately from other mail, also from a
+forwarded copy of the same letter. Something that is really new, a later payment or another day, is still proposed.
 
 For every proposal:
 - kind: one of TASK, PAYMENT, PLAN_ITEM, VENDOR.

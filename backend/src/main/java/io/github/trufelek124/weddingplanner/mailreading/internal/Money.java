@@ -43,4 +43,19 @@ final class Money {
             return OptionalLong.empty();
         }
     }
+
+    /**
+     * The way back: whole numbers of the smallest unit as people write an amount, with the currency ({@code 5000.00 PLN}).
+     * Exact: the number is shifted by the currency's digits, never divided, and no floating point is involved. A currency
+     * the platform does not know is written with no fraction.
+     */
+    static String written(long smallestUnits, String currency) {
+        int digits;
+        try {
+            digits = Math.max(0, Currency.getInstance(currency.toUpperCase(Locale.ROOT)).getDefaultFractionDigits());
+        } catch (IllegalArgumentException notACurrency) {
+            digits = 0;
+        }
+        return BigDecimal.valueOf(smallestUnits, digits).toPlainString() + " " + currency.toUpperCase(Locale.ROOT);
+    }
 }

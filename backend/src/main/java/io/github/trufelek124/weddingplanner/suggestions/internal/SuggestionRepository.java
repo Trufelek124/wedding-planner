@@ -1,5 +1,6 @@
 package io.github.trufelek124.weddingplanner.suggestions.internal;
 
+import io.github.trufelek124.weddingplanner.suggestions.Proposal;
 import io.github.trufelek124.weddingplanner.suggestions.Suggestions;
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.Kind;
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.PaymentKind;
@@ -133,14 +134,37 @@ class SuggestionRepository {
     /** The newest first. The beginning is compared character by character: it is no pattern. */
     List<Suggestions.Proposed> proposedUnder(UUID weddingId, String keyBeginning, int most) {
         return jdbc.sql("""
-                SELECT source_key, title FROM suggestion
+                SELECT source_key, kind, title, start_date, due_date, amount FROM suggestion
                 WHERE wedding_id = ? AND left(source_key, length(?)) = ?
                 ORDER BY created_at DESC, id DESC
                 LIMIT ?
                 """)
                 .params(weddingId, keyBeginning, keyBeginning, most)
-                .query((row, number) -> new Suggestions.Proposed(row.getString("source_key"), row.getString("title")))
+                .query(SuggestionRepository::proposed)
                 .list();
+    }
+
+    /** The newest first, whatever became of them. */
+    List<Suggestions.Proposed> proposedSince(UUID weddingId, Instant since, int most) {
+        return jdbc.sql("""
+                SELECT source_key, kind, title, start_date, due_date, amount FROM suggestion
+                WHERE wedding_id = ? AND created_at >= ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """)
+                .params(weddingId, at(since), most)
+                .query(SuggestionRepository::proposed)
+                .list();
+    }
+
+    private static Suggestions.Proposed proposed(ResultSet row, int number) throws SQLException {
+        return new Suggestions.Proposed(
+                row.getString("source_key"),
+                Proposal.Kind.valueOf(row.getString("kind")),
+                row.getString("title"),
+                row.getObject("start_date", LocalDate.class),
+                row.getObject("due_date", LocalDate.class),
+                row.getObject("amount", Long.class));
     }
 
     int madeSince(UUID weddingId, UUID inboxMemberId, Instant since) {

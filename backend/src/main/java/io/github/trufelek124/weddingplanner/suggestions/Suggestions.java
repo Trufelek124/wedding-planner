@@ -1,6 +1,7 @@
 package io.github.trufelek124.weddingplanner.suggestions;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,8 +26,15 @@ public interface Suggestions {
      */
     UUID handIn(Proposal proposal);
 
-    /** What a suggestion was handed in as: its key and its title. It holds a part of someone's mail and prints nothing. */
-    record Proposed(String sourceKey, String title) {
+    /**
+     * What a suggestion was handed in as: its key, and what is needed to recognise it again (its kind, its title, its first
+     * day, the day it is due and its amount). It holds a part of someone's mail and prints nothing.
+     *
+     * @param startDate a plan item's first day, or null
+     * @param dueDate the day it is due or ends, or null
+     * @param amount in the smallest unit of the wedding's currency, or null
+     */
+    record Proposed(String sourceKey, Proposal.Kind kind, String title, LocalDate startDate, LocalDate dueDate, Long amount) {
 
         @Override
         public String toString() {
@@ -42,6 +50,14 @@ public interface Suggestions {
      * @throws IllegalArgumentException when the beginning is blank or {@code most} is not positive
      */
     List<Proposed> proposedUnder(UUID weddingId, String keyBeginning, int most);
+
+    /**
+     * What was handed in for this wedding at or after this moment, from whichever mail and whatever became of it since
+     * (waiting, added by itself, accepted, rejected), the newest first, at most {@code most}.
+     *
+     * @throws IllegalArgumentException when {@code most} is not positive
+     */
+    List<Proposed> proposedSince(UUID weddingId, Instant since, int most);
 
     /** How many suggestions from this member's inbox came into being at or after this moment. */
     int madeSince(UUID weddingId, UUID inboxMemberId, Instant since);

@@ -44,6 +44,9 @@ class MailNotSetUpIntegrationTest extends PostgresIntegrationTest {
     void aWeddingAndAQuietGoogle() throws Exception {
         google.reset();
         wedding = TestWedding.fresh(jdbc, port);
+        // What the reading used is the server's, not a wedding's: another class's calls must not be counted here,
+        // in whichever order the classes run.
+        jdbc.update("DELETE FROM reading_usage");
     }
 
     @Test

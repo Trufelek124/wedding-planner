@@ -64,13 +64,18 @@ final class WatchedMail implements MailReading {
     }
 
     @Override
-    public boolean mark(MessageHandle message, Verdict verdict) {
+    public boolean copyWasRead(MessageHandle message, String letterKey) {
+        return real.copyWasRead(message, letterKey);
+    }
+
+    @Override
+    public boolean mark(MessageHandle message, Verdict verdict, String letterKey) {
         if (marksToFail > 0) {
             marksToFail--;
             throw new IllegalStateException("The server stopped here; the text of this exception is Secret-Qx");
         }
         marked.add(verdict);
-        return real.mark(message, verdict);
+        return real.mark(message, verdict, letterKey);
     }
 
     @Override

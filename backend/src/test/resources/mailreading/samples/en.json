@@ -483,7 +483,7 @@
         }
       ],
       "alreadyProposed": [
-        "Send Red Door Kitchen the guest numbers by 4 December"
+        "TASK | Send Red Door Kitchen the guest numbers by 4 December | due 2026-12-04"
       ],
       "why": "The request for the guest count was already proposed from this thread; only the tasting on 9 January 2027 (a Saturday) is new.",
       "expected": {

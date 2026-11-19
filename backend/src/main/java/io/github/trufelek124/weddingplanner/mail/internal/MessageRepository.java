@@ -48,7 +48,7 @@ class MessageRepository {
     record Verdict(String word, String reason, Integer proposals) {}
 
     /** How many messages of a wedding's mailboxes are in each state. */
-    record Counts(int waiting, int read, int aboutTheWedding, int couldNotBeRead, int proposals) {}
+    record Counts(int waiting, int read, int aboutTheWedding, int couldNotBeRead, int proposals, int copies) {}
 
     private final JdbcClient jdbc;
 
@@ -194,16 +194,33 @@ class MessageRepository {
      * Gives the message its verdict, if it has none yet and belongs to this wedding's member. A message that has one
      * keeps it: the first verdict stands.
      *
+     * @param letterKey what the letter is known by (a hash), or null where no letter was had
      * @return whether this call gave the verdict; false when it had one, or the message is not there (any more)
      */
-    boolean mark(UUID weddingId, UUID memberId, String messageId, Verdict verdict, Instant now) {
+    boolean mark(UUID weddingId, UUID memberId, String messageId, Verdict verdict, String letterKey, Instant now) {
         return jdbc.sql("""
-                UPDATE mail_message SET verdict = ?, unread_reason = ?, proposals = ?, read_at = ?
+                UPDATE mail_message SET verdict = ?, unread_reason = ?, proposals = ?, letter_key = ?, read_at = ?
                 WHERE member_id = ? AND message_id = ? AND verdict IS NULL
                   AND member_id IN (SELECT id FROM wedding_member WHERE wedding_id = ?)
                 """)
-                .params(verdict.word(), verdict.reason(), verdict.proposals(), at(now), memberId, messageId, weddingId)
+                .params(verdict.word(), verdict.reason(), verdict.proposals(), letterKey, at(now), memberId, messageId, weddingId)
                 .update() == 1;
+    }
+
+    /**
+     * Whether another noted message of this wedding (in either mailbox) has a verdict and this key. The message itself is
+     * not its own copy.
+     */
+    boolean copyWasRead(UUID weddingId, UUID memberId, String messageId, String letterKey) {
+        return jdbc.sql("""
+                SELECT EXISTS (
+                    SELECT 1 FROM mail_message m JOIN wedding_member w ON w.id = m.member_id
+                    WHERE m.letter_key = ? AND m.verdict IS NOT NULL AND w.wedding_id = ?
+                      AND NOT (m.member_id = ? AND m.message_id = ?))
+                """)
+                .params(letterKey, weddingId, memberId, messageId)
+                .query(Boolean.class)
+                .single();
     }
 
     Counts counts(UUID weddingId) {
@@ -212,13 +229,14 @@ class MessageRepository {
                        count(*) FILTER (WHERE m.verdict IS NOT NULL) AS read,
                        count(*) FILTER (WHERE m.verdict = 'WEDDING') AS about,
                        count(*) FILTER (WHERE m.verdict = 'UNREADABLE') AS unreadable,
+                       count(*) FILTER (WHERE m.verdict = 'COPY') AS copies,
                        COALESCE(sum(m.proposals) FILTER (WHERE m.verdict = 'WEDDING'), 0) AS proposals
                 FROM mail_message m JOIN wedding_member w ON w.id = m.member_id
                 WHERE w.wedding_id = ?
                 """)
                 .param(weddingId)
                 .query((rows, number) -> new Counts(rows.getInt("waiting"), rows.getInt("read"), rows.getInt("about"),
-                        rows.getInt("unreadable"), rows.getInt("proposals")))
+                        rows.getInt("unreadable"), rows.getInt("proposals"), rows.getInt("copies")))
                 .single();
     }
 

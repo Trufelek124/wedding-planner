@@ -41,6 +41,9 @@ public final class StandInGoogle {
 
     private static final StandInGoogle INSTANCE = new StandInGoogle();
 
+    /** Numbers the made-up {@code Message-ID}s of messages written without one given: no two messages, in any mailbox, share one. */
+    private static final AtomicInteger MADE_UP = new AtomicInteger();
+
     public static StandInGoogle get() {
         return INSTANCE;
     }
@@ -185,6 +188,16 @@ public final class StandInGoogle {
          * give them encoded, as mail has them) and left out when null.
          */
         public synchronized void write(String id, String threadId, Instant date, String from, String subject, Mime body, String... labels) {
+            writeWithMessageId(id, threadId, date, from, subject, body, "<made-up-" + MADE_UP.incrementAndGet() + "@stand-in.example>", labels);
+        }
+
+        /**
+         * As {@link #write(String, String, Instant, String, String, Mime, String...)}, with this {@code Message-ID} header, as
+         * given (so that a test can write it with or without angle brackets and spaces); none is written when it is null. A
+         * message written without one is given an identifier of its own, which no other message has.
+         */
+        public synchronized void writeWithMessageId(String id, String threadId, Instant date, String from, String subject, Mime body,
+                String messageIdHeader, String... labels) {
             historyId++;
             Map<String, Object> payload = new LinkedHashMap<>(body.part);
             @SuppressWarnings("unchecked")
@@ -194,6 +207,9 @@ public final class StandInGoogle {
             }
             if (subject != null) {
                 headers.add(Map.of("name", "Subject", "value", subject));
+            }
+            if (messageIdHeader != null) {
+                headers.add(Map.of("name", "Message-ID", "value", messageIdHeader));
             }
             headers.add(Map.of("name", "Date", "value", "Mon, 1 Jan 2001 00:00:00 +0000 (a date the planner must not use)"));
             payload.put("headers", headers);

@@ -104,8 +104,10 @@ interface MailSource {
     /**
      * A message with the thread it belongs to. {@code subject} may be empty. {@code earlier} are the messages of the
      * thread that arrived before this one, the oldest first; the owner's own replies are among them, drafts, spam and the bin are not.
+     * {@code identifier} is what the sender gave the letter ({@code Message-ID}), without the spaces and the angle brackets
+     * around it; empty when the message has none. It is only for working a key out: never kept, logged or printed.
      */
-    record Letter(Person from, String subject, Instant arrived, Text text, List<Earlier> earlier) {
+    record Letter(Person from, String subject, Instant arrived, Text text, List<Earlier> earlier, String identifier) {
 
         @Override
         public String toString() {
