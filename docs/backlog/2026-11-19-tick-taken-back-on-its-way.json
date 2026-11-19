@@ -1,0 +1,21 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP4-S2-T3",
+   "story": "EP4-S2",
+   "title": "Android: a tick taken back while it is on its way is not lost",
+   "description": "On the phone a task is ticked off and the tick is being sent. If the person takes the tick away again before the answer arrives, the phone drops the waiting change as if nothing had happened, the tick lands on the server and stays: the second choice is lost. A choice made while the first is on its way is a change of what the server is about to have and has to be kept and sent after it, as the phone already does for a guest's status. Done when tests on the JVM show it for a tick taken back and for a tick set again, and a tick taken back before anything was sent still leaves nothing to send.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  }
+ ]
+}

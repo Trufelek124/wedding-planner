@@ -522,6 +522,12 @@
    "publicId": "WP-TS-57",
    "id": "7a874db7-cf7a-47e3-9ba6-fed31b6a1775",
    "title": "Android: change a guest's status, also without a connection"
+  },
+  "EP4-S2-T3": {
+   "type": "task",
+   "publicId": "WP-TS-58",
+   "id": "d0ecd071-84e8-4c81-aef7-9d430156ec9c",
+   "title": "Android: a tick taken back while it is on its way is not lost"
   }
  }
 }
