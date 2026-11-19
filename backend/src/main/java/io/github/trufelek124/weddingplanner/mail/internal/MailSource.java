@@ -9,8 +9,8 @@ import java.util.UUID;
  * and where to go on from. Nothing here knows which provider stands behind it ({@link GmailSource} is the first;
  * another can take its place without the sync noticing). A mailbox is named by the owner it belongs to.
  *
- * <p>This is deliberately only "which messages": identifiers, no content. What will read a message (S03 section 7,
- * "give me this message") is the next story's and is added here when it is built, not before.
+ * <p>It also gives one message with the thread it belongs to (S03 section 7, "give me this message"). That is
+ * somebody else's words: what carries them hides them from {@code toString()}, and nothing here keeps or logs them.
  */
 interface MailSource {
 
@@ -66,6 +66,78 @@ interface MailSource {
             return kind;
         }
     }
+
+    /** A person who wrote a message. The name may be empty (the address alone was given); both are somebody's own words. */
+    record Person(String name, String address) {
+
+        @Override
+        public String toString() {
+            return "Person[]";
+        }
+    }
+
+    /**
+     * What a message says, cut where it is too long.
+     *
+     * @param cut whether the text goes on beyond {@link #MOST_CHARACTERS}: what is here is the beginning
+     */
+    record Text(String text, boolean cut) {
+
+        @Override
+        public String toString() {
+            return "Text[]";
+        }
+    }
+
+    /** What one message's text is cut at, in characters. */
+    int MOST_CHARACTERS = 100_000;
+
+    /** A message of the thread that arrived before the one asked for. The text may be empty (an attachment alone). */
+    record Earlier(Person from, Instant arrived, Text text) {
+
+        @Override
+        public String toString() {
+            return "Earlier[]";
+        }
+    }
+
+    /**
+     * A message with the thread it belongs to. {@code subject} may be empty. {@code earlier} are the messages of the
+     * thread that arrived before this one, the oldest first; the owner's own replies are among them, drafts, spam and the bin are not.
+     */
+    record Letter(Person from, String subject, Instant arrived, Text text, List<Earlier> earlier) {
+
+        @Override
+        public String toString() {
+            return "Letter[]";
+        }
+    }
+
+    /** What asking for a message came to, when the mailbox itself was in order. */
+    sealed interface Fetch permits Found, Gone, NoText, TooLarge {}
+
+    record Found(Letter letter) implements Fetch {
+
+        @Override
+        public String toString() {
+            return "Found[]";
+        }
+    }
+
+    /** The message is no longer in the mailbox: deleted, in the bin or marked as spam. */
+    record Gone() implements Fetch {}
+
+    /** The message has no text: no plain part and no HTML part, or only attachments. */
+    record NoText() implements Fetch {}
+
+    /** The thread is larger than anything the source is willing to fetch. */
+    record TooLarge() implements Fetch {}
+
+    /**
+     * The message {@code messageId} of the thread {@code threadId}, with the earlier messages of the thread. Attachments
+     * are never fetched or read.
+     */
+    Fetch letter(UUID owner, String messageId, String threadId) throws SourceFailure;
 
     /**
      * Where the mailbox stands now. Asked <em>before</em> a first look, so that what arrives while the look is under

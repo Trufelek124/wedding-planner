@@ -273,6 +273,12 @@ uses another only through the types in that module's own package, and never in a
     only when it is complete (the marker and "last looked at" move with the last of what it found); a refusal by
     Google puts that mailbox off for growing times that are kept in the table; a mailbox that has to be connected
     again is left alone. The log says that a look happened and how many messages it noted, never which.
+  - What another module may do with a noted message is `MailReading`, in `mail`'s own package: the messages not
+    read yet (newest first, without keeping a message's date: the order of noting is kept), a message's content
+    fetched from Gmail at that moment — sender, subject, date, text, and the earlier messages of its thread —
+    keys that name a message and its thread without saying anything, and marking a message with its verdict,
+    which is what makes it "read" for good. A message's content is never kept or logged; attachments are never
+    fetched; a text comes from the plain part, or from the HTML part with no markup, script or style left.
   - Tests use `StandInGoogle`, which also stands in for a mailbox, and move a test clock; the sync does not run by
     itself in tests. **No test ever calls the real Google.**
 

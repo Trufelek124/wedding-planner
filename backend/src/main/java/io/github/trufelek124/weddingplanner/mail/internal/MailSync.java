@@ -5,6 +5,7 @@ import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Kind;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Page;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.SourceFailure;
 import io.github.trufelek124.weddingplanner.mail.internal.MessageRepository.Completion;
+import io.github.trufelek124.weddingplanner.mail.internal.MessageRepository.Look;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -142,12 +143,14 @@ class MailSync {
     /** The marker is taken first: what arrives while the pages are read is then found by the next look. */
     private Optional<Integer> byDate(Connection connection, Instant from) throws SourceFailure {
         String standing = source.standingNow(connection.memberId());
+        // A look by date lists the newest message first.
+        Look look = messages.beginLook(true);
         int added = 0;
         String continuation = null;
         while (true) {
             Page page = source.receivedSince(connection.memberId(), from, continuation);
             boolean last = page.continuation() == null;
-            Optional<Integer> stored = store(connection, page, last ? new Completion(standing, clock.instant()) : null);
+            Optional<Integer> stored = store(connection, look, page, last ? new Completion(standing, clock.instant()) : null);
             if (stored.isEmpty()) {
                 return Optional.empty();
             }
@@ -160,6 +163,8 @@ class MailSync {
     }
 
     private Optional<Integer> since(Connection connection) throws SourceFailure {
+        // The history lists what was added in the order it happened: the newest message last.
+        Look look = messages.beginLook(false);
         int added = 0;
         String continuation = null;
         while (true) {
@@ -168,7 +173,7 @@ class MailSync {
             Completion completion = last
                     ? new Completion(page.marker() != null ? page.marker() : connection.syncMarker(), clock.instant())
                     : null;
-            Optional<Integer> stored = store(connection, page, completion);
+            Optional<Integer> stored = store(connection, look, page, completion);
             if (stored.isEmpty()) {
                 return Optional.empty();
             }
@@ -180,8 +185,8 @@ class MailSync {
         }
     }
 
-    private Optional<Integer> store(Connection connection, Page page, Completion completion) {
-        return messages.note(connection.memberId(), connection.connectedAt(), page.messages(), clock.instant(), completion);
+    private Optional<Integer> store(Connection connection, Look look, Page page, Completion completion) {
+        return messages.note(connection.memberId(), connection.connectedAt(), look, page.messages(), clock.instant(), completion);
     }
 
     /** A source that answers with the page it was just asked for would keep a look going for ever. */

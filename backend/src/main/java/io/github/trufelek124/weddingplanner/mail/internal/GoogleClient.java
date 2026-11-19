@@ -193,6 +193,14 @@ class GoogleClient {
      * rate limit as its reason) and Google's own failures are {@link Failure#SERVER_TROUBLE}.
      */
     JsonNode gmailGet(String accessToken, String path, Map<String, String> query) throws GoogleFailure {
+        return gmailGet(accessToken, path, query, MOST_BYTES);
+    }
+
+    /**
+     * As {@link #gmailGet(String, String, Map)}, with a larger limit on the answer for the one call that needs it (a
+     * thread with its messages in full). An answer beyond the limit is {@link Failure#TOO_LARGE}.
+     */
+    JsonNode gmailGet(String accessToken, String path, Map<String, String> query, int mostBytes) throws GoogleFailure {
         Google google = setup.require().google();
         String base = google.gmailUri().toString().replaceAll("/+$", "");
         String address = base + "/gmail/v1/users/me/" + path + (query.isEmpty() ? "" : "?" + form(query));
@@ -202,7 +210,7 @@ class GoogleClient {
                 .timeout(google.timeout())
                 .GET()
                 .build();
-        Answer answer = send(request);
+        Answer answer = send(request, mostBytes);
         if (answer.status() == 401) {
             throw new GoogleFailure(Failure.UNAUTHORIZED);
         }
@@ -276,8 +284,12 @@ class GoogleClient {
     }
 
     private Answer send(HttpRequest request) throws GoogleFailure {
+        return send(request, MOST_BYTES);
+    }
+
+    private Answer send(HttpRequest request, int mostBytes) throws GoogleFailure {
         Duration timeout = setup.require().google().timeout();
-        CompletableFuture<HttpResponse<byte[]>> call = client().sendAsync(request, info -> new Limited());
+        CompletableFuture<HttpResponse<byte[]>> call = client().sendAsync(request, info -> new Limited(mostBytes));
         try {
             HttpResponse<byte[]> response = call.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             return new Answer(response.statusCode(), jsonOf(response));
@@ -379,7 +391,12 @@ class GoogleClient {
 
         private final CompletableFuture<byte[]> body = new CompletableFuture<>();
         private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        private final int most;
         private Flow.Subscription subscription;
+
+        Limited(int most) {
+            this.most = most;
+        }
 
         @Override
         public CompletionStage<byte[]> getBody() {
@@ -395,7 +412,7 @@ class GoogleClient {
         @Override
         public void onNext(List<ByteBuffer> buffers) {
             for (ByteBuffer buffer : buffers) {
-                if (bytes.size() + buffer.remaining() > MOST_BYTES) {
+                if (bytes.size() + buffer.remaining() > most) {
                     subscription.cancel();
                     body.completeExceptionally(new TooLarge());
                     return;

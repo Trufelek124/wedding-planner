@@ -80,8 +80,88 @@ public final class StandInGoogle {
         }
     }
 
-    /** A message in a made-up mailbox. Only what Gmail's list and history would say of it. */
-    private record Message(String id, String threadId, Set<String> labels, Instant date, long historyId) {}
+    /**
+     * A message in a made-up mailbox: what Gmail's list and history say of it, and, for one written with
+     * {@link Mailbox#write}, what its thread would say of it in full (headers and parts). {@code payload} is null for
+     * one that was only delivered.
+     */
+    private record Message(String id, String threadId, Set<String> labels, Instant date, long historyId, Map<String, Object> payload) {}
+
+    private static final tools.jackson.databind.json.JsonMapper JSON = tools.jackson.databind.json.JsonMapper.builder().build();
+
+    /**
+     * A part of a made-up message, as Gmail's {@code format=full} would show it: its type, its headers, its body as
+     * base64url in the part's own charset, and its children. Everything in it is made up.
+     */
+    public static final class Mime {
+
+        private final Map<String, Object> part = new LinkedHashMap<>();
+
+        private Mime(String type, String charset, byte[] bytes, String filename, String attachmentId, List<Mime> children) {
+            List<Map<String, String>> headers = new ArrayList<>();
+            String contentType = charset == null ? type : type + "; charset=\"" + charset + "\"";
+            headers.add(Map.of("name", "Content-Type", "value", contentType));
+            part.put("partId", "0");
+            part.put("mimeType", type);
+            part.put("filename", filename == null ? "" : filename);
+            part.put("headers", headers);
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("size", bytes == null ? 0 : bytes.length);
+            if (attachmentId != null) {
+                body.put("attachmentId", attachmentId);
+            } else if (bytes != null) {
+                body.put("data", Base64.getUrlEncoder().withoutPadding().encodeToString(bytes));
+            }
+            part.put("body", body);
+            if (children != null) {
+                part.put("parts", children.stream().map(child -> child.part).toList());
+            }
+        }
+
+        public static Mime plain(String text) {
+            return plain(text, java.nio.charset.StandardCharsets.UTF_8.name());
+        }
+
+        public static Mime plain(String text, String charset) {
+            return new Mime("text/plain", charset, text.getBytes(java.nio.charset.Charset.forName(charset)), null, null, null);
+        }
+
+        /** A part whose charset is named as Gmail would show it, but whose bytes are in another: for a name nobody knows. */
+        public static Mime plainClaimingCharset(String text, String claimedCharset) {
+            return new Mime("text/plain", claimedCharset, text.getBytes(java.nio.charset.StandardCharsets.UTF_8), null, null, null);
+        }
+
+        public static Mime html(String html) {
+            return html(html, java.nio.charset.StandardCharsets.UTF_8.name());
+        }
+
+        public static Mime html(String html, String charset) {
+            return new Mime("text/html", charset, html.getBytes(java.nio.charset.Charset.forName(charset)), null, null, null);
+        }
+
+        /** {@code subtype} is "mixed", "alternative", "related" ... */
+        public static Mime multipart(String subtype, Mime... parts) {
+            return new Mime("multipart/" + subtype, null, null, null, null, List.of(parts));
+        }
+
+        /** A file that Gmail gives by an attachment identifier only; whatever it holds is {@code inside} (never shown). */
+        public static Mime file(String filename, String type, String attachmentId) {
+            return new Mime(type, null, null, filename, attachmentId, null);
+        }
+
+        /** A small file that Gmail shows with its data in the thread: still a file, whatever its type says. */
+        public static Mime inlineFile(String filename, String type, String text) {
+            return new Mime(type, "UTF-8", text.getBytes(java.nio.charset.StandardCharsets.UTF_8), filename, null, null);
+        }
+
+        /** The same part with this header added (a disposition, for instance). */
+        public Mime with(String name, String value) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, String>> headers = (List<Map<String, String>>) part.get("headers");
+            headers.add(Map.of("name", name, "value", value));
+            return this;
+        }
+    }
 
     /**
      * A made-up mailbox: messages with their labels and dates, the marker (Gmail's history id) that grows with every
@@ -97,7 +177,51 @@ public final class StandInGoogle {
         /** A message arrives, with these labels (INBOX, SENT, DRAFT, SPAM, TRASH, CHAT ...), written at {@code date}. */
         public synchronized void deliver(String id, String threadId, Instant date, String... labels) {
             historyId++;
-            messages.add(new Message(id, threadId, Set.of(labels), date, historyId));
+            messages.add(new Message(id, threadId, Set.of(labels), date, historyId, null));
+        }
+
+        /**
+         * A message arrives with headers and a body. {@code from} and {@code subject} are written as given (so a test can
+         * give them encoded, as mail has them) and left out when null.
+         */
+        public synchronized void write(String id, String threadId, Instant date, String from, String subject, Mime body, String... labels) {
+            historyId++;
+            Map<String, Object> payload = new LinkedHashMap<>(body.part);
+            @SuppressWarnings("unchecked")
+            List<Map<String, String>> headers = new ArrayList<>((List<Map<String, String>>) payload.get("headers"));
+            if (from != null) {
+                headers.add(Map.of("name", "From", "value", from));
+            }
+            if (subject != null) {
+                headers.add(Map.of("name", "Subject", "value", subject));
+            }
+            headers.add(Map.of("name", "Date", "value", "Mon, 1 Jan 2001 00:00:00 +0000 (a date the planner must not use)"));
+            payload.put("headers", headers);
+            messages.add(new Message(id, threadId, Set.of(labels), date, historyId, payload));
+        }
+
+        /** Gmail's {@code users.threads.get} with {@code format=full}; null when there is no such thread (404). */
+        private synchronized String thread(String threadId) {
+            List<Message> inThread = messages.stream().filter(m -> m.threadId().equals(threadId)).toList();
+            if (inThread.isEmpty()) {
+                return null;
+            }
+            List<Map<String, Object>> shown = new ArrayList<>();
+            // Gmail shows a thread oldest first; a message that arrived at the same moment keeps the order of delivery.
+            inThread.stream().sorted(java.util.Comparator.comparing(Message::date)).forEach(m -> {
+                Map<String, Object> message = new LinkedHashMap<>();
+                message.put("id", m.id());
+                message.put("threadId", m.threadId());
+                message.put("labelIds", List.copyOf(m.labels()));
+                message.put("internalDate", Long.toString(m.date().toEpochMilli()));
+                message.put("payload", m.payload() == null ? Map.of("mimeType", "text/plain", "headers", List.of(), "body", Map.of("size", 0)) : m.payload());
+                shown.add(message);
+            });
+            try {
+                return JSON.writeValueAsString(Map.of("id", threadId, "historyId", Long.toString(historyId), "messages", shown));
+            } catch (RuntimeException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         /** Google no longer knows what happened before now: every marker taken until now is "too old". */
@@ -212,6 +336,12 @@ public final class StandInGoogle {
             server.createContext("/revoke", this::revoke);
             server.createContext("/gmail/v1/users/me/profile", this::profile);
             server.createContext("/gmail/v1/users/me/messages", exchange -> gmail(exchange, "/gmail/v1/users/me/messages", Mailbox::list));
+            server.createContext("/gmail/v1/users/me/threads/", exchange -> thread(exchange));
+            // What the planner must never ask for: a message's own address (and with it an attachment's) is only counted.
+            server.createContext("/gmail/v1/users/me/messages/", exchange -> {
+                record(exchange, "/gmail/v1/users/me/messages/", Map.of());
+                answer(exchange, 404, "application/json", "{\"error\":{\"code\":404}}");
+            });
             server.createContext("/gmail/v1/users/me/history", exchange -> gmail(exchange, "/gmail/v1/users/me/history", Mailbox::history));
             server.createContext("/elsewhere", exchange -> {
                 record(exchange, "/elsewhere", Map.of());
@@ -474,6 +604,31 @@ public final class StandInGoogle {
             return;
         }
         String body = what.apply(mailbox(account), query);
+        if (body == null) {
+            answer(exchange, 404, "application/json", "{\"error\":{\"code\":404,\"status\":\"NOT_FOUND\"}}");
+        } else {
+            answer(exchange, 200, "application/json", body);
+        }
+    }
+
+    /** {@code users.threads.get}: {@code /threads/{id}}, in full. */
+    private void thread(HttpExchange exchange) throws IOException {
+        String path = "/gmail/v1/users/me/threads";
+        Map<String, String> query = form(exchange.getRequestURI().getRawQuery());
+        String id = exchange.getRequestURI().getPath().substring("/gmail/v1/users/me/threads/".length());
+        Map<String, String> seen = new LinkedHashMap<>(query);
+        seen.put("id", id);
+        record(exchange, path, seen);
+        String account = accountOf(exchange);
+        Reply prepared = preparedForGmail(path, account);
+        if (prepared != null && replied(exchange, prepared)) {
+            return;
+        }
+        if (account == null) {
+            answer(exchange, 401, "application/json", "{\"error\":{\"code\":401}}");
+            return;
+        }
+        String body = mailbox(account).thread(id);
         if (body == null) {
             answer(exchange, 404, "application/json", "{\"error\":{\"code\":404,\"status\":\"NOT_FOUND\"}}");
         } else {

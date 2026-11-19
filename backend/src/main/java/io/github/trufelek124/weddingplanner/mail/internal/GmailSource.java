@@ -92,6 +92,33 @@ class GmailSource implements MailSource {
         return new Page(found, next(answer), identifier(scalar(answer, "historyId")).orElse(null));
     }
 
+    /** The thread is read in full, with the messages' own words: the one place where the limit on an answer is larger. */
+    private static final int MOST_THREAD_BYTES = 2 * 1024 * 1024;
+
+    @Override
+    public Fetch letter(UUID owner, String messageId, String threadId) throws SourceFailure {
+        if (identifier(messageId).isEmpty() || identifier(threadId).isEmpty()) {
+            return new Gone();
+        }
+        JsonNode thread;
+        try {
+            // Never the attachments: the thread's own answer is all that is asked for.
+            thread = read(owner, "threads/" + threadId, Map.of("format", "full"), MOST_THREAD_BYTES, true);
+        } catch (GoogleFailure failure) {
+            return switch (failure.failure()) {
+                case NOT_FOUND -> new Gone();
+                case TOO_LARGE -> new TooLarge();
+                default -> throw translated(failure);
+            };
+        }
+        try {
+            return GmailLetters.of(thread, messageId);
+        } catch (RuntimeException unreadable) {
+            // What the answer holds is somebody's words: only that it could not be understood is said.
+            throw new SourceFailure(Kind.INTERRUPTED);
+        }
+    }
+
     // ---------------------------------------------------------------- reading
 
     /**
@@ -100,16 +127,32 @@ class GmailSource implements MailSource {
      */
     private JsonNode read(UUID owner, String path, Map<String, String> query) throws SourceFailure {
         try {
-            return google.gmailGet(token(owner), path, query);
+            return read(owner, path, query, 64 * 1024, false);
+        } catch (GoogleFailure failure) {
+            throw translated(failure);
+        }
+    }
+
+    /**
+     * The same; with {@code answers}, a failure that is not the mailbox's (not found, too large) is left to the
+     * caller: it is an answer to what was asked, not a trouble of the mailbox. The limit is the largest answer taken.
+     */
+    private JsonNode read(UUID owner, String path, Map<String, String> query, int mostBytes, boolean answers)
+            throws SourceFailure, GoogleFailure {
+        try {
+            return google.gmailGet(token(owner), path, query, mostBytes);
         } catch (GoogleFailure first) {
             if (first.failure() != Failure.UNAUTHORIZED) {
-                throw translated(first);
+                throw first;
             }
         }
         access.forget(owner);
         try {
-            return google.gmailGet(token(owner), path, query);
+            return google.gmailGet(token(owner), path, query, mostBytes);
         } catch (GoogleFailure second) {
+            if (answers && (second.failure() == Failure.NOT_FOUND || second.failure() == Failure.TOO_LARGE)) {
+                throw second;
+            }
             // Two refusals of a token that was just made: not a matter of the connection, but of Google's mood.
             throw new SourceFailure(Kind.REFUSED_FOR_NOW);
         }
