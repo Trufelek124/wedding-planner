@@ -95,6 +95,14 @@ closing comment quotes its summary lines and its exit code.
   address, and only on a suggestion from your own inbox (the other owner's mail cannot be opened by you). A decision is sent once; `already-decided` overwrites nothing and says what was decided and by whom.
   "Change and accept" sends every value of the proposal, because the server makes what is sent and nothing else.
   How many wait is asked once in `Shell` and shared with Home and the pages (`WaitingContext`).
+- What the import added by itself (S05) is a part of the same inbox, "Added by itself", with **Undo** and **Keep**:
+  `decide()` (`src/suggestions/decisions.ts`) sends one request per press and answers with a notice or a trouble.
+  `entry-changed` is shown in the server's own sentence, and the card leaves: the suggestion counts as kept. How
+  many wait and how many were added are **two numbers that are never added up** — in the bar the count of what
+  waits and a quieter "+n" with words for a screen reader, on Home two lines. `/suggestions/:id` reads the one
+  suggestion: a form for one that waits, otherwise where it came from and how it stands (with Undo and Keep while
+  it is only added). An entry with a `fromSuggestionId` says "From e-mail" on its form and leads there. The
+  threshold ("Adding by itself") is on the e-mail page and sends both values, so that "never" keeps the number.
 - The e-mail import page (`src/mail/`, S03) is at `/mail`, the address the server sends the browser back to after
   Google. It sends the browser on only to an `https` address at `accounts.google.com` (`googleAddress`), says what
   happened once and takes the parameter out of the address, never shows the partner's address, and asks on the
@@ -193,7 +201,7 @@ first uses it, at the version D-005 names.
   how many wait. A server that does not know them yet (a 404 on that one route) counts as "none wait" and the
   rest of the planner still loads. Everything that came out of a mail is plain text and never printed or logged;
   "Open the e-mail" is drawn only for an `https` address whose host is exactly `mail.google.com`
-  (`mailLinkAddress` in `planner/Contact.kt`).
+  (`mailLinkAddress` in `planner/Contact.kt`), and only on a suggestion from your own inbox (`Planner.inYourInbox`).
 - Accepting or rejecting a suggestion on the phone waits in a table of its own (`waiting_suggestion_decision`, one
   row per suggestion) and is sent by `sync()` after the tasks and the guests' statuses and before the shares, as
   proposed: the request has no body. A decision stands on the server, so the phone is strict about it: one that
@@ -201,6 +209,16 @@ first uses it, at the version D-005 names.
   Decided otherwise by the other owner, gone, or not taken by the server are said with the suggestion's title and
   never sent again by themselves. If the answer to a sent decision is lost, the phone cannot know that it landed:
   taking it back then only changes the phone, and the next load shows what the server has.
+- What the import added by itself (S05) is part of the copy too: the load asks for every state and keeps those
+  that wait, those added by themselves, and of the accepted ones only those an entry of the copy points to — never
+  a rejected one, never a state the app does not know. **Keep** and **Undo** are decisions like the other two: the
+  same table, the same place in `sync()`, the same strictness about what is on its way. An undo takes the entry
+  from every list of the phone at once and gives it back when it is taken back or not taken; an undo of an entry
+  the phone itself has changed is refused on the phone, with the server's words. `entry-changed` from the server
+  means the suggestion counts as kept and the entry is shown again as the server has it. Home and More say two
+  numbers — how many wait, how many were added — that are never added up, and a suggestion with a decision that
+  waits counts in neither. A task or step with a `fromSuggestionId` says "From e-mail" and leads to its source
+  (`planner/SuggestionSource.kt`) when the copy has it; the mark is plain words when it has not.
 - A phone number, an e-mail address, an address and a website open in the phone's own apps through
   `planner/Contact.kt`, and only through it. What the server holds was typed by a person: each way builds one fixed
   kind of intent, a number is dialled and never called, and a website opens only as `http` or `https` — anything

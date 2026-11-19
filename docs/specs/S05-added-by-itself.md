@@ -77,7 +77,10 @@ other one is refused as already decided.
   many wait — two numbers, because they ask different things of a person.
 - **The entry itself** says "From e-mail" with the way to its source (section 3).
 - On the **phone** the same: the part of the inbox, Undo and Keep — also without a connection, sent later like
-  the other decisions (S02 section 7) — and the mark on an entry.
+  the other decisions (S02 section 7) — and the mark on an entry. An undo made on the phone takes the entry from
+  the phone's lists at once and gives it back if it is taken back or the server does not take it; an undo of an
+  entry the phone itself has changed and not yet sent is refused on the phone. The phone keeps, of the accepted
+  suggestions, only those an entry leads to, and none that was rejected.
 
 ## 6. Setting how sure it has to be
 

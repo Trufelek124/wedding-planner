@@ -106,7 +106,7 @@ web's.
   a connection and says from when it is. Home says how many wait and leads to the inbox; More has a row for it.
 - A card says what is proposed in the planner's own words (kind, title, day, amount, vendor), then where it comes
   from (sender, subject, date), the passage as a quotation, and how sure the import is. "Open the e-mail" opens the
-  message in Gmail.
+  message in Gmail, and is offered only on a suggestion from one's own inbox — on the web as on the phone.
 - **Accept** and **Reject** take effect on the phone at once and are sent when the server can be reached, like a
   tick: the decision waits on the phone, survives the app being closed, and is sent by the app or by the
   background worker. Until it is sent it can be taken back on the phone — that is the way out of a wrong tap.
