@@ -10,6 +10,7 @@ import { useLoaded } from '../planning/useLoaded.ts'
 import { useStatusChange, type PendingStatus } from '../planning/useStatusChange.ts'
 import { Field } from '../ui/Field.tsx'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
+import { useWaiting, waitingInWords } from '../suggestions/WaitingContext.ts'
 import { countdown, longDate } from '../wedding/dates.ts'
 import { useCurrentWedding, useWeddingUpdate } from '../wedding/WeddingContext.ts'
 import { changeWedding } from '../wedding/weddingApi.ts'
@@ -21,6 +22,7 @@ export function HomePage() {
   const names = wedding.members.map((member) => member.displayName).join(' & ')
   const home = useLoaded('home', fetchHome)
   const categories = useLoaded('categories', listCategories)
+  const waiting = useWaiting()
   return (
     <div className="stack-wide">
       <div className="hero">
@@ -37,6 +39,12 @@ export function HomePage() {
           </>
         )}
       </div>
+
+      {waiting.count !== null && waiting.count > 0 && (
+        <p className="home-suggestions">
+          <Link to="/suggestions">{waitingInWords(waiting.count)}</Link>
+        </p>
+      )}
 
       {home.state.status === 'failed' || categories.state.status === 'failed' ? (
         <PageRetry

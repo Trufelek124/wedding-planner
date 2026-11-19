@@ -90,6 +90,11 @@ closing comment quotes its summary lines and its exit code.
   words, with the colour and the sign (`src/ui/Warning.tsx`) only beside them. A bar of money is `Meter`
   (`src/budget/Meter.tsx`).
 - A list tells the form where to return to (`state={{ back }}`), filters included.
+- The suggestions inbox (`src/suggestions/`, S02) shows what the e-mail import proposes. Everything that came out of
+  a mail is plain text, never markup or a link made from it; "Open the e-mail" is drawn only for an `https`
+  address. A decision is sent once; `already-decided` overwrites nothing and says what was decided and by whom.
+  "Change and accept" sends every value of the proposal, because the server makes what is sent and nothing else.
+  How many wait is asked once in `Shell` and shared with Home and the pages (`WaitingContext`).
 - Every colour, size and radius comes from the tokens at the top of `src/index.css`; light and dark both work.
 - What a person reads is written for that person. This includes the server's validation messages
   (`message = "Enter your partner's name."`), which the forms show next to the field.

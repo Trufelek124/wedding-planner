@@ -12,7 +12,7 @@ type Inspiration = Schemas['Inspiration']
 type Picture = Schemas['Picture']
 type Board = Schemas['Board']
 
-type Handler = Response | Error | ((request: Request) => Response | Promise<Response>)
+export type Handler = Response | Error | ((request: Request) => Response | Promise<Response>)
 
 export interface FakeServer {
   /** Every request the page made, in order, as "METHOD /path". */
@@ -163,6 +163,7 @@ export function planningServer(entries: Entry[], extra: Record<string, Handler> 
     'GET /api/wedding': weddingOfAnnaAndPiotr(),
     'GET /api/categories': Response.json([VENUE, FLOWERS]),
     'GET /api/vendors': Response.json([]),
+    'GET /api/suggestions': Response.json([]),
     'GET /api/entries': (request) => {
       const kind = new URL(request.url).searchParams.get('kind')
       return Response.json(entries.filter((candidate) => kind === null || candidate.kind === kind))
@@ -243,6 +244,7 @@ export function inspirationsServer(inspirations: Inspiration[], extra: Record<st
     'GET /api/inspirations/tags': Response.json([...tags].map(([tag, count]) => ({ tag, count }))),
     'GET /api/entries': Response.json([]),
     'GET /api/vendors': Response.json([]),
+    'GET /api/suggestions': Response.json([]),
     ...pictures,
     ...extra,
   })
@@ -343,5 +345,43 @@ export function countsOf(guests: Guest[]): GuestCounts {
         byStatus: GUEST_STATUSES.map((status) => ({ status, count: count(theirs.filter((one) => one.status === status)) })),
       }
     }),
+  }
+}
+
+let suggestionNumber = 0
+
+/** A suggestion as the server sends it, from a made-up sender at an `.example` address; name only what the test is about. */
+export function suggestion(overrides: Partial<Schemas['Suggestion']> = {}): Schemas['Suggestion'] {
+  suggestionNumber += 1
+  return {
+    id: `55555555-5555-4555-8555-${String(suggestionNumber).padStart(12, '0')}`,
+    kind: 'TASK',
+    state: 'WAITING',
+    title: `Suggestion ${suggestionNumber}`,
+    notes: '',
+    startDate: null,
+    dueDate: null,
+    amount: null,
+    paymentKind: null,
+    categoryId: null,
+    vendorId: null,
+    vendorName: null,
+    vendorEmail: null,
+    vendorPhone: null,
+    vendorWebsite: null,
+    senderName: 'Jan from Palace on the Hill',
+    senderAddress: 'jan@palace.example',
+    subject: 'Your booking',
+    receivedAt: '2026-11-12T13:05:00Z',
+    inboxMemberId: ANNA_MEMBER,
+    mailLink: 'https://mail.google.com/mail/u/0/#all/abc123',
+    passage: 'Please send the signed form by the end of the month.',
+    confidence: 62,
+    decidedBy: null,
+    decidedAt: null,
+    madeEntryId: null,
+    madeVendorId: null,
+    createdAt: '2026-11-12T13:06:00Z',
+    ...overrides,
   }
 }
