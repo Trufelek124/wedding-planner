@@ -61,8 +61,8 @@
   "docs/decisions.md#D-005": {
    "publicId": "WP-DOC-7",
    "id": "e3403e80-a126-40ea-9867-d035cef644c3",
-   "sha256": "8a1157a7a1f39fc1e382b8428a7c6e921199d49b03ed21b51fc69c7b0e4b5510",
-   "commit": "d90f98a"
+   "sha256": "f021c940967e3d0915282b030a468979f7aeeae71faa4bfd9aa3eb9d2292d17e",
+   "commit": "9ce6377"
   },
   "docs/android-release.md": {
    "publicId": "WP-DOC-8",
