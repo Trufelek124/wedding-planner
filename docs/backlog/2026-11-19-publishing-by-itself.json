@@ -1,0 +1,21 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP3-S1-T4",
+   "story": "EP3-S1",
+   "title": "The image is published at every push to main, and the server takes the newest by itself",
+   "description": "The owner asked for publishing to be automatic, the way the other application on the same server works, after the first publishing from the Mac needed Java 25 installed and failed twice in the checks for reasons of that machine. Decision D-010 replaces D-002. A workflow in the repository publishes every push to main that changes what the image is made of: the gate for the backend and the web app, a build for linux/arm64, a push under the full commit and as latest - for main only, never for a pull request, with no secret, GitHub's own actions named by commit and the image built and pushed with plain docker. deploy/update.sh, run every ten minutes on the server, takes the newest image of the tag the server's .env names. The script for publishing by hand stays. docs/deployment.md and CLAUDE.md follow. Done when the workflow has run on main and published, the update script was tried against Docker, and the documents are mirrored.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "docker",
+    "github-actions"
+   ]
+  }
+ ]
+}

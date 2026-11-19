@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Publishes the planner's image: the checks, a build for the server's processor, and the push.
-# The owner runs it on the Mac (docs/decisions.md, D-002); nothing else publishes.
+# The way by hand: the owner runs it on the Mac. Usually the image publishes itself, at every push to
+# main, through .github/workflows/publish.yml (docs/decisions.md, D-010).
 #
 #   scripts/publish-image.sh               publish the commit that main is on
 #   scripts/publish-image.sh --no-push     everything but the push, to see that it would work
@@ -34,7 +35,7 @@ for argument in "$@"; do
     --no-push) PUSH=no ;;
     --full-gate) GATE_PARTS="" ;;
     -h | --help)
-      sed -n '2,23p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)

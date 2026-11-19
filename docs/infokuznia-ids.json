@@ -720,6 +720,12 @@
    "publicId": "WP-TS-89",
    "id": "099cd17f-576b-4f2a-8df6-677ee6e0a331",
    "title": "The gate says which Node it needs instead of failing in four tests"
+  },
+  "EP3-S1-T4": {
+   "type": "task",
+   "publicId": "WP-TS-90",
+   "id": "eaf159ca-dba4-41dd-988a-8fa433e6481f",
+   "title": "The image is published at every push to main, and the server takes the newest by itself"
   }
  }
 }

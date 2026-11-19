@@ -19,16 +19,31 @@ as `--build-arg REVISION=<sha>`; it ends up in the label `org.opencontainers.ima
 
 ## Publishing the image
 
-The owner publishes, from the Mac, by running one script (decision D-002). Nothing else does.
+**It publishes itself** (decision D-010, which replaced D-002). Every push to `main` that changes something the
+image is made of starts the workflow `.github/workflows/publish.yml`: it runs the checks for the backend and the
+web app, builds the image for `linux/arm64` and pushes it twice — tagged with the full commit, and as `latest`.
+The commit is also in the image's label `org.opencontainers.image.revision`. A push that only changes documents,
+the phone app or the tracker's tooling publishes nothing. Together with a server that takes the newest image by
+itself (below), **what reaches `main` goes live within a quarter of an hour, with nobody in between.**
+
+- **Where to look:** the repository's Actions tab. A run that fails publishes nothing, and the server stays on
+  what it has.
+- **Once:** Actions have to be allowed for the repository (Settings → Actions → General). If the first run is
+  refused when it pushes (`denied`, `permission_denied: write_package`), the package was made from the Mac and
+  does not yet know the repository: on GitHub, the package → Package settings → Manage Actions access → add
+  the repository with the role Write.
+- **By hand**, from the workflow's page: "Run workflow", on `main`.
+- The workflow holds no secret; the registry takes the run's own short-lived token.
+
+**Publishing from the Mac still works**, for when GitHub is not to be relied on:
 
 ```bash
 scripts/publish-image.sh
 ```
 
 It refuses unless the checkout is on `main`, has no changes of its own and is exactly what the repository's `main`
-is. Then it runs the checks for the backend and the web app (`--full-gate` adds the Android part), builds the image
-for `linux/arm64` and pushes it twice: tagged with the full commit, and as `latest`. The commit is also in the
-image's label `org.opencontainers.image.revision`. `--no-push` does everything but the push.
+is. Then it does what the workflow does (`--full-gate` adds the Android part). `--no-push` does everything but
+the push.
 
 - **Name.** `ghcr.io/<owner>/<repository>`, worked out from the address of the remote `origin`. Give `IMAGE=…`
   to publish somewhere else.
@@ -39,7 +54,48 @@ image's label `org.opencontainers.image.revision`. `--no-push` does everything b
   read packages, or the package is made public on GitHub: it contains nothing that is not in this repository.
 - **Going back.** Every published commit keeps its own tag. The server runs an older one by naming that commit
   as the tag instead of `latest`.
-- The Mac needs Docker with its daemon running, and what the gate needs: JDK 25 and Node 22.
+- For the script the Mac needs Docker with its daemon running, and what the gate needs: JDK 25 and Node 22 —
+  that version, not a newer one (`PATH="<a Node 22>/bin:$PATH" scripts/publish-image.sh` where another is the
+  Mac's own).
+
+## The server updates itself
+
+`deploy/update.sh` asks the registry for the image the planner's `.env` names and starts the planner on it when
+it is a newer one. It lies next to `compose.yaml` and works in that directory, wherever it is called from. Run
+every ten minutes, it makes the server follow what is published:
+
+- `IMAGE_TAG=latest` in `.env`: the planner follows `main`.
+- `IMAGE_TAG=<a full commit id>`: the planner stays on that commit, whatever is published. That is a rollback,
+  and it holds until the tag is set back.
+- It prints a line only when it changed something or could not ask; a registry that cannot be reached leaves
+  the running planner alone.
+
+On a Mac, a job for launchd — `~/Library/LaunchAgents/planner.update.plist`, with the two paths filled in, loaded
+once with `launchctl load ~/Library/LaunchAgents/planner.update.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>planner.update</string>
+  <key>ProgramArguments</key>
+  <array><string>/bin/bash</string><string>/path/to/the/planner/update.sh</string></array>
+  <key>StartInterval</key><integer>600</integer>
+  <key>RunAtLoad</key><true/>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string></dict>
+  <key>StandardOutPath</key><string>/path/to/a/log/planner-update.log</string>
+  <key>StandardErrorPath</key><string>/path/to/a/log/planner-update.log</string>
+</dict>
+</plist>
+```
+
+`PATH` has to hold the directory `docker` is in (`which docker`). On Linux the same with cron:
+`*/10 * * * * /path/to/the/planner/update.sh >> /path/to/a/log/planner-update.log 2>&1`.
+
+The database is brought up to date by the new image as it starts, so an update that changes the database is
+taken like any other. Take the nightly backup seriously for that reason: nobody looks before it happens.
 
 ## Trying it on one machine
 
@@ -256,19 +312,15 @@ Both services restart by themselves after the server restarts (`restart: unless-
 
 ### An update
 
-1. On the Mac, from a checkout of `main`: `scripts/publish-image.sh` (see "Publishing the image").
-2. On the server:
+An update happens by itself: a push to `main` is published (see "Publishing the image"), and the server takes it
+at its next look, within ten minutes (see "The server updates itself"). To take it at once, or where no job runs:
 
 ```bash
-docker compose pull app
+./update.sh
 ```
 
-```bash
-docker compose up -d app
-```
-
-3. `docker compose ps` until `app` is `healthy`, usually within half a minute. Then the commit shown by the
-   command above is the one just published.
+Then `docker compose ps` until `app` is `healthy`, usually within half a minute; the commit shown by the command
+above is the one just published. The job's log says when the planner was last moved to another commit.
 
 The database is brought up to date by the new image as it starts. If `app` does not become healthy, read its
 logs, and roll back.
@@ -288,16 +340,13 @@ IMAGE_TAG=<the full commit id>
 3. Then, as for an update:
 
 ```bash
-docker compose pull app
-```
-
-```bash
-docker compose up -d app
+./update.sh
 ```
 
 4. `docker compose ps` until `app` is `healthy`, and check the running commit with the command under "What runs".
 
-To follow `main` again later, set `IMAGE_TAG=latest` and repeat step 3.
+The job that updates the server leaves it there: it asks for the tag `.env` names. To follow `main` again later,
+set `IMAGE_TAG=latest` and repeat step 3.
 
 **When the update changed the database.** An older image starts in front of a database that a newer one has
 already changed; it says so in a warning and carries on. Whether it then works depends on the change: something
@@ -431,6 +480,10 @@ On 2026-11-19 the environment block of `deploy/compose.yaml` was run in a contai
 without the e-mail import's values in `.env` the four switches arrive empty and no optional setting arrives at
 all; with them, and two optional ones, exactly those arrive.
 
-Not done yet: a run of the publishing script on the owner's Mac that pushes to the real registry; the server
-pulling from it; the nightly backup on the server and a restore from one of its files; and the owner rolling
-back from this text alone.
+On 2026-11-19 `deploy/update.sh` was run against Docker with two images that carry a commit in their label: it
+started the planner where nothing ran, said nothing and changed nothing at the next run, moved to the newer image
+and said which commit, started a container that had been stopped by hand, and left everything alone, with one
+line, when the registry refused. The owner published from the Mac with the script that day.
+
+Not done yet: the launchd job on the owner's Mac; the nightly backup on the server and a restore from one of its
+files; and the owner rolling back from this text alone.

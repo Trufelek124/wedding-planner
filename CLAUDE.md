@@ -19,7 +19,8 @@ guests, vendors or mail. Configuration that names the owner's systems lives in e
 | `docs/state.md` | One screen on where the project stands — arrives with WP-TS-2 |
 | `docs/backlog/` | Backlog batches that were imported into the tracker |
 | `scripts/ops/` | Tracker tooling: `ik.py`, `ik_seed.py`, `ik_sync_docs.py` |
-| `scripts/publish-image.sh` | Publishes the image. The owner runs it on the Mac, from `main` (D-002); a session never publishes |
+| `.github/workflows/publish.yml` | Publishes the image at every push to `main` that changes what it is made of (D-010). With `deploy/update.sh` on the server, **what reaches `main` goes live by itself within a quarter of an hour**. A public repository with a workflow that can publish: its triggers, permissions and pinned actions are not loosened |
+| `scripts/publish-image.sh` | Publishes by hand, from `main`, on the owner's Mac. A session never runs it |
 | `docs/android-release.md` | The phone app's release build: the owner's signing key, its fingerprint for Google sign-in, installing |
 
 The interface is in English. Tests never call the real AI service or the real Gmail.
@@ -411,7 +412,8 @@ it blocks nothing.
    `complete_task` takes `{"taskId","result"}`; `result` is one or two sentences with the commits — later tasks
    that depend on this one see it.
 6. **Then bring `main` up to date.** The owner wants `main` kept current: it is where the branches are merged, and
-   what the image is published from (D-002). `git fetch origin main`; if `main` is an ancestor of the branch,
+   what the image is published from — **by itself, and the server then takes it by itself (D-010): a push to
+   `main` is a deployment.** `git fetch origin main`; if `main` is an ancestor of the branch,
    `git push origin <branch>:main`. If `main` has commits the branch lacks, merge `origin/main` into the branch,
    pass the gate again, push the branch, and only then push it to `main`. Never force a push to `main`, and never
    put there what has not passed the gate.

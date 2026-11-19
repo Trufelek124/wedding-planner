@@ -91,6 +91,9 @@ We write the chart ourselves, as one SVG inside a React component, with no chart
 
 ## D-002 — The image is published by a script the owner runs on the Mac
 
+> **Replaced by D-010 on 2026-11-19**: the image is published by a workflow at every push to `main`. The script
+> remains as the way by hand.
+
 **Date:** 2026-11-17 · **Task:** WP-TS-27 · **Decided by:** the owner · **Applies to:** WP-TS-28, the server's update
 
 ### Context
@@ -525,4 +528,49 @@ about the last thirty days.
   so far: each owner presses the button once after the update.
 - The limits of S04 hold for a look back too: at most fifty new suggestions from one mailbox in a day. Thirty
   days of busy wedding mail can therefore take several days to appear; the limit is a setting.
+
+## D-010 — The image is published at every push to main, and the server takes the newest by itself
+
+**Date:** 2026-11-19 · **Task:** WP-TS-90 · **Decided by:** the owner · **Replaces:** D-002
+
+### Context
+
+D-002 had the owner publish from the Mac with a script, so that nothing went live unless the owner ran it, and
+named GitHub Actions as the alternative "if publishing by hand becomes a burden". The first real publishing was
+that burden: the Mac needed Java 25 installed, its Node was three versions newer than the one the project is
+tested on, and two rounds of failing checks had to be explained before an image existed. The owner then asked
+for it to be automatic, the way the other application on the same server works: a workflow publishes at every
+push to `main`, and a job on the server pulls the newest image every ten minutes.
+
+### What was compared
+
+| Question | Chosen | The alternative, and why not |
+|---|---|---|
+| Who publishes | **A workflow in this repository**, at every push to `main` | The script on the Mac only: correct, and it depends on the tools of a machine that is also the owner's own computer |
+| When the server updates | **By itself**, a job every ten minutes that asks for the tag the server's `.env` names | By hand after every publishing: the second half of the burden |
+| What the workflow may do | Run for `main` and when started by hand, **never for a pull request**; no secret; only the job that pushes may write packages; GitHub's own three actions named by commit; the image built and pushed with plain `docker` | Third-party actions for building and pushing: more convenient, and more code from elsewhere with the right to publish |
+| What it checks | The gate for the backend and the web app, the two parts the image is built from | The whole gate with the Android part: an Android SDK in every run, for a part that is not in the image; sessions run the whole gate before anything reaches `main` |
+| Pushes that change no part of the image | **Publish nothing** (documents, the phone app, the tracker's tooling) | Publishing every push: the server would restart for a corrected sentence |
+| Going back | `IMAGE_TAG=<commit>` in the server's `.env`: the job then stays on that commit | Stopping the job: one more thing to remember to start again |
+
+### Decision
+
+1. **`.github/workflows/publish.yml` publishes every push to `main`** that changes what the image is made of:
+   the checks, a build for `linux/arm64`, a push under the full commit and as `latest`.
+2. **`deploy/update.sh`, run every ten minutes on the server, takes the newest image** of the tag in `.env`.
+3. **`scripts/publish-image.sh` stays** as the way to publish by hand.
+4. **What reaches `main` goes live.** `main` is therefore only ever given what has passed the whole gate
+   (CLAUDE.md), and a session says in its closing comment that the change is live once the workflow has run.
+
+### What it costs, and what would change the decision
+
+- Nobody looks before a change is live. A session that puts a mistake on `main` puts it on the server; a
+  change of the database is applied with it. The answers are the gate, the nightly backup, and a rollback that
+  is one line in `.env`. If that proves too little, the server's job can be given a tag that only the owner moves.
+- A public repository now has a workflow that can publish. Its triggers, its permissions and its pinned actions
+  are what keep that safe (the workflow's own first lines say how); a change to that file deserves a second look.
+- The checks run on GitHub's machines and no longer on the Mac, where they found two real differences of the
+  owner's machine. Those were faults of the tests, not of the planner; the script still runs them there.
+- Publishing depends on GitHub Actions being available and allowed for the repository. When they are not, the
+  script publishes.
 
