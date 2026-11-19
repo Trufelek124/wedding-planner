@@ -39,7 +39,7 @@ fun MoreContent(planner: Planner, onBudget: () -> Unit, onVendors: () -> Unit, o
         MoreRow("vendors", R.string.more_vendors, vendorsSummary(planner.vendorList), onVendors),
         MoreRow("guests", R.string.more_guests, guestsSummary(planner.guestCounts, planner.guests), onGuests),
         MoreRow("inspirations", R.string.more_inspirations, inspirationsSummary(planner.inspirations, planner.shares.count { it.trouble == null }), onInspirations),
-        MoreRow("suggestions", R.string.more_suggestions, suggestionsSummary(planner.suggestionsToDecide), onSuggestions),
+        MoreRow("suggestions", R.string.more_suggestions, suggestionsOnMore(planner.suggestionsToDecide, planner.addedToLookAt), onSuggestions),
     )
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
         items(rows, key = { it.key }) { row ->

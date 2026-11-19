@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +28,7 @@ import io.github.trufelek124.weddingplanner.data.Entry
 import io.github.trufelek124.weddingplanner.data.Kind
 import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.data.Status
+import io.github.trufelek124.weddingplanner.data.Suggestion
 import io.github.trufelek124.weddingplanner.data.Waiting
 
 /**
@@ -37,6 +40,8 @@ class TaskActions(
     val open: (Entry) -> Unit,
     /** @param parentId the step of the plan the new task is added to; null for none */
     val add: (parentId: String?) -> Unit,
+    /** Opens where an entry came from: the suggestion that made it. */
+    val source: (suggestionId: String) -> Unit = {},
 )
 
 /**
@@ -54,8 +59,38 @@ fun EntryLine(
     withPlanItem: Boolean = true,
     actions: TaskActions? = null,
     withVendor: Boolean = true,
+    withSource: Boolean = true,
 ) {
-    TaskLine(entry, factsOf(entry, planner, withPlanItem, withVendor), modifier, actions)
+    TaskLine(entry, factsOf(entry, planner, withPlanItem, withVendor, withSource), modifier, actions)
+}
+
+/**
+ * "From e-mail" on a task or a step of the plan that a suggestion made: in words, and where the copy holds the suggestion and
+ * there is somewhere to go, the way to its source, a button of its own. A suggestion the copy does not have (undone since, or an
+ * older copy) leaves the words standing and no button.
+ *
+ * @param suggestion what made the entry, where the copy has it
+ * @param onOpen what pressing it does; null where it only says
+ */
+@Composable
+fun FromEmail(suggestion: Suggestion?, onOpen: (() -> Unit)?, modifier: Modifier = Modifier) {
+    if (suggestion == null || onOpen == null) {
+        Text(
+            FROM_EMAIL,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = modifier.padding(vertical = 4.dp),
+        )
+        return
+    }
+    val says = fromEmailDescription(suggestion)
+    TextButton(
+        onClick = onOpen,
+        modifier = modifier.heightIn(min = 48.dp).semantics { contentDescription = says },
+    ) {
+        Text(FROM_EMAIL, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+    }
 }
 
 /** A line with the facts given: for a list that says less about each task than the full line does. */

@@ -1,5 +1,6 @@
 package io.github.trufelek124.weddingplanner.planner
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import java.time.LocalDate
  * @param today the date where the wedding takes place, by the phone's clock
  * @param onBudget what pressing the glance at the money does; null where it only shows
  * @param onSuggestions what pressing the line about the suggestions that wait does; null where it only shows
+ * @param onAdded what pressing the line about what was added by itself does; null where it only shows
  * @param foot what stands under everything: when this was loaded, who is signed in, the way out
  */
 @Composable
@@ -45,6 +47,7 @@ fun HomeContent(
     actions: TaskActions? = null,
     onBudget: (() -> Unit)? = null,
     onSuggestions: (() -> Unit)? = null,
+    onAdded: (() -> Unit)? = null,
     foot: @Composable () -> Unit = {},
 ) {
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
@@ -52,7 +55,11 @@ fun HomeContent(
 
         // Where nothing waits Home says nothing about suggestions.
         suggestionsOnHome(planner.suggestionsToDecide)?.let { line ->
-            item(key = "suggestions") { SuggestionsWaiting(line, onSuggestions) }
+            item(key = "suggestions") { SuggestionsWaiting(line, onSuggestions, R.string.home_suggestions_open) }
+        }
+        // A second line, beside the first: what was added by itself is not one more of what waits.
+        addedOnHome(planner.addedToLookAt)?.let { line ->
+            item(key = "added") { SuggestionsWaiting(line, onAdded, R.string.home_added_open, Modifier.padding(top = if (planner.suggestionsToDecide > 0) 0.dp else 16.dp)) }
         }
 
         if (planner.overdue.isEmpty() && planner.next.isEmpty()) {
@@ -97,10 +104,10 @@ private fun LazyListScope.entries(group: String, title: Int, entries: List<Entry
     }
 }
 
-/** One line: how many suggestions wait; pressing it leads to the inbox. */
+/** One line: how many suggestions wait, or were added by themselves; pressing it leads to the inbox. */
 @Composable
-private fun SuggestionsWaiting(line: String, onOpen: (() -> Unit)?) {
-    val open = stringResource(R.string.home_suggestions_open)
+private fun SuggestionsWaiting(line: String, onOpen: (() -> Unit)?, @StringRes label: Int, modifier: Modifier = Modifier.padding(top = 16.dp)) {
+    val open = stringResource(label)
     Text(
         text = line,
         style = MaterialTheme.typography.titleMedium,
@@ -108,7 +115,7 @@ private fun SuggestionsWaiting(line: String, onOpen: (() -> Unit)?) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
-            .padding(top = 16.dp)
+            .then(modifier)
             .then(if (onOpen == null) Modifier else Modifier.clickable(onClickLabel = open, role = Role.Button, onClick = onOpen))
             .padding(vertical = 8.dp),
     )

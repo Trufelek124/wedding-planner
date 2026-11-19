@@ -32,6 +32,8 @@ data class EntryWire(
     val assigneeIds: List<String>,
     val taskCount: Int,
     val version: Int,
+    /** The suggestion of the e-mail import that made it; none on a server that does not tell, and for an entry made by hand. */
+    val fromSuggestionId: String? = null,
 )
 
 @Serializable
@@ -159,7 +161,13 @@ data class GuestCountsWire(val total: HeadCountWire, val byStatus: List<StatusCo
 /**
  * What the e-mail import proposes, as far as the phone reads it. Everything that came out of a mail (the sender, the
  * subject, the passage, the title) is someone else's words: this is no data class, so nothing of it is printed.
- * [kind] and [paymentKind] are names from a fixed set.
+ * [kind], [paymentKind] and [state] are names from a fixed set. A server that is older than the work that added the
+ * last four fields does not send them: a suggestion is then one that waits.
+ *
+ * @param state WAITING, ADDED, ACCEPTED or REJECTED as the server names it; a newer server may add one
+ * @param madeEntryId the task or step it made, or that was added by itself; null once undone, and for a vendor
+ * @param decidedBy the member who decided it; null while it waits or is added, and when thirty days made it count as kept
+ * @param decidedAt when that was
  */
 @Serializable
 class SuggestionWire(
@@ -185,6 +193,10 @@ class SuggestionWire(
     val mailLink: String,
     val passage: String,
     val confidence: Int,
+    val state: String = "WAITING",
+    val madeEntryId: String? = null,
+    val decidedBy: String? = null,
+    val decidedAt: String? = null,
 ) {
     override fun toString(): String = "SuggestionWire[id=$id]"
 }

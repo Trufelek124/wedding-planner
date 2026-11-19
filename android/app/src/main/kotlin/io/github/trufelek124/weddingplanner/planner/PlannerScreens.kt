@@ -102,7 +102,14 @@ private const val INSPIRATIONS = "inspirations"
 private const val INSPIRATION = "inspiration"
 private const val INSPIRATION_ROUTE = "$INSPIRATION?id={id}"
 
+/** The inbox; "suggestions?part=added" comes to the part of what was added by itself. */
 private const val SUGGESTIONS = "suggestions"
+private const val SUGGESTIONS_ROUTE = "$SUGGESTIONS?part={part}"
+private const val ADDED_PART_ARGUMENT = "added"
+
+/** Where a task or a step came from: "source?id=…", the id of the suggestion. */
+private const val SOURCE = "source"
+private const val SOURCE_ROUTE = "$SOURCE?id={id}"
 
 private val BEHIND_MORE = listOf(
     BehindMore(BUDGET, R.string.budget_title),
@@ -112,7 +119,8 @@ private val BEHIND_MORE = listOf(
     BehindMore(GUEST_ROUTE, R.string.guest_title) { planner, id -> planner.guest(id)?.name },
     BehindMore(INSPIRATIONS, R.string.inspirations_title),
     BehindMore(INSPIRATION_ROUTE, R.string.inspiration_title) { planner, id -> planner.inspiration(id)?.let(::inspirationName) },
-    BehindMore(SUGGESTIONS, R.string.suggestions_title),
+    BehindMore(SUGGESTIONS_ROUTE, R.string.suggestions_title),
+    BehindMore(SOURCE_ROUTE, R.string.source_title) { planner, id -> planner.suggestion(id)?.let(::suggestionName) },
 )
 
 /** Where a task is added or changed: "task?id=…" for an existing one, "task?parent=…" for a new one under a step. */
@@ -252,6 +260,7 @@ private fun Places(
         tick = changes.setStatus,
         open = { task -> navigation.navigate("$TASK?id=${task.id}") },
         add = { parentId -> navigation.navigate(if (parentId == null) TASK else "$TASK?parent=$parentId") },
+        source = { suggestionId -> navigation.navigate("$SOURCE?id=${Uri.encode(suggestionId)}") },
     )
 
     Scaffold(
@@ -350,7 +359,7 @@ private fun Places(
                 for (share in planner.shares.filter { it.trouble != null }) {
                     NotSaved(share, onDiscard = { changes.letGoOfShare(share.id) })
                 }
-                if (route == SUGGESTIONS) {
+                if (route == SUGGESTIONS_ROUTE || route == SOURCE_ROUTE) {
                     for (trouble in planner.suggestionTroubles) {
                         SuggestionDecisionNotSent(trouble, onLetGo = { changes.letGoOfSuggestionDecision(trouble.suggestionId) })
                     }
@@ -368,7 +377,7 @@ private fun Places(
                 val today = todayAt(planner, clock.instant())
                 NavHost(navController = navigation, startDestination = Place.HOME.route) {
                     composable(Place.HOME.route) {
-                        HomeContent(planner, today = today, actions = actions, onBudget = { navigation.navigate(BUDGET) }, onSuggestions = { navigation.navigate(SUGGESTIONS) }) {
+                        HomeContent(planner, today = today, actions = actions, onBudget = { navigation.navigate(BUDGET) }, onSuggestions = { navigation.navigate(SUGGESTIONS) }, onAdded = { navigation.navigate("$SUGGESTIONS?part=$ADDED_PART_ARGUMENT") }) {
                             Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 loaded()
                                 SignedInAs(userName, unsent = planner.unsent, onSignOut = onSignOut)
@@ -386,9 +395,18 @@ private fun Places(
                         }
                     }
                     composable(BUDGET) { BudgetContent(planner, foot = loaded) }
-                    composable(SUGGESTIONS) {
+                    composable(
+                        route = SUGGESTIONS_ROUTE,
+                        arguments = listOf(
+                            navArgument("part") {
+                                type = NavType.StringType
+                                nullable = true
+                            },
+                        ),
+                    ) { entry ->
                         SuggestionsContent(
                             planner, zone = clock.zone, foot = loaded,
+                            scrollToAdded = entry.arguments?.getString("part") == ADDED_PART_ARGUMENT,
                             actions = { suggestion ->
                                 SuggestionActions(
                                     suggestion, notTakenBack = suggestion.id in ui.notTakenBack,
@@ -397,6 +415,27 @@ private fun Places(
                                 )
                             },
                         )
+                    }
+                    composable(
+                        route = SOURCE_ROUTE,
+                        arguments = listOf(navArgument("id") { type = NavType.StringType }),
+                    ) { entry ->
+                        val suggestion = entry.arguments?.getString("id")?.let(planner::suggestion)
+                        if (suggestion == null) {
+                            // Undone or decided since, and loaded again: nothing of the mail is held any more.
+                            SuggestionSourceGone(onBack = { navigation.popBackStack() })
+                        } else {
+                            SuggestionSourceContent(
+                                planner, suggestion, clock.zone, foot = loaded,
+                                actions = { shown ->
+                                    SuggestionActions(
+                                        shown, notTakenBack = shown.id in ui.notTakenBack,
+                                        onDecide = { changes.decideSuggestion(shown.id, it) },
+                                        onTakeBack = { changes.takeBackSuggestionDecision(shown.id) },
+                                    )
+                                },
+                            )
+                        }
                     }
                     composable(VENDORS) {
                         VendorsContent(planner, onOpen = { navigation.navigate("$VENDOR?id=${Uri.encode(it.id)}") }, foot = loaded)
@@ -489,6 +528,7 @@ private fun Places(
                                     task?.let { changes.letGo(it.id) }
                                     navigation.popBackStack()
                                 },
+                                onSource = actions.source,
                             )
                         }
                     }

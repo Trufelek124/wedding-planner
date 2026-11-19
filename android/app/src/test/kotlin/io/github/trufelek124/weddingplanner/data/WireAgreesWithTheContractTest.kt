@@ -176,6 +176,17 @@ class WireAgreesWithTheContractTest {
             ),
         )
         assertEquals(Suggestion.Kind.VENDOR, proposedVendor.kind)
+        // What the import added by itself, and what a person accepted, with the entry each made.
+        val added = strict.decodeFromString<Suggestion>(StandIn.added("a1", "Send the guest list", "e1"))
+        assertEquals(Suggestion.State.ADDED, added.state)
+        assertEquals("e1", added.madeEntryId.toString())
+        assertEquals(null, added.decidedBy)
+        val accepted = strict.decodeFromString<Suggestion>(
+            StandIn.suggestion("s3", "Book the band", state = "ACCEPTED", madeEntryId = "e3", decidedBy = StandIn.MAREK, decidedAt = "2026-11-17T10:00:00Z"),
+        )
+        assertEquals(Suggestion.State.ACCEPTED, accepted.state)
+        assertEquals(StandIn.MAREK, accepted.decidedBy.toString())
+        assertEquals("s1", strict.decodeFromString<ContractEntry>(StandIn.entry("e1", "Send the guest list", fromSuggestionId = "s1")).fromSuggestionId.toString())
         assertEquals("Studio Light", proposedVendor.vendorName)
         assertEquals(null, proposedVendor.paymentKind)
         assertEquals(null, proposedVendor.amount)

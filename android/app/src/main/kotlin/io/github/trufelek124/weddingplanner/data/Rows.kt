@@ -37,6 +37,8 @@ data class EntryRow(
     val assigneeIds: String,
     val taskCount: Int,
     val version: Int,
+    /** The suggestion of the e-mail import that made it; null for an entry made by hand, and in a copy made before version 9. */
+    val fromSuggestionId: String? = null,
 )
 
 @Entity(tableName = "category")
@@ -272,6 +274,11 @@ class InspirationPictureRow(
  * @param kind TASK, PAYMENT, PLAN_ITEM or VENDOR as the server names it; a newer server may add one
  * @param paymentKind DEPOSIT, INSTALMENT or FINAL as the server names it
  * @param receivedAt when the message arrived, as the server writes it
+ * @param state WAITING, ADDED or ACCEPTED as the server names it: one that was rejected is not kept. A copy made before
+ *   version 9 held only what waited.
+ * @param madeEntryId the task or step it made, or that was added by itself
+ * @param decidedBy the member who decided it; null for one that waits or was added, and for one that counts as kept
+ *   after thirty days
  */
 @Entity(tableName = "suggestion")
 class SuggestionRow(
@@ -298,29 +305,42 @@ class SuggestionRow(
     val mailLink: String,
     val passage: String,
     val confidence: Int,
+    @ColumnInfo(defaultValue = "'WAITING'") val state: String = "WAITING",
+    val madeEntryId: String? = null,
+    val decidedBy: String? = null,
+    val decidedAt: String? = null,
 ) {
     override fun toString(): String = "SuggestionRow[id=$id]"
 }
 
 /**
- * A suggestion accepted or rejected on the phone that the server does not have yet. Like a waiting change it exists
+ * A suggestion accepted, rejected, kept or undone on the phone that the server does not have yet. Like a waiting change it exists
  * nowhere else until it is sent. At most one per suggestion: the other decision replaces it while it waits. Not a data
  * class: it holds a title that came out of someone's mail, which is not to be printed.
  */
 @Entity(tableName = "waiting_suggestion_decision")
 class SuggestionDecisionRow(
     @PrimaryKey val suggestionId: String,
-    /** ACCEPT or REJECT, by its name. */
+    /** ACCEPT or REJECT for one that waits, KEEP or UNDO for one that was added by itself, by its name. */
     val decision: String,
     /** The suggestion's title when it was decided, to name it should it be gone from the copy. */
     val title: String,
     /** Counts the times the other decision replaced this one. */
     val revision: Int = 0,
-    /** Why the server did not take it: DECIDED_OTHERWISE, GONE or REFUSED. Null while it waits to be sent. */
+    /** Why the server did not take it: DECIDED_OTHERWISE, GONE, REFUSED or ENTRY_CHANGED. Null while it waits to be sent. */
     val trouble: String? = null,
+    /** For DECIDED_OTHERWISE of a keep or an undo: how the server says it stands, ACCEPTED or REJECTED; null where that is not known. */
+    val heldState: String? = null,
+    /** For [heldState]: the member who decided it; null where nobody did (thirty days) or it is not known. */
+    val heldBy: String? = null,
 ) {
-    fun copy(decision: String = this.decision, revision: Int = this.revision, trouble: String? = this.trouble): SuggestionDecisionRow =
-        SuggestionDecisionRow(suggestionId, decision, title, revision, trouble)
+    fun copy(
+        decision: String = this.decision,
+        revision: Int = this.revision,
+        trouble: String? = this.trouble,
+        heldState: String? = this.heldState,
+        heldBy: String? = this.heldBy,
+    ): SuggestionDecisionRow = SuggestionDecisionRow(suggestionId, decision, title, revision, trouble, heldState, heldBy)
 
     override fun toString(): String = "SuggestionDecisionRow[suggestionId=$suggestionId]"
 }

@@ -451,4 +451,80 @@ class DatabaseCarriesOverTest {
             database.close()
         }
     }
+
+    @Test
+    fun `what version 8 held is still there, a suggestion in it waits, no entry says it came from e-mail until the next load, and an added one can stand beside it`() = runBlocking {
+        val file = folder.root.resolve("planner.db")
+        aDatabaseOfVersion(8, file) { old ->
+            old.execSQL(
+                """INSERT INTO planner (id, loadedAt, weddingDate, currency, timeZone, daysLeft, today, budgetTotal, budgetPlanned, budgetCommitted,
+                   budgetPaid, overdueIds, nextIds, nextPaymentIds)
+                   VALUES (1, 1795093500000, '2027-06-19', 'PLN', 'Europe/Warsaw', 213, '2026-11-18', NULL, 0, 0, 0, '', 't1', '')""",
+            )
+            old.execSQL("INSERT INTO member (id, position, displayName, you) VALUES ('m1', 0, 'Anna', 1)")
+            old.execSQL(
+                """INSERT INTO entry (id, position, kind, title, notes, categoryId, startDate, dueDate, status, priorityMode, priority, priorityReason,
+                   parentId, vendorId, amount, paymentKind, paidOn, assigneeIds, taskCount, version)
+                   VALUES ('t1', 0, 'TASK', 'Send the guest list', '', NULL, NULL, NULL, 'NOT_STARTED', 'AUTO', 'NORMAL', 'NO_DATE',
+                   NULL, NULL, NULL, NULL, NULL, '', 0, 0)""",
+            )
+            old.execSQL(
+                """INSERT INTO suggestion (id, position, kind, title, notes, startDate, dueDate, amount, paymentKind, categoryId, vendorId, vendorName,
+                   vendorEmail, vendorPhone, vendorWebsite, senderName, senderAddress, subject, receivedAt, inboxMemberId, mailLink, passage, confidence)
+                   VALUES ('s1', 0, 'TASK', 'Book the band', '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                   'Ewa from the Registry Office', 'ewa@registry.example', 'The band', '2026-11-17T09:30:00Z', 'm1',
+                   'https://mail.google.com/mail/u/0/#all/18c0ffef', 'The band is free that day.', 80)""",
+            )
+            old.execSQL("INSERT INTO waiting_suggestion_decision (suggestionId, decision, title, revision, trouble) VALUES ('s1', 'ACCEPT', 'Book the band', 0, NULL)")
+        }
+
+        val database = Room.databaseBuilder(context, PlannerDatabase::class.java, file.path).build()
+        try {
+            val stored = database.planner().stored()!!
+            val shown = plannerOf(stored)
+
+            // What waited, waits, and is as decided as it was; what the copy cannot know is left out, never shown as something else.
+            assertEquals(listOf("s1"), shown.suggestions.map { it.id })
+            assertEquals(SuggestionState.WAITING, shown.suggestions.single().state)
+            assertEquals(null, shown.suggestions.single().madeEntryId)
+            assertEquals(Decision.ACCEPT, shown.suggestions.single().decided)
+            assertTrue(shown.added.isEmpty())
+            assertEquals(0, shown.addedToLookAt)
+            assertEquals(null, shown.entry("t1")!!.fromSuggestionId)
+            assertEquals(1, shown.unsent)
+            assertEquals(null, stored.suggestionDecisions.single().heldState)
+
+            // The new columns can be written and read: an added suggestion with the entry it made, and a keep that waits for it.
+            database.planner().putSuggestionDecision(SuggestionDecisionRow("s2", "UNDO", "Send the guest list"))
+            database.planner().putEntry(
+                database.planner().entry("t1")!!.let {
+                    EntryRow(
+                        it.id, it.position, it.kind, it.title, it.notes, it.categoryId, it.startDate, it.dueDate, it.status, it.priorityMode, it.priority,
+                        it.priorityReason, it.parentId, it.vendorId, it.amount, it.paymentKind, it.paidOn, it.assigneeIds, it.taskCount, it.version, "s2",
+                    )
+                },
+            )
+            database.planner().putSuggestions(
+                listOf(
+                    SuggestionRow(
+                        "s2", 1, "TASK", "Send the guest list", "", null, null, null, null, null, null, null, null, null, null,
+                        "Ewa from the Registry Office", "ewa@registry.example", "Guest list", "2026-11-17T09:30:00Z", "m1",
+                        "https://mail.google.com/mail/u/0/#all/18c0ffee", "We need the guest list.", 90, "ADDED", "t1", null, null,
+                    ),
+                ),
+            )
+            val after = plannerOf(database.planner().stored()!!)
+            assertEquals(listOf("s2"), after.added.map { it.id })
+            assertEquals("t1", after.added.single().madeEntryId)
+            assertEquals(Decision.UNDO, after.added.single().decided)
+            // The undo that waits already took the entry from the lists.
+            assertEquals(null, after.entry("t1"))
+            assertEquals(0, after.addedToLookAt)
+
+            database.planner().forget()
+            assertTrue(database.planner().suggestionDecisions().isEmpty())
+        } finally {
+            database.close()
+        }
+    }
 }

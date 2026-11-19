@@ -49,6 +49,7 @@
     <string name="home_budget">Budget</string>
     <string name="home_budget_open">Open the budget</string>
     <string name="home_suggestions_open">Open the suggestions</string>
+    <string name="home_added_open">Open what was added by itself</string>
     <string name="home_next_payments">Next payments</string>
 
     <!-- More, and the budget it leads to -->
@@ -124,6 +125,9 @@
     <string name="suggestions_empty">Nothing waits for you.</string>
     <string name="suggestion_quotation">From the e-mail</string>
     <string name="suggestion_open_email">Open the e-mail</string>
+    <string name="source_title">From e-mail</string>
+    <string name="source_open">see where it came from</string>
+    <string name="source_gone">The e-mail this came from is not in this copy any more. Load the planner again to see whether it is still there.</string>
 
     <!-- The inspirations -->
     <string name="inspirations_title">Inspirations</string>

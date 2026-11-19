@@ -211,21 +211,41 @@ class PlannerRepository(
     // ---------------------------------------------------------------- deciding a suggestion
 
     /**
-     * Accepts or rejects a suggestion, as it was proposed. Shown at once; sent with the next [sync]. One decision waits
-     * per suggestion and the other one replaces it for as long as it has not been sent. Once it is on its way it stands:
-     * the server is about to have it, and nothing is changed. A suggestion the phone does not have gets none.
+     * Decides a suggestion, as it was proposed: accepts or rejects one that waits, keeps or undoes one that the import added by
+     * itself. Shown at once; sent with the next [sync]. One decision waits per suggestion and the other one replaces it for as
+     * long as it has not been sent. Once it is on its way it stands: the server is about to have it, and nothing is changed.
+     * A suggestion the phone does not have gets none, and neither does one the decision is not for.
+     *
+     * An undo of an entry that this phone has changed itself (a change waits for it, it is ticked off, a task belongs to it) is
+     * not made: the entry is no longer what was added, as the server would say. It is kept as a decision the server is never
+     * asked, with the notice that says so, until that is let go of.
      */
     suspend fun decideSuggestion(suggestionId: String, decision: Decision) = written {
         val suggestion = dao.suggestion(suggestionId) ?: return@written
+        val fits = if (decision.ofAdded) suggestion.state == SuggestionState.ADDED.name else suggestion.state == SuggestionState.WAITING.name
+        if (!fits) {
+            return@written
+        }
+        val refused = if (decision == Decision.UNDO && entryChangedOnThePhone(suggestion)) SuggestionTroubleKind.ENTRY_CHANGED.name else null
         val waiting = dao.suggestionDecisionOf(suggestionId)
         when {
-            waiting == null -> dao.putSuggestionDecision(SuggestionDecisionRow(suggestionId, decision.name, suggestion.title))
+            waiting == null -> dao.putSuggestionDecision(SuggestionDecisionRow(suggestionId, decision.name, suggestion.title, trouble = refused))
             // It has to be looked at first: see [letGoOfSuggestionDecision].
             waiting.trouble != null -> Unit
             suggestionId in decisionsOnTheWay -> Unit
             waiting.decision == decision.name -> Unit
-            else -> dao.putSuggestionDecision(waiting.copy(decision = decision.name, revision = waiting.revision + 1))
+            else -> dao.putSuggestionDecision(waiting.copy(decision = decision.name, revision = waiting.revision + 1, trouble = refused))
         }
+    }
+
+    /** Whether the entry that was added is no longer what was added, as far as this phone can tell. */
+    private suspend fun entryChangedOnThePhone(suggestion: SuggestionRow): Boolean {
+        val id = suggestion.madeEntryId ?: return false
+        if (dao.changeOf(id) != null) {
+            return true
+        }
+        val entry = dao.entry(id) ?: return false
+        return entry.status != Status.NOT_STARTED.name || entry.taskCount > 0
     }
 
     /**
@@ -261,17 +281,33 @@ class PlannerRepository(
                 decisionsOnTheWay -= change.suggestionId
                 continue
             }
-            val route = if (decision == Decision.ACCEPT) "accept" else "reject"
+            val route = when (decision) {
+                Decision.ACCEPT -> "accept"
+                Decision.REJECT -> "reject"
+                Decision.KEEP -> "keep"
+                Decision.UNDO -> "undo"
+            }
             try {
-                api().send<SuggestionWire>(HttpMethod.Post, "/api/suggestions/${change.suggestionId}/$route", null)
-                suggestionDecisionTaken(since, change)
+                val answer = api().send<SuggestionWire>(HttpMethod.Post, "/api/suggestions/${change.suggestionId}/$route", null)
+                suggestionDecisionTaken(since, change, decision, answer)
             } catch (failure: ApiFailure) {
                 when {
                     failure is ApiFailure.Unreachable -> return Sending.UNREACHABLE
                     failure is ApiFailure.SignedOut -> return Sending.SIGNED_OUT
                     failure is ApiFailure.Problem && failure.status == 404 -> suggestionDecisionTroubled(since, change, SuggestionTroubleKind.GONE)
+                    failure is ApiFailure.Problem && failure.isOf(ApiFailure.ENTRY_CHANGED) -> suggestionEntryChanged(since, change)
                     failure is ApiFailure.Problem && failure.isOf(ApiFailure.ALREADY_DECIDED) ->
-                        suggestionDecisionTroubled(since, change, SuggestionTroubleKind.DECIDED_OTHERWISE)
+                        if (decision.ofAdded) {
+                            val held = try {
+                                api().get<SuggestionWire>("/api/suggestions/${change.suggestionId}")
+                            } catch (noAnswer: ApiFailure) {
+                                // Not known yet who decided it, and how: the decision waits and is tried again.
+                                return if (noAnswer is ApiFailure.SignedOut) Sending.SIGNED_OUT else Sending.UNREACHABLE
+                            }
+                            suggestionDecisionTroubled(since, change, SuggestionTroubleKind.DECIDED_OTHERWISE, held.state, held.decidedBy)
+                        } else {
+                            suggestionDecisionTroubled(since, change, SuggestionTroubleKind.DECIDED_OTHERWISE)
+                        }
                     failure is ApiFailure.Problem && failure.isOf(ApiFailure.BAD_REQUEST) ->
                         suggestionDecisionTroubled(since, change, SuggestionTroubleKind.REFUSED)
                     // Something is wrong on the server's side: the decision waits and is tried again.
@@ -284,20 +320,44 @@ class PlannerRepository(
         return Sending.ALL_SENT
     }
 
-    /** The server has the decision: the row goes, and so does the suggestion from the copy, which no longer waits. */
-    private suspend fun suggestionDecisionTaken(since: Int, sent: SuggestionDecisionRow) = written {
+    /**
+     * The server has the decision: the row goes. An acceptance or a rejection takes the suggestion from the copy too, which
+     * no longer waits; a keep leaves it standing as accepted; an undo takes it away, and the entry with it.
+     */
+    private suspend fun suggestionDecisionTaken(since: Int, sent: SuggestionDecisionRow, decision: Decision, answer: SuggestionWire) = written {
         decisionsOnTheWay -= sent.suggestionId
         if (forgotten == since) {
-            dao.decisionSent(sent.suggestionId)
+            when (decision) {
+                Decision.KEEP -> dao.keepSent(sent.suggestionId, answer.decidedBy, answer.decidedAt)
+                Decision.UNDO -> dao.undoSent(sent.suggestionId, dao.suggestion(sent.suggestionId)?.madeEntryId)
+                else -> dao.decisionSent(sent.suggestionId)
+            }
         }
     }
 
-    private suspend fun suggestionDecisionTroubled(since: Int, sent: SuggestionDecisionRow, trouble: SuggestionTroubleKind) = written {
+    private suspend fun suggestionDecisionTroubled(
+        since: Int,
+        sent: SuggestionDecisionRow,
+        trouble: SuggestionTroubleKind,
+        heldState: String? = null,
+        heldBy: String? = null,
+    ) = written {
         decisionsOnTheWay -= sent.suggestionId
         if (forgotten != since) {
             return@written
         }
-        dao.suggestionDecisionOf(sent.suggestionId)?.let { dao.putSuggestionDecision(it.copy(trouble = trouble.name)) }
+        val held = heldState?.takeIf { it == SuggestionState.ACCEPTED.name || it == REJECTED }
+        dao.suggestionDecisionOf(sent.suggestionId)?.let { dao.putSuggestionDecision(it.copy(trouble = trouble.name, heldState = held, heldBy = heldBy.takeIf { held != null })) }
+    }
+
+    /** An undo met an entry that is no longer what was added: it stays, and the server counts the suggestion as kept by this person. */
+    private suspend fun suggestionEntryChanged(since: Int, sent: SuggestionDecisionRow) = written {
+        decisionsOnTheWay -= sent.suggestionId
+        if (forgotten != since) {
+            return@written
+        }
+        dao.suggestionDecisionOf(sent.suggestionId)?.let { dao.putSuggestionDecision(it.copy(trouble = SuggestionTroubleKind.ENTRY_CHANGED.name)) }
+        dao.setSuggestionAccepted(sent.suggestionId, dao.members().firstOrNull { it.you }?.id, null)
     }
 
     // ---------------------------------------------------------------- sharing to the planner
@@ -549,12 +609,13 @@ class PlannerRepository(
         }
 
     /**
-     * The suggestions that wait. A server that does not know the route yet (it answers 404) has none: a phone that was
+     * The suggestions. A server that does not know the route yet (it answers 404) has none: a phone that was
      * updated before the server must go on showing the planner. Any other failure is the load's.
      */
     private suspend fun suggestionsOrNone(): List<SuggestionWire> =
         try {
-            api().get("/api/suggestions")
+            // All of them: what waits, what was added by itself, and what was accepted, which an entry says it came from.
+            api().get("/api/suggestions?state=ALL")
         } catch (failure: ApiFailure.Problem) {
             if (failure.status == 404) emptyList() else throw failure
         }
@@ -659,6 +720,9 @@ internal enum class Sending {
 
 private const val SEPARATOR = ","
 
+/** What the server calls a suggestion that was rejected or undone: a state the phone does not hold, only says. */
+private const val REJECTED = "REJECTED"
+
 internal fun storedOf(
     at: Instant,
     wedding: WeddingWire,
@@ -673,6 +737,27 @@ internal fun storedOf(
     counts: GuestCountsWire,
     inspirations: List<InspirationWire>,
     suggestions: List<SuggestionWire>,
+): Stored {
+    // Home's lists are read a moment apart from the whole list: an entry only Home knows of is kept too.
+    val allEntries = (entries + home.overdue + home.next + home.nextPayments).distinctBy { it.id }
+    return storedOf(at, wedding, home, allEntries, categories, vendors, boards, budget, guests, households, counts, inspirations, suggestions, allEntries.mapNotNull { it.fromSuggestionId }.toSet())
+}
+
+private fun storedOf(
+    at: Instant,
+    wedding: WeddingWire,
+    home: HomeWire,
+    allEntries: List<EntryWire>,
+    categories: List<NameWire>,
+    vendors: List<VendorWire>,
+    boards: List<NameWire>,
+    budget: WholeBudgetWire,
+    guests: List<GuestWire>,
+    households: List<NameWire>,
+    counts: GuestCountsWire,
+    inspirations: List<InspirationWire>,
+    suggestions: List<SuggestionWire>,
+    cameFrom: Set<String>,
 ): Stored = Stored(
     planner = PlannerRow(
         loadedAt = at.toEpochMilli(),
@@ -693,8 +778,7 @@ internal fun storedOf(
         uncategorisedPayments = budget.uncategorised.payments,
         guestCounts = Json.encodeToString(GuestCountsWire.serializer(), counts),
     ),
-    // Home's lists are read a moment apart from the whole list: an entry only Home knows of is kept too.
-    entries = (entries + home.overdue + home.next + home.nextPayments).distinctBy { it.id }.mapIndexed { position, entry -> rowOf(entry, position) },
+    entries = allEntries.mapIndexed { position, entry -> rowOf(entry, position) },
     categories = categories.mapIndexed { position, category -> CategoryRow(category.id, position, category.name) },
     vendors = vendors.mapIndexed { position, vendor ->
         VendorRow(
@@ -728,16 +812,28 @@ internal fun storedOf(
     inspirationPictures = inspirations.flatMap { idea ->
         idea.pictures.mapIndexed { position, picture -> InspirationPictureRow(picture.id, idea.id, position, picture.width, picture.height, picture.preview) }
     },
-    suggestions = suggestions.mapIndexed { position, one ->
+    suggestions = suggestions.filter { heldOf(it, cameFrom) }.mapIndexed { position, one ->
         SuggestionRow(
             id = one.id, position = position, kind = one.kind, title = one.title, notes = one.notes, startDate = one.startDate, dueDate = one.dueDate,
             amount = one.amount, paymentKind = one.paymentKind, categoryId = one.categoryId, vendorId = one.vendorId, vendorName = one.vendorName,
             vendorEmail = one.vendorEmail, vendorPhone = one.vendorPhone, vendorWebsite = one.vendorWebsite, senderName = one.senderName,
             senderAddress = one.senderAddress, subject = one.subject, receivedAt = one.receivedAt, inboxMemberId = one.inboxMemberId,
             mailLink = one.mailLink, passage = one.passage, confidence = one.confidence,
+            state = one.state, madeEntryId = one.madeEntryId, decidedBy = one.decidedBy, decidedAt = one.decidedAt,
         )
     },
 )
+
+/**
+ * Whether the phone keeps a suggestion the server listed: one that waits, and one that was added by itself and nobody has
+ * decided. One that was accepted only when an entry says it came from it (that is all an entry's "From e-mail" leads to:
+ * the rest is parts of mail the phone has no use for), and one that was rejected, or is in a state a newer server adds, never.
+ */
+private fun heldOf(suggestion: SuggestionWire, cameFrom: Set<String>): Boolean = when (suggestion.state) {
+    SuggestionState.WAITING.name, SuggestionState.ADDED.name -> true
+    SuggestionState.ACCEPTED.name -> suggestion.id in cameFrom
+    else -> false
+}
 
 /** An entry as the server sent it, for the phone's table. */
 internal fun rowOf(entry: EntryWire, position: Int): EntryRow = EntryRow(
@@ -761,6 +857,7 @@ internal fun rowOf(entry: EntryWire, position: Int): EntryRow = EntryRow(
     assigneeIds = entry.assigneeIds.joinToString(SEPARATOR),
     taskCount = entry.taskCount,
     version = entry.version,
+    fromSuggestionId = entry.fromSuggestionId,
 )
 
 /** What the screens show: the last load with the phone's own waiting changes laid over it. */
@@ -799,8 +896,10 @@ internal fun plannerOf(stored: Stored): Planner {
     val known = stored.guests.map { it.id }.toSet()
     stored.guestStatuses.filter { it.trouble == Trouble.GONE || it.guestId !in known }.forEach { guestTroubles += GuestTrouble(it.guestId, it.name, gone = true) }
     val decisions = stored.suggestionDecisions.associateBy { it.suggestionId }
-    val suggestions = stored.suggestions.map { suggestionOf(it, decisions[it.id]) }
-    val suggestionTroubles = stored.suggestionDecisions.mapNotNull(::troubleOf)
+    val held = stored.suggestions.mapNotNull { suggestionOf(it, decisions[it.id]) }
+    val suggestionTroubles = stored.suggestionDecisions.mapNotNull { troubleOf(it, stored.members) }
+    // An undo takes effect at once: the entry is gone from the lists, and comes back should the decision be taken back or not be taken.
+    held.filter { it.state == SuggestionState.ADDED && it.decided == Decision.UNDO }.mapNotNull { it.madeEntryId }.forEach { entries.remove(it) }
     // What was just added on the phone stands first, where it is seen.
     val all = added + entries.values
     val byId = all.associateBy { it.id }
@@ -833,7 +932,9 @@ internal fun plannerOf(stored: Stored): Planner {
         guestCounts = countsOf(planner.guestCounts),
         guestTroubles = guestTroubles,
         inspirations = stored.inspirations.map { row -> inspirationOf(row, pictures[row.id].orEmpty()) },
-        suggestions = suggestions,
+        suggestions = held.filter { it.state == SuggestionState.WAITING },
+        added = held.filter { it.state == SuggestionState.ADDED },
+        accepted = held.filter { it.state == SuggestionState.ACCEPTED },
         suggestionTroubles = suggestionTroubles,
         suggestionDecisions = stored.suggestionDecisions.size,
     )
@@ -846,13 +947,24 @@ private fun vendorOf(row: VendorRow): Vendor = Vendor(
     inspirations = row.inspirations,
 )
 
-private fun troubleOf(row: SuggestionDecisionRow): SuggestionTrouble? {
+private fun troubleOf(row: SuggestionDecisionRow, members: List<MemberRow>): SuggestionTrouble? {
     val kind = SuggestionTroubleKind.entries.firstOrNull { it.name == row.trouble } ?: return null
     val decision = Decision.entries.firstOrNull { it.name == row.decision } ?: return null
-    return SuggestionTrouble(row.suggestionId, row.title, kind, decision)
+    return SuggestionTrouble(
+        row.suggestionId, row.title, kind, decision,
+        decidedAs = when {
+            row.heldState == SuggestionState.ACCEPTED.name -> if (row.heldBy == null) DecidedAs.KEPT_AFTER_THIRTY_DAYS else DecidedAs.KEPT
+            row.heldState == REJECTED -> DecidedAs.UNDONE
+            else -> null
+        },
+        decidedBy = members.firstOrNull { it.id == row.heldBy }?.displayName,
+    )
 }
 
-private fun suggestionOf(row: SuggestionRow, waiting: SuggestionDecisionRow?): Suggestion = Suggestion(
+/** A suggestion as the screens show it; null for one in a state this version of the app does not know. */
+private fun suggestionOf(row: SuggestionRow, waiting: SuggestionDecisionRow?): Suggestion? = Suggestion(
+    state = SuggestionState.entries.firstOrNull { it.name == row.state } ?: return null,
+    madeEntryId = row.madeEntryId, decidedBy = row.decidedBy, decidedAt = row.decidedAt?.let(::instantOf),
     id = row.id, kind = SuggestionKind.entries.firstOrNull { it.name == row.kind } ?: SuggestionKind.OTHER, title = row.title, notes = row.notes,
     startDate = dateOf(row.startDate), dueDate = dateOf(row.dueDate), amount = row.amount, paymentKind = row.paymentKind, categoryId = row.categoryId,
     vendorId = row.vendorId, vendorName = row.vendorName, vendorEmail = row.vendorEmail, vendorPhone = row.vendorPhone, vendorWebsite = row.vendorWebsite,
@@ -956,6 +1068,7 @@ private fun entryOf(row: EntryRow): Entry? {
         taskCount = row.taskCount,
         version = row.version,
         byHand = row.priorityMode == "MANUAL",
+        fromSuggestionId = row.fromSuggestionId,
     )
 }
 

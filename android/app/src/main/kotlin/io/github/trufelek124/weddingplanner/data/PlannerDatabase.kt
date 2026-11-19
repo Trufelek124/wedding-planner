@@ -242,6 +242,26 @@ abstract class PlannerDao {
         deleteSuggestion(suggestionId)
     }
 
+    /** The server took a keep: the suggestion stands as accepted, by whoever the server says. */
+    @Transaction
+    open suspend fun keepSent(suggestionId: String, decidedBy: String?, decidedAt: String?) {
+        deleteSuggestionDecision(suggestionId)
+        setSuggestionAccepted(suggestionId, decidedBy, decidedAt)
+    }
+
+    /** The server took an undo: the entry is gone, the suggestion is rejected and not held any more. */
+    @Transaction
+    open suspend fun undoSent(suggestionId: String, entryId: String?) {
+        decisionSent(suggestionId)
+        entryId?.let { deleteEntry(it) }
+    }
+
+    @Query("UPDATE suggestion SET state = 'ACCEPTED', decidedBy = :decidedBy, decidedAt = :decidedAt WHERE id = :id")
+    abstract suspend fun setSuggestionAccepted(id: String, decidedBy: String?, decidedAt: String?)
+
+    @Query("DELETE FROM entry WHERE id = :id")
+    abstract suspend fun deleteEntry(id: String)
+
     @Query("SELECT * FROM waiting_suggestion_decision ORDER BY suggestionId")
     abstract suspend fun suggestionDecisions(): List<SuggestionDecisionRow>
 
@@ -288,9 +308,9 @@ abstract class PlannerDao {
         ShareRow::class, BudgetLineRow::class, GuestRow::class, HouseholdRow::class, GuestStatusRow::class, InspirationRow::class, InspirationPictureRow::class,
         SuggestionRow::class, SuggestionDecisionRow::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6), AutoMigration(from = 6, to = 7), AutoMigration(from = 7, to = 8)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6), AutoMigration(from = 6, to = 7), AutoMigration(from = 7, to = 8), AutoMigration(from = 8, to = 9)],
 )
 abstract class PlannerDatabase : RoomDatabase() {
 

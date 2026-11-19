@@ -291,7 +291,7 @@ class SuggestionsScreenTest : SignedInPhoneTest() {
 
     @Test
     fun `Open the e-mail starts the message in Gmail`() {
-        server.planner(suggestions = listOf(payment))
+        server.planner(suggestions = listOf(payment.inAnnasInbox()))
         open()
         openSuggestions()
 
@@ -302,6 +302,9 @@ class SuggestionsScreenTest : SignedInPhoneTest() {
         assertEquals(link, intent.data.toString())
         compose.onNodeWithText("No app on this phone can open that.").assertDoesNotExist()
     }
+
+    /** The same suggestion, in Anna's inbox, who is signed in: the only one whose message can be opened from here. */
+    private fun String.inAnnasInbox(): String = replace(Regex("\"inboxMemberId\":\"[^\"]*\""), "\"inboxMemberId\":\"${StandIn.ANNA}\"")
 
     private fun String.withLink(address: String): String = replace(Regex("\"mailLink\":\"[^\"]*\""), "\"mailLink\":\"$address\"")
 
@@ -332,7 +335,7 @@ class SuggestionsScreenTest : SignedInPhoneTest() {
 
     @Test
     fun `where only some cards have a link that passes only those have the button`() {
-        server.planner(suggestions = listOf(payment, task.withLink("http://mail.google.com/mail/u/0/#all/1")))
+        server.planner(suggestions = listOf(payment.inAnnasInbox(), task.withLink("http://mail.google.com/mail/u/0/#all/1")))
         open()
         openSuggestions()
 
@@ -344,7 +347,7 @@ class SuggestionsScreenTest : SignedInPhoneTest() {
 
     @Test
     fun `with no app to take the message the screen stays and says so, and the next press that works takes the message away`() {
-        server.planner(suggestions = listOf(payment))
+        server.planner(suggestions = listOf(payment.inAnnasInbox()))
         open()
         openSuggestions()
         shadowOf(compose.activity.application).checkActivities(true)
@@ -433,6 +436,8 @@ class SuggestionsScreenTest : SignedInPhoneTest() {
 
         compose.onNodeWithText("No connection. This is what was loaded on 18 Nov 2026 at 14:05.").assertIsDisplayed()
         compose.onNode(line("Payment", "Pay the deposit", "62% sure")).assertIsDisplayed()
+        // Only the messages in Anna's own mailbox can be opened from here: the second card's.
+        scrollTo(openTheEmail)
         compose.onAllNodes(openTheEmail).onFirst().assertIsDisplayed()
     }
 

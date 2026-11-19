@@ -1,8 +1,10 @@
 package io.github.trufelek124.weddingplanner.planner
 
+import io.github.trufelek124.weddingplanner.data.DecidedAs
 import io.github.trufelek124.weddingplanner.data.Decision
 import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.data.Suggestion
+import io.github.trufelek124.weddingplanner.data.SuggestionState
 import io.github.trufelek124.weddingplanner.data.SuggestionKind
 import io.github.trufelek124.weddingplanner.data.SuggestionTrouble
 import io.github.trufelek124.weddingplanner.data.SuggestionTroubleKind
@@ -126,9 +128,59 @@ fun suggestionsSummary(count: Int): String = when {
 /** What Home says: how many wait; null when none do, and Home then says nothing about them. */
 fun suggestionsOnHome(count: Int): String? = suggestionsSummary(count).takeIf { count > 0 }
 
+/** The part of the inbox that holds what the import added by itself. */
+const val ADDED_PART = "Added by itself"
+
+/** The part of the inbox that holds what waits, said only where the other part is there as well. */
+const val WAITING_PART = "Waiting for a decision"
+
+/** Said once above the cards of [ADDED_PART]. */
+const val ADDED_INTRO =
+    "These are already in your plan. Undo what should not be there; what nobody undoes counts as kept after thirty days."
+
+/** What Home says about what was added by itself and nobody has looked at; null when there is none. It is a second line, never added to the first. */
+fun addedOnHome(count: Int): String? = when {
+    count <= 0 -> null
+    count == 1 -> "1 entry was added from your e-mail"
+    else -> "$count entries were added from your e-mail"
+}
+
+/** The second mark beside the suggestions, for a screen reader: "2 added by themselves". */
+fun addedMark(count: Int): String = "$count added by themselves"
+
+/** What More says under "Suggestions": how many wait and, beside it, how many were added by themselves and not looked at. */
+fun suggestionsOnMore(waiting: Int, added: Int): String =
+    if (added > 0) "${suggestionsSummary(waiting)} \u00b7 ${addedMark(added)}" else suggestionsSummary(waiting)
+
+/** The mark on a task or a step of the plan that a suggestion made. */
+const val FROM_EMAIL = "From e-mail"
+
+/** What a screen reader says for the mark where it leads to the source: it names what came from the mail. */
+fun fromEmailDescription(suggestion: Suggestion): String = "$FROM_EMAIL: where “${suggestionName(suggestion)}” came from"
+
+/**
+ * How a suggestion stands, for the source page: "Added by itself", "Accepted by Marek, 18 Nov 2026 at 14:05", "Added by itself;
+ * kept after thirty days". The server does not say whether an accepted one was kept or accepted, so it is always "Accepted by".
+ * Null for one that still waits.
+ */
+fun suggestionStanding(suggestion: Suggestion, planner: Planner, zone: ZoneId): String? = when (suggestion.state) {
+    SuggestionState.WAITING -> null
+    SuggestionState.ADDED -> "Added by itself"
+    SuggestionState.ACCEPTED -> {
+        val by = suggestion.decidedBy
+        if (by == null) {
+            "Added by itself; kept after thirty days"
+        } else {
+            val who = if (planner.you?.id == by) "you" else planner.memberName(by) ?: "someone"
+            listOfNotNull("Accepted by $who", suggestion.decidedAt?.let { moment(it, zone) }).joinToString(", ")
+        }
+    }
+}
+
 /** The card as one statement for a screen reader: what is proposed, where it comes from, the passage as a quotation, how sure. */
-fun suggestionInWords(suggestion: Suggestion, planner: Planner, zone: ZoneId): String {
+fun suggestionInWords(suggestion: Suggestion, planner: Planner, zone: ZoneId, standing: String? = null): String {
     val parts = mutableListOf("${suggestionKindLabel(suggestion.kind)}: ${suggestionName(suggestion)}")
+    if (standing != null) parts += standing
     parts += suggestionFacts(suggestion, planner)
     if (suggestion.notes.isNotBlank()) parts += "Notes: ${suggestion.notes.trim()}"
     parts += suggestionSource(suggestion, planner, zone)
@@ -138,13 +190,30 @@ fun suggestionInWords(suggestion: Suggestion, planner: Planner, zone: ZoneId): S
 }
 
 /** What the buttons of a card say: the same for every card, and what each does to which suggestion is in its description. */
-fun decideButton(decision: Decision): String = if (decision == Decision.ACCEPT) "Accept" else "Reject"
+fun decideButton(decision: Decision): String = when (decision) {
+    Decision.ACCEPT -> "Accept"
+    Decision.REJECT -> "Reject"
+    Decision.KEEP -> "Keep"
+    Decision.UNDO -> "Undo"
+}
 
 /** What a screen reader says for a button of a card: it names the suggestion, so that the buttons of two cards differ. */
 fun decideDescription(decision: Decision, suggestion: Suggestion): String = "${decideButton(decision)} “${suggestionName(suggestion)}”"
 
 /** What a decision made on the phone is called on the card, before it is sent. */
-fun decidedInWords(decision: Decision): String = if (decision == Decision.ACCEPT) "Accepted" else "Rejected"
+fun decidedInWords(decision: Decision): String = when (decision) {
+    Decision.ACCEPT -> "Accepted"
+    Decision.REJECT -> "Rejected"
+    Decision.KEEP -> "Kept"
+    Decision.UNDO -> "Undone"
+}
+
+/** What the card of a suggestion says of a decision made on the phone: for a keep and an undo it names the suggestion and says what it came to. */
+fun decidedOnCard(decision: Decision, suggestion: Suggestion): String = when (decision) {
+    Decision.KEEP -> "Kept: “${suggestionName(suggestion)}”."
+    Decision.UNDO -> "Undone: “${suggestionName(suggestion)}”. It was removed from your plan."
+    else -> decidedInWords(decision)
+}
 
 const val TAKE_BACK = "Take back"
 
@@ -153,24 +222,47 @@ fun takeBackDescription(suggestion: Suggestion): String = "Take back your decisi
 /** Said under a decision that cannot be taken back any more: it is being sent. */
 const val ON_ITS_WAY = "It is being sent and cannot be taken back."
 
+/** What the person asked for, as it is said after "your": "acceptance", "undo". */
+private fun asked(decision: Decision): String = when (decision) {
+    Decision.ACCEPT -> "acceptance"
+    Decision.REJECT -> "rejection"
+    Decision.KEEP -> "decision to keep it"
+    Decision.UNDO -> "undo"
+}
+
 /**
  * What a decision that could not be sent says, with the suggestion's title: what was decided otherwise, that the
- * suggestion is gone, or that the server did not take it and where the proposal can be changed.
+ * suggestion is gone, that the server did not take it and where the proposal can be changed, or that an undone entry was
+ * changed after it was added and so stays.
  */
 fun suggestionTroubleInWords(trouble: SuggestionTrouble): String {
     val title = trouble.title.trim().ifEmpty { "Suggestion without a title" }
     val accepted = trouble.decision == Decision.ACCEPT
     return when (trouble.kind) {
-        // The phone sent the opposite of what the server holds.
+        SuggestionTroubleKind.ENTRY_CHANGED -> "“$title” was changed after it was added, so it stays in your plan."
         SuggestionTroubleKind.DECIDED_OTHERWISE ->
-            "“$title” was already ${if (accepted) "rejected" else "accepted"}. Your ${if (accepted) "acceptance" else "rejection"} was not kept."
-        SuggestionTroubleKind.GONE -> "“$title” no longer exists, so your ${if (accepted) "acceptance" else "rejection"} was not sent."
+            if (trouble.decision.ofAdded) decidedOtherwiseOfAdded(trouble, title) else
+                // The phone sent the opposite of what the server holds.
+                "“$title” was already ${if (accepted) "rejected" else "accepted"}. Your ${if (accepted) "acceptance" else "rejection"} was not kept."
+        SuggestionTroubleKind.GONE -> "“$title” no longer exists, so your ${asked(trouble.decision)} was not sent."
         SuggestionTroubleKind.REFUSED ->
-            if (accepted) {
-                "The server did not take your acceptance of “$title”. The proposal can be changed in the web app."
-            } else {
-                "The server did not take your rejection of “$title”."
+            when (trouble.decision) {
+                Decision.ACCEPT -> "The server did not take your acceptance of “$title”. The proposal can be changed in the web app."
+                Decision.REJECT -> "The server did not take your rejection of “$title”."
+                Decision.KEEP -> "The server did not take your decision to keep “$title”."
+                Decision.UNDO -> "The server did not take your undo of “$title”."
             }
+    }
+}
+
+/** "“t” was already kept by Marek.", "“t” was already undone by Marek.", "“t” counted as kept after thirty days." */
+private fun decidedOtherwiseOfAdded(trouble: SuggestionTrouble, title: String): String {
+    val by = trouble.decidedBy?.let { " by $it" }.orEmpty()
+    return when (trouble.decidedAs) {
+        DecidedAs.KEPT_AFTER_THIRTY_DAYS -> "“$title” counted as kept after thirty days."
+        DecidedAs.KEPT -> "“$title” was already kept$by."
+        DecidedAs.UNDONE -> "“$title” was already undone$by."
+        null -> "The server did not take your ${asked(trouble.decision)} of “$title”."
     }
 }
 

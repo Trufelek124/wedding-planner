@@ -71,6 +71,7 @@ private val SHOWN_BESIDE = setOf("title", "dueDate", "categoryId", "parentId", "
  * @param parentId for a new task: the step of the plan it is added to
  * @param today the date where the wedding takes place, by the phone's clock
  * @param onLetGo for a task whose change could not be sent: give the change up and keep the latest version
+ * @param onSource where a task that a suggestion made leads to its source; null where it does not
  */
 @Composable
 fun TaskForm(
@@ -82,6 +83,7 @@ fun TaskForm(
     onCancel: () -> Unit,
     onLetGo: () -> Unit,
     modifier: Modifier = Modifier,
+    onSource: ((suggestionId: String) -> Unit)? = null,
 ) {
     val from = task?.fields ?: TaskFields(title = "", parentId = parentId)
     val refused = task?.refusals.orEmpty()
@@ -146,6 +148,8 @@ fun TaskForm(
             Waiting.TO_BE_SENT -> FormNotice(stringResource(R.string.task_waiting))
             null -> Unit
         }
+
+        task?.fromSuggestionId?.let { id -> FromEmail(planner.suggestion(id), onSource?.let { go -> { go(id) } }) }
 
         OutlinedTextField(
             value = title,

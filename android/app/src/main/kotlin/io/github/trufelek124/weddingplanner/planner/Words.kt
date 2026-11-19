@@ -123,9 +123,12 @@ data class Fact(val text: String, val strong: Boolean = false)
  *
  * @param withPlanItem false where the task already stands under its plan item
  * @param withVendor false where the entry already stands under its vendor
+ * @param withSource false where the mark "From e-mail" is drawn on its own, as the way to the source
  */
-fun factsOf(entry: Entry, planner: Planner, withPlanItem: Boolean = true, withVendor: Boolean = true): List<Fact> = listOfNotNull(
+fun factsOf(entry: Entry, planner: Planner, withPlanItem: Boolean = true, withVendor: Boolean = true, withSource: Boolean = true): List<Fact> = listOfNotNull(
     waitingInWords(entry.waiting)?.let { Fact(it, strong = true) },
+    // Said in words and in weight: what the import made without a person looking is not to be missed.
+    Fact(FROM_EMAIL, strong = true).takeIf { withSource && entry.fromSuggestionId != null },
     statusLabel(entry.status).takeIf { entry.kind == Kind.PLAN_ITEM || entry.status != Status.NOT_STARTED }?.let(::Fact),
     // The level is a word and says why; the weight only helps the eye find what is urgent. A task that
     // exists only on the phone has no level yet: the server works it out.

@@ -64,9 +64,16 @@ class LivingPlanner(
         guests.remove(id)
     }
 
-    /** The other owner decides a suggestion on another device; the phone's own decision, when it arrives, finds it decided. */
-    fun decideElsewhere(id: String, state: String) {
-        suggestionStates[id]?.let { suggestionStates[id] = JsonObject(it + ("state" to JsonPrimitive(state))) }
+    /**
+     * The other owner decides a suggestion on another device; the phone's own decision, when it arrives, finds it decided.
+     * @param by the member who did; null where nobody did (thirty days)
+     */
+    fun decideElsewhere(id: String, state: String, by: String? = StandIn.MAREK) {
+        suggestionStates[id]?.let {
+            suggestionStates[id] = JsonObject(
+                it + ("state" to JsonPrimitive(state)) + ("decidedBy" to (by?.let(::JsonPrimitive) ?: JsonNull)) + ("decidedAt" to JsonPrimitive("2026-11-18T15:00:00Z")),
+            )
+        }
     }
 
     /** Someone removes a suggestion. */
@@ -74,8 +81,41 @@ class LivingPlanner(
         suggestionStates.remove(id)
     }
 
-    /** WAITING, ACCEPTED or REJECTED; null for one the server does not have. */
+    /** WAITING, ADDED, ACCEPTED or REJECTED; null for one the server does not have. */
     fun suggestionStateOf(id: String): String? = suggestionStates[id]?.getValue("state")?.jsonPrimitive?.content
+
+    private fun MockRequestHandleScope.keptOrUndone(suggestion: JsonObject, keep: Boolean): HttpResponseData {
+        val id = suggestion.getValue("id").jsonPrimitive.content
+        val now = suggestion.getValue("state").jsonPrimitive.content
+        val wanted = if (keep) "ACCEPTED" else "REJECTED"
+        fun decided(state: String, by: String?) = JsonObject(
+            suggestion + ("state" to JsonPrimitive(state)) + ("decidedBy" to (by?.let(::JsonPrimitive) ?: JsonNull)) +
+                ("decidedAt" to JsonPrimitive("2026-11-18T14:05:00Z")),
+        )
+        return when {
+            now == wanted -> respondJson(suggestion.toString())
+            now == "WAITING" -> respondProblem(400, "bad-request")
+            now != "ADDED" -> respondProblem(409, "already-decided")
+            keep -> decided("ACCEPTED", StandIn.ANNA).also { suggestionStates[id] = it }.let { respondJson(it.toString()) }
+            else -> {
+                val entryId = suggestion.getValue("madeEntryId").let { if (it == JsonNull) null else it.jsonPrimitive.content }
+                val entry = entryId?.let { entries[it] }
+                // As the server judges: saved at least once, not "not started" any more, a task hangs on it, or gone.
+                val untouched = entry != null && entry.getValue("version").jsonPrimitive.int == 0 &&
+                    entry.getValue("status").jsonPrimitive.content == "NOT_STARTED" && entry.getValue("taskCount").jsonPrimitive.int == 0
+                if (untouched) {
+                    entries.remove(entryId)
+                    val undone = decided("REJECTED", StandIn.ANNA)
+                    suggestionStates[id] = JsonObject(undone + ("madeEntryId" to JsonNull))
+                    respondJson(suggestionStates.getValue(id).toString())
+                } else {
+                    // Kept after all, by the person who asked.
+                    suggestionStates[id] = decided("ACCEPTED", StandIn.ANNA)
+                    respondProblem(409, "entry-changed")
+                }
+            }
+        }
+    }
 
     /** The entry that accepting a suggestion made, by the id the suggestion names. */
     fun madeFor(suggestionId: String): JsonObject? = entries["made-$suggestionId"]
@@ -86,10 +126,11 @@ class LivingPlanner(
         val kind = suggestion.getValue("kind").jsonPrimitive.content
         val id = "made-" + suggestion.getValue("id").jsonPrimitive.content
         val title = suggestion.getValue("title").jsonPrimitive.content
+        val from = suggestion.getValue("id").jsonPrimitive.content
         val entry = when (kind) {
-            "TASK" -> StandIn.entry(id, title, dueDate = text("dueDate"))
-            "PAYMENT" -> StandIn.entry(id, title, dueDate = text("dueDate"), amount = text("amount")?.toLong(), paymentKind = text("paymentKind"))
-            "PLAN_ITEM" -> StandIn.entry(id, title, kind = "PLAN_ITEM", startDate = text("startDate"), dueDate = text("dueDate"))
+            "TASK" -> StandIn.entry(id, title, dueDate = text("dueDate"), fromSuggestionId = from)
+            "PAYMENT" -> StandIn.entry(id, title, dueDate = text("dueDate"), amount = text("amount")?.toLong(), paymentKind = text("paymentKind"), fromSuggestionId = from)
+            "PLAN_ITEM" -> StandIn.entry(id, title, kind = "PLAN_ITEM", startDate = text("startDate"), dueDate = text("dueDate"), fromSuggestionId = from)
             else -> return
         }
         put(entry)
@@ -142,8 +183,18 @@ class LivingPlanner(
                 guests[kept.getValue("id").jsonPrimitive.content] = now
                 respondJson(now.toString())
             }
-            method == "GET" && path == "/api/suggestions" ->
-                respondJson(suggestionStates.values.filter { it.getValue("state").jsonPrimitive.content == "WAITING" }.joinToString(",", "[", "]"))
+            method == "GET" && path == "/api/suggestions" -> {
+                // As the server does: what waits unless another state is asked for, or all of them.
+                val which = request.url.parameters["state"] ?: "WAITING"
+                respondJson(suggestionStates.values.filter { which == "ALL" || it.getValue("state").jsonPrimitive.content == which }.joinToString(",", "[", "]"))
+            }
+            method == "GET" && path.startsWith("/api/suggestions/") && !path.removePrefix("/api/suggestions/").contains("/") ->
+                suggestionStates[path.removePrefix("/api/suggestions/")]?.let { respondJson(it.toString()) } ?: respondProblem(404, "not-found")
+            method == "POST" && path.startsWith("/api/suggestions/") && (path.endsWith("/keep") || path.endsWith("/undo")) -> {
+                val kept = suggestionStates[path.removePrefix("/api/suggestions/").substringBefore("/")] ?: return respondProblem(404, "not-found")
+                if (request.body.toByteArray().isNotEmpty()) return respondProblem(400, "bad-request")
+                keptOrUndone(kept, keep = path.endsWith("/keep"))
+            }
             method == "POST" && path.startsWith("/api/suggestions/") && (path.endsWith("/accept") || path.endsWith("/reject")) -> {
                 val kept = suggestionStates[path.removePrefix("/api/suggestions/").substringBefore("/")] ?: return respondProblem(404, "not-found")
                 // Accepting and rejecting as proposed: no body.

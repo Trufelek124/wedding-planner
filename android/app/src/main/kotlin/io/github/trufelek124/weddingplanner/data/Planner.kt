@@ -192,6 +192,21 @@ class Inspiration(
 enum class SuggestionKind { TASK, PAYMENT, PLAN_ITEM, VENDOR, OTHER }
 
 /**
+ * Where a suggestion that the phone holds stands. One that was rejected is not held, and neither is a state a newer
+ * server adds.
+ */
+enum class SuggestionState {
+    /** Nobody has decided it: accept or reject. */
+    WAITING,
+
+    /** The import was sure enough and made the task or the step by itself: keep it or undo it. */
+    ADDED,
+
+    /** Accepted by a person, kept, or counted as kept after thirty days: what an entry's "From e-mail" leads to. */
+    ACCEPTED,
+}
+
+/**
  * What the e-mail import proposes. Not a data class: the sender, the subject, the passage and the title came out of
  * someone's mail and are not to be printed. All of it is plain text, whatever it looks like.
  *
@@ -205,6 +220,10 @@ enum class SuggestionKind { TASK, PAYMENT, PLAN_ITEM, VENDOR, OTHER }
  * @param mailLink the server's link to the message in Gmail; whether it may be opened is `mailLinkAddress` in planner/Contact.kt's to say
  * @param passage the quotation the proposal rests on
  * @param confidence how sure the import is, as a whole percentage
+ * @param state where it stands on the server
+ * @param madeEntryId the task or step it made, or that was added by itself
+ * @param decidedBy the member who decided it; null while nobody did, and for one that counts as kept after thirty days
+ * @param decidedAt when it was decided
  * @param decided what was decided on this phone and the server does not have yet; null while nobody decided
  * @param waiting where the decision stands: set with [decided]
  * @param needsLook a decision made on this phone cannot be sent as it is: the card says nothing of it and offers none
@@ -233,6 +252,10 @@ class Suggestion(
     val mailLink: String,
     val passage: String,
     val confidence: Int,
+    val state: SuggestionState = SuggestionState.WAITING,
+    val madeEntryId: String? = null,
+    val decidedBy: String? = null,
+    val decidedAt: Instant? = null,
     val decided: Decision? = null,
     val waiting: Waiting? = null,
     val needsLook: Boolean = false,
@@ -240,12 +263,30 @@ class Suggestion(
     override fun toString(): String = "Suggestion[id=$id]"
 }
 
-/** What a person decides about a suggestion. */
-enum class Decision { ACCEPT, REJECT;
+/**
+ * What a person decides about a suggestion: accept or reject one that waits, keep or undo one that was added by itself.
+ */
+enum class Decision {
+    ACCEPT,
+    REJECT,
+    KEEP,
+    UNDO;
 
     /** The decision the other owner would have made. */
-    val other: Decision get() = if (this == ACCEPT) REJECT else ACCEPT
+    val other: Decision
+        get() = when (this) {
+            ACCEPT -> REJECT
+            REJECT -> ACCEPT
+            KEEP -> UNDO
+            UNDO -> KEEP
+        }
+
+    /** Whether this is for a suggestion that was added by itself. */
+    val ofAdded: Boolean get() = this == KEEP || this == UNDO
 }
+
+/** How a suggestion that was added by itself stands on the server when a keep or an undo of the phone's met it decided. */
+enum class DecidedAs { KEPT, UNDONE, KEPT_AFTER_THIRTY_DAYS }
 
 /** Why a decision made on the phone could not be sent as it is. */
 enum class SuggestionTroubleKind {
@@ -257,6 +298,9 @@ enum class SuggestionTroubleKind {
 
     /** The server did not take an acceptance: a vendor that is gone, an amount that is not valid. */
     REFUSED,
+
+    /** An undo of an entry that is no longer what was added: it stays in the plan. The server counts the suggestion as kept. */
+    ENTRY_CHANGED,
 }
 
 /**
@@ -264,8 +308,17 @@ enum class SuggestionTroubleKind {
  * class: it holds the title of a suggestion, which came out of someone's mail.
  *
  * @param decision what the phone sent, or was to send
+ * @param decidedAs for a keep or an undo that was decided otherwise: how it stands on the server; null where that is not known
+ * @param decidedBy the name of the member who decided it; null where nobody did or the member is not known
  */
-class SuggestionTrouble(val suggestionId: String, val title: String, val kind: SuggestionTroubleKind, val decision: Decision) {
+class SuggestionTrouble(
+    val suggestionId: String,
+    val title: String,
+    val kind: SuggestionTroubleKind,
+    val decision: Decision,
+    val decidedAs: DecidedAs? = null,
+    val decidedBy: String? = null,
+) {
     override fun toString(): String = "SuggestionTrouble[suggestionId=$suggestionId]"
 }
 
@@ -309,6 +362,8 @@ data class Entry(
     val version: Int,
     /** Whether the level was chosen by hand, as opposed to worked out by the server. */
     val byHand: Boolean = false,
+    /** The suggestion of the e-mail import that made it; null for an entry made by hand, and while the copy does not know. */
+    val fromSuggestionId: String? = null,
     /** Set while a change made on this phone has not reached the server. */
     val waiting: Waiting? = null,
     /** For a change the server refused: what is wrong, by field, in words for the person. */
@@ -386,6 +441,10 @@ class Planner(
     val inspirations: List<Inspiration> = emptyList(),
     /** What the e-mail import proposes and nobody has decided, the newest message first. */
     val suggestions: List<Suggestion> = emptyList(),
+    /** What the import added by itself and nobody has kept or undone, the newest first: those with a decision made on the phone included. */
+    val added: List<Suggestion> = emptyList(),
+    /** What was accepted or kept and an entry says it came from: nothing else of the accepted is held. */
+    val accepted: List<Suggestion> = emptyList(),
     /** Decisions made on the phone that cannot be sent as they are. */
     val suggestionTroubles: List<SuggestionTrouble> = emptyList(),
     /** How many decisions of suggestions exist only on this phone, those that could not be sent included. */
@@ -407,6 +466,18 @@ class Planner(
 
     fun inspiration(id: String): Inspiration? = inspirations.firstOrNull { it.id == id }
 
+    /** A suggestion the phone holds, whether it waits, was added by itself or was accepted; null for one it does not have. */
+    fun suggestion(id: String): Suggestion? = (suggestions + added + accepted).firstOrNull { it.id == id }
+
+    /** The member who is signed in on this phone; null while the copy has none. */
+    val you: Member? get() = members.firstOrNull { it.you }
+
+    /**
+     * Whether the message is in the signed-in person's own mailbox. A message in the other owner's cannot be opened
+     * from here.
+     */
+    fun inYourInbox(suggestion: Suggestion): Boolean = you?.id == suggestion.inboxMemberId
+
     /** The plan items, tasks and payments that concern a vendor, in the list's order. */
     fun entriesOf(vendor: Vendor): List<Entry> = entries.filter { it.vendorId == vendor.id }
 
@@ -416,10 +487,16 @@ class Planner(
     /** How many changes made on this phone are on their way to the server. */
     val waiting: Int
         get() = entries.count { it.waiting == Waiting.TO_BE_SENT } + guests.count { it.waiting == Waiting.TO_BE_SENT } +
-            suggestions.count { it.waiting == Waiting.TO_BE_SENT }
+            (suggestions + added).count { it.waiting == Waiting.TO_BE_SENT }
 
     /** How many suggestions still wait for a decision: those decided on this phone are not counted, they are as good as decided. */
     val suggestionsToDecide: Int get() = suggestions.count { it.decided == null }
+
+    /**
+     * How many were added by themselves and nobody has looked at: the number beside [suggestionsToDecide], never added to
+     * it, because the two ask different things of a person. One with a decision made on this phone is not counted.
+     */
+    val addedToLookAt: Int get() = added.count { it.decided == null }
 
     /** How many guests show a status chosen on this phone that the server does not have: the head count does not know of them. */
     val guestsChanged: Int get() = guests.count { it.waiting != null }

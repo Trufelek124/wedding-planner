@@ -130,7 +130,10 @@ private fun PlanItem(item: Entry, planner: Planner, actions: TaskActions?) {
     val tasks = planner.tasksOf(item)
     var open by rememberSaveable(item.id) { mutableStateOf(false) }
     Column {
-        EntryLine(item, planner)
+        EntryLine(item, planner, withSource = false)
+        item.fromSuggestionId?.let { id ->
+            FromEmail(planner.suggestion(id), actions?.let { shown -> { shown.source(id) } })
+        }
         if (tasks.isNotEmpty()) {
             val shown = stringResource(R.string.tasks_shown)
             val hidden = stringResource(R.string.tasks_hidden)

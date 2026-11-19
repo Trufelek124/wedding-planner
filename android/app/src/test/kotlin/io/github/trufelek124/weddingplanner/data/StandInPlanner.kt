@@ -113,6 +113,9 @@ object StandIn {
      * @param amount in the smallest unit; null where none was read
      * @param vendorId a vendor the planner has; [vendorName] is for one it has not
      * @param mailLink what the server says opens the message
+     * @param state WAITING, ADDED, ACCEPTED or REJECTED
+     * @param madeEntryId the task or step it made, or that was added by itself
+     * @param decidedBy the member who decided it; null while nobody did
      * @param more further fields, for what a newer server might add: `"addedLater":true`
      */
     fun suggestion(
@@ -138,15 +141,26 @@ object StandIn {
         mailLink: String = "https://mail.google.com/mail/u/0/#all/18c0ffee",
         passage: String = "Please pay the deposit by 1 December.",
         confidence: Int = 62,
+        state: String = "WAITING",
+        madeEntryId: String? = null,
+        decidedBy: String? = null,
+        decidedAt: String? = null,
         more: String = "",
     ): String =
-        """{"id":"$id","kind":"$kind","state":"WAITING","title":"$title","notes":"$notes","startDate":${text(startDate)},"dueDate":${text(dueDate)},""" +
+        """{"id":"$id","kind":"$kind","state":"$state","title":"$title","notes":"$notes","startDate":${text(startDate)},"dueDate":${text(dueDate)},""" +
             """"amount":$amount,"paymentKind":${text(paymentKind)},"categoryId":${text(categoryId)},"vendorId":${text(vendorId)},""" +
             """"vendorName":${text(vendorName)},"vendorEmail":${text(vendorEmail)},"vendorPhone":${text(vendorPhone)},"vendorWebsite":${text(vendorWebsite)},""" +
             """"senderName":"$senderName","senderAddress":"$senderAddress","subject":"$subject","receivedAt":"$receivedAt",""" +
             """"inboxMemberId":"$inboxMemberId","mailLink":"$mailLink","passage":"$passage","confidence":$confidence,""" +
-            """"decidedBy":null,"decidedAt":null,"madeEntryId":null,"madeVendorId":null,"createdAt":"2026-11-18T13:06:00Z"""" +
+            """"decidedBy":${text(decidedBy)},"decidedAt":${text(decidedAt)},"madeEntryId":${text(madeEntryId)},"madeVendorId":null,"createdAt":"2026-11-18T13:06:00Z"""" +
             (if (more.isEmpty()) "" else ",$more") + "}"
+
+    /**
+     * A suggestion that the import added by itself, with the task or step it made (by the id [entryId]): the entry is made by
+     * [entry] with `fromSuggestionId = id`, and is "not started" and never saved since.
+     */
+    fun added(id: String, title: String, entryId: String = "made-$id", kind: String = "TASK", confidence: Int = 90, more: String = ""): String =
+        suggestion(id, title, kind = kind, confidence = confidence, state = "ADDED", madeEntryId = entryId, more = more)
 
     /** @param categoryId the vendor's category, or null */
     fun vendor(
