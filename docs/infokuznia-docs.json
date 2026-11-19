@@ -74,6 +74,12 @@
    "id": "9b11e409-1566-479e-b42c-37091704cb6e",
    "sha256": "53b4401e5528c07a8b953d41a6623ae009022656b78458f4ea9b01862a7302f0",
    "commit": "da96205"
+  },
+  "docs/specs/S02-suggestions.md": {
+   "publicId": "WP-DOC-9",
+   "id": "65ac27c4-3684-42ab-bb57-4a75e01b3457",
+   "sha256": "e1b6ca5190de665545c86cf1b9cfdf504e05c0b7911f5e9da02b8897b59a20c0",
+   "commit": "48015f1"
   }
  }
 }
