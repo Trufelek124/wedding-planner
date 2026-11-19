@@ -10,6 +10,8 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Stands in for the planner's server in tests. Each "METHOD /path" gets its own answer; a route the
@@ -20,13 +22,17 @@ class StandInServer {
     /** What the app sent, in order. */
     data class Call(val route: String, val authorization: String?, val origin: String?, val body: String, val contentType: String? = null)
 
-    val calls = mutableListOf<Call>()
-    private val answers = mutableMapOf<String, suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData>()
+    // The app asks for several things at once, and each is answered on a thread of its own: what is
+    // written here while answering has to bear that, or a call goes missing from the list now and then.
+    val calls: MutableList<Call> = CopyOnWriteArrayList()
+    private val answers = ConcurrentHashMap<String, suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData>()
 
     /** Asked when no answer was named for a route; null from it means "unreachable" as before. */
+    @Volatile
     var otherwise: (suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData?)? = null
 
     /** No connection at all: nothing gets an answer, whatever was named. */
+    @Volatile
     var down = false
 
     val engine = MockEngine { request ->
