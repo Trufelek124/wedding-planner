@@ -106,7 +106,7 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
     void eachVerdictIsStoredWithItsOwnDetailAndCounted() throws Exception {
         threeLooks();
         List<MessageHandle> waiting = reading.waiting(100);
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(6, 0, 0, 0));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(6, 0, 0, 0, 0));
 
         reading.mark(waiting.get(0), new NotAboutTheWedding());
         reading.mark(waiting.get(1), new AboutTheWedding(3));
@@ -114,7 +114,7 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
         reading.mark(waiting.get(3), new CouldNotBeRead(Reason.DECLINED));
         reading.mark(waiting.get(4), new CouldNotBeRead(Reason.TOO_MANY_PROPOSALS));
 
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(1, 5, 2, 2));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(1, 5, 2, 2, 3));
         assertThat(stored("a4")).containsEntry("verdict", "NOT_WEDDING").containsEntry("unread_reason", null).containsEntry("proposals", null);
         assertThat(stored("a3")).containsEntry("verdict", "WEDDING").containsEntry("unread_reason", null).containsEntry("proposals", 3);
         assertThat(stored("p2")).containsEntry("verdict", "WEDDING").containsEntry("proposals", 0);
@@ -148,7 +148,7 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
         assertThat(reading.mark(message, new CouldNotBeRead(Reason.GONE))).isFalse();
 
         assertThat(stored(message.messageId())).isEqualTo(once);
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(5, 1, 1, 0));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(5, 1, 1, 0, 2));
     }
 
     @Test
@@ -189,8 +189,8 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
                 new NotAboutTheWedding())).as("the other member's mailbox").isFalse();
         assertThat(reading.mark(new MessageHandle(message.weddingId(), message.memberId(), "nobody-knows", "t"),
                 new NotAboutTheWedding())).as("a message that is not noted").isFalse();
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(6, 0, 0, 0));
-        assertThat(reading.counts(UUID.randomUUID())).as("another wedding has its own count").isEqualTo(new Counts(0, 0, 0, 0));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(6, 0, 0, 0, 0));
+        assertThat(reading.counts(UUID.randomUUID())).as("another wedding has its own count").isEqualTo(new Counts(0, 0, 0, 0, 0));
     }
 
     @Test
@@ -205,7 +205,7 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
         assertThat(reading.mark(beingRead, new AboutTheWedding(1))).as("a no-op, not an error").isFalse();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM mail_message WHERE member_id = ?", Integer.class, anna())).isZero();
         assertThat(waitingIds(100)).containsExactly("p2", "p1");
-        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(2, 0, 0, 0));
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(2, 0, 0, 0, 0));
     }
 
     // ---------------------------------------------------------------- the key
@@ -221,9 +221,13 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
                 .as("it does not depend on what the wedding is called here").isEqualTo(first);
         assertThat(first.message()).matches("m1-[A-Za-z0-9_-]{43}").hasSizeLessThanOrEqualTo(100);
         assertThat(first.thread()).matches("t1-[A-Za-z0-9_-]{43}").hasSizeLessThanOrEqualTo(100);
-        assertThat(first.message()).doesNotContain("a4").doesNotContain("ta4").doesNotContain(a4.memberId().toString());
-        assertThat(first.thread()).doesNotContain("ta4").doesNotContain(a4.memberId().toString());
         assertThat(first.message()).isNotEqualTo(first.thread());
+        // Identifiers as long as Gmail's own: two letters could stand in a key by chance, sixteen cannot.
+        MessageHandle telling = new MessageHandle(a4.weddingId(), a4.memberId(), "18f3c2a9d07b4e61", "18f3c2a9d07b0000");
+        Keys ofTelling = reading.keysOf(telling);
+        assertThat(ofTelling.message())
+                .doesNotContain(telling.messageId()).doesNotContain(telling.threadId()).doesNotContain(a4.memberId().toString());
+        assertThat(ofTelling.thread()).doesNotContain(telling.threadId()).doesNotContain(a4.memberId().toString());
 
         MessageHandle other = reading.waiting(2).get(1);
         assertThat(reading.keysOf(other).message()).isNotEqualTo(first.message());
@@ -272,6 +276,136 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
 
         assertThat(handle.toString()).doesNotContain("msg-hidden-zq").doesNotContain("thr-hidden-zq");
         assertThat(reading.keysOf(handle).toString()).doesNotContain(reading.keysOf(handle).message());
+    }
+
+    // ---------------------------------------------------------------- leaving mailboxes out
+
+    @Test
+    void waitingLeavingOutAMailboxHandsOutTheOthersStillNewestFirstUpToMost() throws Exception {
+        threeLooks();
+
+        assertThat(reading.waiting(100, List.of(piotr())).stream().map(MessageHandle::messageId).toList())
+                .containsExactly("a4", "a3", "a2", "a1");
+        assertThat(reading.waiting(3, List.of(piotr())).stream().map(MessageHandle::messageId).toList())
+                .as("Piotr's messages do not take places").containsExactly("a4", "a3", "a2");
+        assertThat(reading.waiting(100, List.of(anna())).stream().map(MessageHandle::messageId).toList())
+                .containsExactly("p2", "p1");
+        assertThat(reading.waiting(1, List.of(anna())).stream().map(MessageHandle::messageId).toList()).containsExactly("p2");
+        assertThat(reading.waiting(100, List.of(anna(), piotr()))).as("both left out").isEmpty();
+        assertThat(reading.waiting(100, List.of(UUID.randomUUID())).stream().map(MessageHandle::messageId).toList())
+                .as("a member nobody knows leaves nobody out").containsExactly("a4", "a3", "p2", "p1", "a2", "a1");
+        assertThat(reading.waiting(100, List.of())).isEqualTo(reading.waiting(100));
+        assertThatThrownBy(() -> reading.waiting(0, List.of(piotr()))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void leavingAMailboxOutDoesNotBringBackWhatWasMarked() throws Exception {
+        threeLooks();
+        reading.mark(reading.waiting(1).getFirst(), new NotAboutTheWedding());
+
+        assertThat(reading.waiting(100, List.of(piotr())).stream().map(MessageHandle::messageId).toList())
+                .containsExactly("a3", "a2", "a1");
+    }
+
+    // ---------------------------------------------------------------- the link to a message
+
+    private static final String ANNAS_ADDRESS_AS_A_VALUE = "anna.mailbox%40planner.example";
+
+    @Test
+    void theLinkNamesTheMailboxItIsInWithTheAddressEncodedAsAQueryValue() throws Exception {
+        connectAnna();
+        connectPiotr();
+
+        assertThat(reading.linkTo(annas("18c0ffee00000001", "t1")))
+                .contains("https://mail.google.com/mail/?authuser=" + ANNAS_ADDRESS_AS_A_VALUE + "#all/18c0ffee00000001");
+        assertThat(reading.linkTo(piotrs("Ab_-9", "t1")))
+                .contains("https://mail.google.com/mail/?authuser=piotr.mailbox%40planner.example#all/Ab_-9");
+    }
+
+    @Test
+    void anAddressThatNeedsEncodingIsEncoded() throws Exception {
+        assertThat(location(connect(wedding.anna, "anna+wedding@planner.example"))).isEqualTo(YES);
+
+        assertThat(reading.linkTo(annas("m-1", "t-1")))
+                .contains("https://mail.google.com/mail/?authuser=anna%2Bwedding%40planner.example#all/m-1");
+    }
+
+    @Test
+    void theLinkPassesTheSuggestionsOwnCheckForAGmailLink() throws Exception {
+        connectAnna();
+
+        String link = reading.linkTo(annas("18c0ffee00000001", "t1")).orElseThrow();
+
+        // The suggestions module accepts an https address at exactly mail.google.com, no user, no port, no spaces.
+        java.net.URI uri = new java.net.URI(link);
+        assertThat(uri.getScheme()).isEqualTo("https");
+        assertThat(uri.getRawAuthority()).isEqualTo("mail.google.com");
+        assertThat(uri.getUserInfo()).isNull();
+        assertThat(uri.getPort()).isEqualTo(-1);
+        assertThat(link).doesNotContainPattern("[\\s\\p{Cntrl}\\\\]").hasSizeLessThanOrEqualTo(2_000);
+    }
+
+    @Test
+    void thereIsNoLinkWithoutAMailboxOrAfterItWasDisconnected() throws Exception {
+        connectAnna();
+
+        assertThat(reading.linkTo(piotrs("m-1", "t-1"))).as("Piotr has none connected").isEmpty();
+        assertThat(reading.linkTo(annas("m-1", "t-1"))).isPresent();
+
+        assertThat(http.deleteAs(wedding.anna, "/api/mail/gmail/connection").statusCode()).isEqualTo(204);
+
+        assertThat(reading.linkTo(annas("m-1", "t-1"))).as("disconnected meanwhile").isEmpty();
+    }
+
+    @Test
+    void aMailboxThatHasToBeConnectedAgainStillHasItsAddressForTheLink() throws Exception {
+        threeLooks();
+        google.withdraw(google.refreshTokenOf(PIOTR_MAILBOX));
+        TestClock.advance(Duration.ofHours(1));
+        sync.lookAtAll();
+        assertThat(state(piotr())).isEqualTo("NEEDS_RECONNECTING");
+
+        assertThat(reading.linkTo(piotrs("p1", "tp1")))
+                .contains("https://mail.google.com/mail/?authuser=piotr.mailbox%40planner.example#all/p1");
+    }
+
+    @Test
+    void anIdentifierThatGmailDoesNotGiveOutMakesNoLink() throws Exception {
+        connectAnna();
+
+        for (String identifier : List.of(
+                "a/b", "a#b", "a b", "a?b", "a&b", "a%2Fb", "../x", "a\nb", "ąę", "", " ", "a.b", "x".repeat(65))) {
+            assertThat(reading.linkTo(annas(identifier, "t-1"))).as("identifier " + identifier.length() + " characters").isEmpty();
+        }
+        assertThat(reading.linkTo(annas("x".repeat(64), "t-1"))).as("the longest there is").isPresent();
+        assertThat(reading.linkTo(annas("A", "t-1"))).isPresent();
+        assertThat(reading.linkTo(annas(null, "t-1"))).isEmpty();
+    }
+
+    @Test
+    void nothingButTheMessageAndTheMailboxGoesIntoTheLink() throws Exception {
+        connectAnna();
+
+        String link = reading.linkTo(new MessageHandle(UUID.randomUUID(), anna(), "m-1", "thread-that-is-not-in-the-link")).orElseThrow();
+
+        assertThat(link).doesNotContain("thread").doesNotContain(anna().toString());
+    }
+
+    // ---------------------------------------------------------------- the count of proposals
+
+    @Test
+    void theProposalsAddUpOverTheMessagesThatWereAboutTheWeddingOnly() throws Exception {
+        threeLooks();
+        List<MessageHandle> waiting = reading.waiting(100);
+
+        reading.mark(waiting.get(0), new AboutTheWedding(2));
+        reading.mark(waiting.get(1), new AboutTheWedding(3));
+        reading.mark(waiting.get(2), new AboutTheWedding(0));
+        reading.mark(waiting.get(3), new NotAboutTheWedding());
+        reading.mark(waiting.get(4), new CouldNotBeRead(Reason.TOO_MANY_PROPOSALS));
+
+        assertThat(reading.counts(weddingId())).isEqualTo(new Counts(1, 5, 3, 1, 5));
+        assertThat(reading.counts(UUID.randomUUID()).proposals()).as("another wedding").isZero();
     }
 
     private Map<String, Object> stored(String messageId) {

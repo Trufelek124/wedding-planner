@@ -9,13 +9,17 @@ import io.github.trufelek124.weddingplanner.mail.internal.MailSource.NoText;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.SourceFailure;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.TooLarge;
 import io.github.trufelek124.weddingplanner.mail.internal.MessageRepository.Waiting;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -33,24 +37,45 @@ class MailReadingService implements MailReading {
     private final MailSetup setup;
     private final MailSource source;
     private final MessageRepository messages;
+    private final ConnectionRepository connections;
     private final Clock clock;
 
-    MailReadingService(MailSetup setup, MailSource source, MessageRepository messages, Clock clock) {
+    MailReadingService(
+            MailSetup setup, MailSource source, MessageRepository messages, ConnectionRepository connections, Clock clock) {
         this.setup = setup;
         this.source = source;
         this.messages = messages;
+        this.connections = connections;
         this.clock = clock;
     }
 
     @Override
     public List<MessageHandle> waiting(int most) {
+        return waiting(most, List.of());
+    }
+
+    @Override
+    public List<MessageHandle> waiting(int most, Collection<UUID> leavingOut) {
         if (most <= 0) {
             throw new IllegalArgumentException("most");
         }
         if (setup.ready().isEmpty()) {
             return List.of();
         }
-        return messages.waiting(most).stream().map(MailReadingService::handle).toList();
+        return messages.waiting(most, leavingOut).stream().map(MailReadingService::handle).toList();
+    }
+
+    /** The identifiers Gmail gives out: short, and nothing in them that could change what the address means. */
+    private static final Pattern GMAIL_IDENTIFIER = Pattern.compile("[0-9A-Za-z_-]{1,64}");
+
+    @Override
+    public Optional<String> linkTo(MessageHandle message) {
+        if (setup.ready().isEmpty() || message.messageId() == null || !GMAIL_IDENTIFIER.matcher(message.messageId()).matches()) {
+            return Optional.empty();
+        }
+        return connections.find(message.memberId())
+                .map(connection -> "https://mail.google.com/mail/?authuser="
+                        + URLEncoder.encode(connection.address(), StandardCharsets.UTF_8) + "#all/" + message.messageId());
     }
 
     private static MessageHandle handle(Waiting waiting) {
@@ -139,6 +164,7 @@ class MailReadingService implements MailReading {
     @Override
     public Counts counts(UUID weddingId) {
         MessageRepository.Counts counts = messages.counts(weddingId);
-        return new Counts(counts.waiting(), counts.read(), counts.aboutTheWedding(), counts.couldNotBeRead());
+        return new Counts(
+                counts.waiting(), counts.read(), counts.aboutTheWedding(), counts.couldNotBeRead(), counts.proposals());
     }
 }

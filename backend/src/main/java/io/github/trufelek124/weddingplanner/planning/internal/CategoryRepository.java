@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -25,6 +26,14 @@ class CategoryRepository {
                 .param(weddingId)
                 .query(CategoryRow.class)
                 .list();
+    }
+
+    /** The unique index on (wedding_id, lower(name)) makes at most one. */
+    Optional<UUID> findByName(UUID weddingId, String name) {
+        return jdbc.sql("SELECT id FROM category WHERE wedding_id = ? AND lower(name) = lower(btrim(?))")
+                .params(weddingId, name)
+                .query(UUID.class)
+                .optional();
     }
 
     boolean exists(UUID weddingId, UUID categoryId) {

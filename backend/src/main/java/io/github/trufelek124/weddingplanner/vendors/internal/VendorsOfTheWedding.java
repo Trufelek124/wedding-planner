@@ -1,6 +1,7 @@
 package io.github.trufelek124.weddingplanner.vendors.internal;
 
 import io.github.trufelek124.weddingplanner.vendors.Vendors;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -16,5 +17,15 @@ class VendorsOfTheWedding implements Vendors {
     @Override
     public boolean exists(UUID weddingId, UUID vendorId) {
         return vendors.exists(weddingId, vendorId);
+    }
+
+    @Override
+    public Optional<UUID> withAddress(UUID weddingId, String address) {
+        return address == null || address.isBlank() ? Optional.empty() : vendors.onlyOneWith("email", weddingId, address.strip());
+    }
+
+    @Override
+    public Optional<UUID> named(UUID weddingId, String name) {
+        return name == null || name.isBlank() ? Optional.empty() : vendors.onlyOneWith("name", weddingId, name.strip());
     }
 }

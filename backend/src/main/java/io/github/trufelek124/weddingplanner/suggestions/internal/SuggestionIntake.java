@@ -13,6 +13,7 @@ import io.github.trufelek124.weddingplanner.wedding.Weddings;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -56,6 +57,24 @@ class SuggestionIntake implements Suggestions {
         // A concurrent hand-in of the same key waits on the unique key and then finds this one kept.
         suggestions.insert(proposal.weddingId(), row);
         return suggestions.idOfSource(proposal.weddingId(), row.sourceKey()).orElseThrow();
+    }
+
+    @Override
+    @Transactional
+    public List<Proposed> proposedUnder(UUID weddingId, String keyBeginning, int most) {
+        if (keyBeginning == null || keyBeginning.isBlank()) {
+            throw new IllegalArgumentException("keyBeginning");
+        }
+        if (most <= 0) {
+            throw new IllegalArgumentException("most");
+        }
+        return suggestions.proposedUnder(weddingId, keyBeginning, most);
+    }
+
+    @Override
+    @Transactional
+    public int madeSince(UUID weddingId, UUID inboxMemberId, Instant since) {
+        return suggestions.madeSince(weddingId, inboxMemberId, since);
     }
 
     private SuggestionRow checked(Proposal p) {

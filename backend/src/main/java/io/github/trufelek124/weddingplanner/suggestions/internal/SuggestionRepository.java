@@ -1,5 +1,6 @@
 package io.github.trufelek124.weddingplanner.suggestions.internal;
 
+import io.github.trufelek124.weddingplanner.suggestions.Suggestions;
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.Kind;
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.PaymentKind;
 import io.github.trufelek124.weddingplanner.suggestions.internal.SuggestionTypes.State;
@@ -53,6 +54,14 @@ class SuggestionRepository {
             UUID madeVendorId,
             Instant createdAt) {
 
+        /** The same suggestion with another link to its message. */
+        SuggestionRow withMailLink(String link) {
+            return new SuggestionRow(
+                    id, sourceKey, kind, state, title, notes, startDate, dueDate, amount, paymentKind, categoryId, vendorId,
+                    vendorName, vendorEmail, vendorPhone, vendorWebsite, senderName, senderAddress, subject, receivedAt,
+                    inboxMemberId, link, passage, confidence, decidedBy, decidedAt, madeEntryId, madeVendorId, createdAt);
+        }
+
         @Override
         public String toString() {
             return "SuggestionRow[id=" + id + ", kind=" + kind + ", state=" + state + "]";
@@ -101,6 +110,26 @@ class SuggestionRepository {
         return (which == Which.ALL ? statement.params(weddingId) : statement.params(weddingId, which.name()))
                 .query(SuggestionRepository::row)
                 .list();
+    }
+
+    /** The newest first. The beginning is compared character by character: it is no pattern. */
+    List<Suggestions.Proposed> proposedUnder(UUID weddingId, String keyBeginning, int most) {
+        return jdbc.sql("""
+                SELECT source_key, title FROM suggestion
+                WHERE wedding_id = ? AND left(source_key, length(?)) = ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """)
+                .params(weddingId, keyBeginning, keyBeginning, most)
+                .query((row, number) -> new Suggestions.Proposed(row.getString("source_key"), row.getString("title")))
+                .list();
+    }
+
+    int madeSince(UUID weddingId, UUID inboxMemberId, Instant since) {
+        return jdbc.sql("SELECT count(*) FROM suggestion WHERE wedding_id = ? AND inbox_member_id = ? AND created_at >= ?")
+                .params(weddingId, inboxMemberId, at(since))
+                .query(Integer.class)
+                .single();
     }
 
     /** @return false when the wedding already has a suggestion with this source key */

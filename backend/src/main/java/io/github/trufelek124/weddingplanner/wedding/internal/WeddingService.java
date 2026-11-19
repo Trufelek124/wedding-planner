@@ -4,6 +4,7 @@ import io.github.trufelek124.weddingplanner.api.ApiException;
 import io.github.trufelek124.weddingplanner.api.ProblemCode;
 import io.github.trufelek124.weddingplanner.identity.UserId;
 import io.github.trufelek124.weddingplanner.wedding.Membership;
+import io.github.trufelek124.weddingplanner.wedding.WeddingFacts;
 import io.github.trufelek124.weddingplanner.wedding.Weddings;
 import io.github.trufelek124.weddingplanner.wedding.internal.WeddingDtos.DetailsRequest;
 import io.github.trufelek124.weddingplanner.wedding.internal.WeddingDtos.MemberResponse;
@@ -95,6 +96,14 @@ class WeddingService implements Weddings {
     @Transactional
     public boolean hasMember(UUID weddingId, UUID memberId) {
         return repository.members(weddingId).stream().anyMatch(member -> member.id().equals(memberId));
+    }
+
+    @Override
+    @Transactional
+    public Optional<WeddingFacts> factsOf(UUID weddingId) {
+        return repository.find()
+                .filter(wedding -> wedding.id().equals(weddingId))
+                .map(wedding -> new WeddingFacts(wedding.weddingDate(), wedding.currency(), ZoneId.of(wedding.timeZone())));
     }
 
     /** Finds the caller's place; a signed-in owner without one takes the free place. */

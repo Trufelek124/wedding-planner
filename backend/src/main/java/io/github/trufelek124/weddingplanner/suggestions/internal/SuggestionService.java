@@ -51,7 +51,10 @@ class SuggestionService {
 
     @Transactional
     List<SuggestionRow> list(UserId user, Which which) {
-        return suggestions.list(weddings.membershipOf(user).weddingId(), which);
+        Membership membership = weddings.membershipOf(user);
+        return suggestions.list(membership.weddingId(), which).stream()
+                .map(row -> asSeenBy(membership, row))
+                .toList();
     }
 
     /**
@@ -65,7 +68,7 @@ class SuggestionService {
         Membership membership = weddings.membershipOf(user);
         SuggestionRow suggestion = held(membership, id);
         if (suggestion.state() == State.ACCEPTED) {
-            return suggestion;
+            return asSeenBy(membership, suggestion);
         }
         if (suggestion.state() == State.REJECTED) {
             throw new ApiException(ProblemCode.ALREADY_DECIDED, "This suggestion was rejected already.");
@@ -82,7 +85,7 @@ class SuggestionService {
         }
         suggestions.decide(
                 membership.weddingId(), id, State.ACCEPTED, membership.memberId(), clock.instant(), madeEntryId, madeVendorId);
-        return held(membership, id);
+        return asSeenBy(membership, held(membership, id));
     }
 
     /** Makes nothing. Asked again after it was rejected, it answers the same; after it was accepted, it is refused. */
@@ -91,13 +94,34 @@ class SuggestionService {
         Membership membership = weddings.membershipOf(user);
         SuggestionRow suggestion = held(membership, id);
         if (suggestion.state() == State.REJECTED) {
-            return suggestion;
+            return asSeenBy(membership, suggestion);
         }
         if (suggestion.state() == State.ACCEPTED) {
             throw new ApiException(ProblemCode.ALREADY_DECIDED, "This suggestion was accepted already.");
         }
         suggestions.decide(membership.weddingId(), id, State.REJECTED, membership.memberId(), clock.instant(), null, null);
-        return held(membership, id);
+        return asSeenBy(membership, held(membership, id));
+    }
+
+    /**
+     * The one place that decides what link a person is given. The link of a message in the other owner's mailbox names
+     * that mailbox in its query, and the partner's address is never shown: it is answered without its query.
+     */
+    private static SuggestionRow asSeenBy(Membership membership, SuggestionRow row) {
+        if (membership.memberId().equals(row.inboxMemberId())) {
+            return row;
+        }
+        return row.withMailLink(withoutQuery(row.mailLink()));
+    }
+
+    static String withoutQuery(String link) {
+        int question = link.indexOf('?');
+        int hash = link.indexOf('#');
+        if (question < 0 || (hash >= 0 && hash < question)) {
+            return link;
+        }
+        String shortened = link.substring(0, question) + (hash < 0 ? "" : link.substring(hash));
+        return SuggestionIntake.isGmailLink(shortened) ? shortened : "https://" + SuggestionIntake.MAIL_HOST + "/mail/";
     }
 
     private SuggestionRow held(Membership membership, UUID id) {

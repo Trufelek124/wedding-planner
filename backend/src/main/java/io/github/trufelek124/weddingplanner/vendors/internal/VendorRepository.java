@@ -68,6 +68,22 @@ class VendorRepository {
         return jdbc.sql("SELECT count(*) FROM vendor WHERE wedding_id = ? AND id = ?").params(weddingId, id).query(Integer.class).single() > 0;
     }
 
+    /**
+     * The id of the one vendor whose {@code column} ("name" or "email") equals the value without regard to case and
+     * to spaces around it; empty when none or more than one. The value is a statement parameter and nothing else.
+     */
+    Optional<UUID> onlyOneWith(String column, UUID weddingId, String value) {
+        if (!column.equals("name") && !column.equals("email")) {
+            throw new IllegalArgumentException("column");
+        }
+        List<UUID> found = jdbc.sql("SELECT id FROM vendor WHERE wedding_id = ? AND lower(btrim(" + column
+                        + ")) = lower(btrim(?)) LIMIT 2")
+                .params(weddingId, value)
+                .query(UUID.class)
+                .list();
+        return found.size() == 1 ? Optional.of(found.get(0)) : Optional.empty();
+    }
+
     /** By name, however it is capitalised. */
     List<VendorRow> list(UUID weddingId, Filter filter) {
         StringBuilder where = new StringBuilder(" WHERE wedding_id = :wedding");

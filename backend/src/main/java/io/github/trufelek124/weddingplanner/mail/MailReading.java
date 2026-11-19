@@ -1,7 +1,9 @@
 package io.github.trufelek124.weddingplanner.mail;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -35,6 +37,24 @@ public interface MailReading {
      * @throws IllegalArgumentException when {@code most} is not positive
      */
     List<MessageHandle> waiting(int most);
+
+    /**
+     * As {@link #waiting(int)}, leaving out the mailboxes of these members: the reader has paused them, and their
+     * messages must not take the places of the others'.
+     *
+     * @throws IllegalArgumentException when {@code most} is not positive
+     */
+    List<MessageHandle> waiting(int most, Collection<UUID> leavingOut);
+
+    /**
+     * The address that opens this message in Gmail, in the mailbox it is in:
+     * {@code https://mail.google.com/mail/?authuser=<the mailbox's address>#all/<the message>}. Made by the server from
+     * what it keeps, never from anything a message says. Empty when the member has no mailbox connected (any more),
+     * the import is off, or the message's identifier is not one Gmail gives out.
+     *
+     * <p>It contains the mailbox's address: it is never logged, and it is for that mailbox's owner.
+     */
+    Optional<String> linkTo(MessageHandle message);
 
     /**
      * What the message says, or why it cannot be had. A message is read from the mailbox on every call; nothing of it
@@ -184,8 +204,9 @@ public interface MailReading {
      * @param read with a verdict, of any kind
      * @param aboutTheWedding of those read, the ones that concerned the wedding
      * @param couldNotBeRead of those read, the ones that could not be read
+     * @param proposals the sum of the proposals of the messages that were about the wedding
      */
-    record Counts(int waiting, int read, int aboutTheWedding, int couldNotBeRead) {}
+    record Counts(int waiting, int read, int aboutTheWedding, int couldNotBeRead, int proposals) {}
 
     Counts counts(UUID weddingId);
 }

@@ -4,7 +4,9 @@ import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Noted;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -46,7 +48,7 @@ class MessageRepository {
     record Verdict(String word, String reason, Integer proposals) {}
 
     /** How many messages of a wedding's mailboxes are in each state. */
-    record Counts(int waiting, int read, int aboutTheWedding, int couldNotBeRead) {}
+    record Counts(int waiting, int read, int aboutTheWedding, int couldNotBeRead, int proposals) {}
 
     private final JdbcClient jdbc;
 
@@ -118,16 +120,24 @@ class MessageRepository {
      * in one list.
      */
     List<Waiting> waiting(int most) {
+        return waiting(most, List.of());
+    }
+
+    /** As {@link #waiting(int)}, without the mailboxes of these members. */
+    List<Waiting> waiting(int most, Collection<UUID> leavingOut) {
+        String leaving = leavingOut.isEmpty() ? "" : " AND m.member_id NOT IN (:leavingOut)";
         return jdbc.sql("""
                 SELECT w.wedding_id, m.member_id, m.message_id, m.thread_id
                 FROM mail_message m
                 JOIN mail_connection c ON c.member_id = m.member_id AND c.state = 'CONNECTED'
                 JOIN wedding_member w ON w.id = m.member_id
-                WHERE m.verdict IS NULL
+                WHERE m.verdict IS NULL""" + leaving + """
+
                 ORDER BY m.look DESC, m.newness DESC
-                LIMIT ?
+                LIMIT :most
                 """)
-                .param(most)
+                .param("most", most)
+                .params(leavingOut.isEmpty() ? Map.<String, Object>of() : Map.<String, Object>of("leavingOut", List.copyOf(leavingOut)))
                 .query((rows, number) -> new Waiting(
                         rows.getObject("wedding_id", UUID.class),
                         rows.getObject("member_id", UUID.class),
@@ -157,12 +167,14 @@ class MessageRepository {
                 SELECT count(*) FILTER (WHERE m.verdict IS NULL) AS waiting,
                        count(*) FILTER (WHERE m.verdict IS NOT NULL) AS read,
                        count(*) FILTER (WHERE m.verdict = 'WEDDING') AS about,
-                       count(*) FILTER (WHERE m.verdict = 'UNREADABLE') AS unreadable
+                       count(*) FILTER (WHERE m.verdict = 'UNREADABLE') AS unreadable,
+                       COALESCE(sum(m.proposals) FILTER (WHERE m.verdict = 'WEDDING'), 0) AS proposals
                 FROM mail_message m JOIN wedding_member w ON w.id = m.member_id
                 WHERE w.wedding_id = ?
                 """)
                 .param(weddingId)
-                .query((rows, number) -> new Counts(rows.getInt("waiting"), rows.getInt("read"), rows.getInt("about"), rows.getInt("unreadable")))
+                .query((rows, number) -> new Counts(rows.getInt("waiting"), rows.getInt("read"), rows.getInt("about"),
+                        rows.getInt("unreadable"), rows.getInt("proposals")))
                 .single();
     }
 

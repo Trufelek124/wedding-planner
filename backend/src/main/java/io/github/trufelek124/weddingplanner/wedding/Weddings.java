@@ -15,4 +15,7 @@ public interface Weddings {
 
     /** Whether this member belongs to this wedding. */
     boolean hasMember(java.util.UUID weddingId, java.util.UUID memberId);
+
+    /** What a part of the server that works without a signed-in person needs to know of a wedding. Empty: no such wedding. */
+    java.util.Optional<WeddingFacts> factsOf(java.util.UUID weddingId);
 }

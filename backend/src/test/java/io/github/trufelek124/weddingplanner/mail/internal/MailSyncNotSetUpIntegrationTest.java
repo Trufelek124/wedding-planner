@@ -30,6 +30,9 @@ class MailSyncNotSetUpIntegrationTest extends PostgresIntegrationTest {
     @Autowired
     MailSync sync;
 
+    @Autowired
+    io.github.trufelek124.weddingplanner.mail.MailReading reading;
+
     final StandInGoogle google = StandInGoogle.get();
 
     @DynamicPropertySource
@@ -56,5 +59,20 @@ class MailSyncNotSetUpIntegrationTest extends PostgresIntegrationTest {
         assertThat(google.calls()).isEmpty();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM mail_message", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT last_look_at FROM mail_connection", java.time.OffsetDateTime.class)).isNull();
+    }
+
+    @Test
+    void withoutTheImportSetUpNothingWaitsAndNoLinkIsMade() throws Exception {
+        TestWedding wedding = TestWedding.fresh(jdbc, port);
+        UUID anna = UUID.fromString(wedding.annaId);
+        UUID weddingId = jdbc.queryForObject("SELECT id FROM wedding", UUID.class);
+        jdbc.update("INSERT INTO mail_connection (member_id, state, address, token_sealed, connected_at) VALUES (?, 'CONNECTED', ?, ?, now())",
+                anna, "anna.mailbox@planner.example", new byte[40]);
+        jdbc.update("INSERT INTO mail_message (member_id, message_id, thread_id, noted_at, look, newness) VALUES (?, 'm-1', 't-1', now(), 1, 1)", anna);
+
+        assertThat(reading.waiting(10)).isEmpty();
+        assertThat(reading.waiting(10, java.util.List.of())).isEmpty();
+        assertThat(reading.linkTo(new io.github.trufelek124.weddingplanner.mail.MailReading.MessageHandle(weddingId, anna, "m-1", "t-1")))
+                .isEmpty();
     }
 }

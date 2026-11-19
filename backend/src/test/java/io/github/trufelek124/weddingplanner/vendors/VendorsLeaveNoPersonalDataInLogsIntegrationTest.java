@@ -37,6 +37,9 @@ class VendorsLeaveNoPersonalDataInLogsIntegrationTest extends PostgresIntegratio
     @Autowired
     JdbcTemplate jdbc;
 
+    @Autowired
+    Vendors vendors;
+
     @Test
     void nothingOfAVendorReachesTheLog(CapturedOutput output) throws Exception {
         TestWedding wedding = TestWedding.fresh(jdbc, port);
@@ -67,6 +70,11 @@ class VendorsLeaveNoPersonalDataInLogsIntegrationTest extends PostgresIntegratio
         vendor.put("version", 99);
         vendor.put("email", "halina@zielinska.example");
         assertThat(http.putJsonAs(wedding.anna, "/api/vendors/" + id, TestHttp.jsonOf(vendor)).statusCode()).isEqualTo(409);
+        // The lookups the mail reader makes by address and by name go through a statement parameter only.
+        java.util.UUID weddingId = jdbc.queryForObject("SELECT id FROM wedding", java.util.UUID.class);
+        assertThat(vendors.withAddress(weddingId, "Halina@Zielinska.example")).isPresent();
+        assertThat(vendors.withAddress(weddingId, "someone-else@zielinska.example")).isEmpty();
+        assertThat(vendors.named(weddingId, "fotografia zielinska")).isPresent();
         assertThat(http.deleteAs(wedding.anna, "/api/vendors/" + id).statusCode()).isEqualTo(204);
 
         String log = output.getAll();

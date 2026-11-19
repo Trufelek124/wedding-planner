@@ -1,5 +1,7 @@
 package io.github.trufelek124.weddingplanner.suggestions;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -18,4 +20,25 @@ public interface Suggestions {
      *     a member of the wedding, or a link that is not an https address at mail.google.com
      */
     UUID handIn(Proposal proposal);
+
+    /** What a suggestion was handed in as: its key and its title. It holds a part of someone's mail and prints nothing. */
+    record Proposed(String sourceKey, String title) {
+
+        @Override
+        public String toString() {
+            return "Proposed[]";
+        }
+    }
+
+    /**
+     * What was handed in under keys that begin with this, whatever became of it since (waiting, accepted, rejected),
+     * the newest first, at most {@code most}. The beginning is compared as it is, character by character: nothing in
+     * it is a pattern.
+     *
+     * @throws IllegalArgumentException when the beginning is blank or {@code most} is not positive
+     */
+    List<Proposed> proposedUnder(UUID weddingId, String keyBeginning, int most);
+
+    /** How many suggestions from this member's inbox came into being at or after this moment. */
+    int madeSince(UUID weddingId, UUID inboxMemberId, Instant since);
 }

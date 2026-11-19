@@ -90,6 +90,13 @@ class MailLettersLeaveNothingInLogsIntegrationTest extends MailLettersTestBase {
             reading.mark(handle, new AboutTheWedding(1));
         }
         reading.counts(weddingId());
+        // The link holds the mailbox's address: made and thrown away, it leaves nothing in the log.
+        String link = reading.linkTo(annas("msg-now-qx", "thr-plain-qx")).orElseThrow();
+        assertThat(link).contains("authuser=");
+        reading.linkTo(annas("not/an/identifier", "thr-plain-qx"));
+        reading.waiting(100, List.of(piotr()));
+        String address = link.substring(link.indexOf("authuser=") + 9, link.indexOf('#'));
+        secrets.addAll(List.of(address, ANNA_MAILBOX));
 
         assertThat(contents).anySatisfy(content -> assertThat(content).isInstanceOf(Letter.class));
         // Whatever a person might print: the answers and the handles.
