@@ -99,8 +99,8 @@
   "docs/specs/S03-mail-connection-and-sync.md": {
    "publicId": "WP-DOC-10",
    "id": "2c206000-bf22-4895-8793-dfa921bce8cf",
-   "sha256": "8217d99a24117e29cefa71dba608af5235d87a98213880382c576999f82d85f6",
-   "commit": "79f8f6f"
+   "sha256": "47169c0dc737f3670fdcd8b7611ca975d508243efc50fe9f4b335b3c6074e31a",
+   "commit": "0a0b89c"
   },
   "docs/decisions.md#D-006": {
    "publicId": "WP-DOC-11",
@@ -111,8 +111,8 @@
   "docs/specs/S04-reading-the-mail.md": {
    "publicId": "WP-DOC-12",
    "id": "8f8b9b00-2f5f-4d46-9609-aa87121e7b56",
-   "sha256": "d59087f2a8685575481ea3856743c98f8c132490deb97d5dc4b64a617ce4c6cf",
-   "commit": "79f8f6f"
+   "sha256": "f6a3438a8889d4b8f8228cfbb13c2cc9bc4c4ce63bdcd023c90d1b9af8cda363",
+   "commit": "0a0b89c"
   },
   "docs/decisions.md#D-007": {
    "publicId": "WP-DOC-13",
