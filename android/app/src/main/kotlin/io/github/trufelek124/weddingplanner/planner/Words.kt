@@ -147,7 +147,7 @@ fun tasksInWords(tasks: List<Entry>): String {
 /** What the payments are measured against: the couple's own limit, or else what they planned; null without either. */
 fun limitOf(budget: Budget): Long? = budget.total ?: budget.planned.takeIf { it > 0 }
 
-private fun limitName(budget: Budget): String = if (budget.total == null) "planned" else "budget"
+fun limitName(budget: Budget): String = if (budget.total == null) "planned" else "budget"
 
 /** Whether there is any money in the planner to talk about. */
 fun hasMoney(budget: Budget): Boolean = budget.total != null || budget.planned != 0L || budget.committed != 0L
@@ -164,15 +164,8 @@ fun budgetInWords(budget: Budget, currency: String): String {
 }
 
 /** What a screen reader is told instead of the bar. */
-fun meterInWords(budget: Budget, currency: String): String {
-    val spent = "${money(budget.paid, currency)} paid, ${money(budget.committed - budget.paid, currency)} still to pay"
-    val limit = limitOf(budget) ?: return "The whole budget: $spent"
-    return if (budget.committed > limit) {
-        "The whole budget: $spent: ${money(budget.committed - limit, currency)} more than the ${money(limit, currency)} ${limitName(budget)}"
-    } else {
-        "The whole budget: $spent, of ${money(limit, currency)} ${limitName(budget)}"
-    }
-}
+fun meterInWords(budget: Budget, currency: String): String =
+    meterSentence("The whole budget", limitOf(budget), budget.committed, budget.paid, limitName(budget), currency)
 
 /** Today's date where the wedding takes place, by the phone's clock. */
 fun todayAt(planner: Planner, now: Instant): LocalDate =

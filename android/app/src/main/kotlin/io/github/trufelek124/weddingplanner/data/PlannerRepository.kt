@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -357,9 +359,16 @@ class PlannerRepository(
                 val home = async { api().get<HomeWire>("/api/home") }
                 val entries = async { api().get<List<EntryWire>>("/api/entries") }
                 val categories = async { api().get<List<NameWire>>("/api/categories") }
-                val vendors = async { api().get<List<NameWire>>("/api/vendors") }
+                val vendors = async { api().get<List<VendorWire>>("/api/vendors") }
                 val boards = async { api().get<List<NameWire>>("/api/boards") }
-                storedOf(clock.instant(), wedding.await(), home.await(), entries.await(), categories.await(), vendors.await(), boards.await())
+                val budget = async { api().get<WholeBudgetWire>("/api/budget") }
+                val guests = async { api().get<List<GuestWire>>("/api/guests") }
+                val households = async { api().get<List<NameWire>>("/api/households") }
+                val counts = async { api().get<GuestCountsWire>("/api/guests/counts") }
+                storedOf(
+                    clock.instant(), wedding.await(), home.await(), entries.await(), categories.await(), vendors.await(), boards.await(),
+                    budget.await(), guests.await(), households.await(), counts.await(),
+                )
             }
         } catch (failure: ApiFailure) {
             return when {
@@ -422,8 +431,12 @@ internal fun storedOf(
     home: HomeWire,
     entries: List<EntryWire>,
     categories: List<NameWire>,
-    vendors: List<NameWire>,
-    boards: List<NameWire> = emptyList(),
+    vendors: List<VendorWire>,
+    boards: List<NameWire>,
+    budget: WholeBudgetWire,
+    guests: List<GuestWire>,
+    households: List<NameWire>,
+    counts: GuestCountsWire,
 ): Stored = Stored(
     planner = PlannerRow(
         loadedAt = at.toEpochMilli(),
@@ -439,11 +452,34 @@ internal fun storedOf(
         overdueIds = home.overdue.joinToString(SEPARATOR) { it.id },
         nextIds = home.next.joinToString(SEPARATOR) { it.id },
         nextPaymentIds = home.nextPayments.joinToString(SEPARATOR) { it.id },
+        uncategorisedCommitted = budget.uncategorised.committed,
+        uncategorisedPaid = budget.uncategorised.paid,
+        uncategorisedPayments = budget.uncategorised.payments,
+        guestCounts = Json.encodeToString(GuestCountsWire.serializer(), counts),
     ),
     // Home's lists are read a moment apart from the whole list: an entry only Home knows of is kept too.
     entries = (entries + home.overdue + home.next + home.nextPayments).distinctBy { it.id }.mapIndexed { position, entry -> rowOf(entry, position) },
     categories = categories.mapIndexed { position, category -> CategoryRow(category.id, position, category.name) },
-    vendors = vendors.map { VendorRow(it.id, it.name) },
+    vendors = vendors.mapIndexed { position, vendor ->
+        VendorRow(
+            id = vendor.id, name = vendor.name, position = position, status = vendor.status, categoryId = vendor.categoryId,
+            contactPerson = vendor.contactPerson, phone = vendor.phone, email = vendor.email, website = vendor.website, address = vendor.address,
+            notes = vendor.notes, agreedPrice = vendor.agreedPrice, committed = vendor.committed, paid = vendor.paid, planItems = vendor.planItems,
+            tasks = vendor.tasks, payments = vendor.payments, inspirations = vendor.inspirations,
+        )
+    },
+    budgetLines = budget.categories.mapIndexed { position, line ->
+        BudgetLineRow(line.categoryId, position, line.name, line.planned, line.committed, line.paid, line.payments)
+    },
+    guests = guests.mapIndexed { position, guest ->
+        GuestRow(
+            id = guest.id, position = position, name = guest.name, status = guest.status, sideMemberId = guest.sideMemberId,
+            householdId = guest.householdId, plusOne = guest.plusOne, children = guest.children, heads = guest.heads,
+            dietaryNeeds = guest.dietaryNeeds, needsAccommodation = guest.needsAccommodation, phone = guest.phone, email = guest.email,
+            notes = guest.notes,
+        )
+    },
+    households = households.mapIndexed { position, household -> HouseholdRow(household.id, position, household.name) },
     members = wedding.members.mapIndexed { position, member -> MemberRow(member.id, position, member.displayName, member.you) },
     boards = boards.mapIndexed { position, board -> BoardRow(board.id, position, board.name) },
 )
@@ -514,7 +550,41 @@ internal fun plannerOf(stored: Stored): Planner {
         gone = gone,
         boards = stored.boards.map { Board(it.id, it.name) },
         shares = stored.shares.map { WaitingShare(it.inspirationId, it.url, it.pictures, it.trouble) },
+        budgetLines = stored.budgetLines.map { BudgetLine(it.categoryId, it.name, it.planned, it.committed, it.paid, it.payments) },
+        uncategorised = BudgetRest(planner.uncategorisedCommitted, planner.uncategorisedPaid, planner.uncategorisedPayments),
+        vendorList = stored.vendors.map(::vendorOf),
+        guests = stored.guests.map(::guestOf),
+        households = stored.households.map { Household(it.id, it.name) },
+        guestCounts = countsOf(planner.guestCounts),
     )
+}
+
+private fun vendorOf(row: VendorRow): Vendor = Vendor(
+    id = row.id, name = row.name, status = VendorStatus.entries.firstOrNull { it.name == row.status } ?: VendorStatus.OTHER,
+    categoryId = row.categoryId, contactPerson = row.contactPerson, phone = row.phone, email = row.email, website = row.website,
+    address = row.address, notes = row.notes, agreedPrice = row.agreedPrice, committed = row.committed, paid = row.paid,
+    inspirations = row.inspirations,
+)
+
+private fun guestOf(row: GuestRow): Guest = Guest(
+    id = row.id, name = row.name, status = GuestStatus.entries.firstOrNull { it.name == row.status } ?: GuestStatus.OTHER,
+    sideMemberId = row.sideMemberId, householdId = row.householdId, plusOne = row.plusOne, children = row.children, heads = row.heads,
+    dietaryNeeds = row.dietaryNeeds, needsAccommodation = row.needsAccommodation, phone = row.phone, email = row.email, notes = row.notes,
+)
+
+/** The head count as it was stored; null for a copy that has none, or one that cannot be read. */
+private fun countsOf(stored: String): GuestCounts? {
+    if (stored.isEmpty()) {
+        return null
+    }
+    val counts = try {
+        Json.decodeFromString(GuestCountsWire.serializer(), stored)
+    } catch (unreadable: SerializationException) {
+        return null
+    }
+    fun head(count: HeadCountWire) = HeadCount(count.guests, count.plusOnes, count.children, count.heads)
+    fun statuses(lines: List<StatusCountWire>) = lines.map { StatusCount(it.status, head(it.count)) }
+    return GuestCounts(head(counts.total), statuses(counts.byStatus), counts.bySide.map { SideCount(it.sideMemberId, head(it.count), statuses(it.byStatus)) })
 }
 
 /** A task that so far exists only on the phone. */

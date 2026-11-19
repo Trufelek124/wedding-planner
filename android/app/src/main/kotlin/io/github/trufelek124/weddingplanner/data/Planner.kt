@@ -56,6 +56,84 @@ data class TaskFields(
 /** A task that was let go of on the server while a change to it was waiting on the phone. */
 data class Gone(val entryId: String, val title: String)
 
+/** A category of the budget against its plan, in the smallest unit of the wedding's currency. */
+data class BudgetLine(val categoryId: String, val name: String, val planned: Long?, val committed: Long, val paid: Long, val payments: Int)
+
+/** The payments filed under no category. */
+data class BudgetRest(val committed: Long, val paid: Long, val payments: Int)
+
+/** [OTHER] is a state a newer server knows and this app does not. */
+enum class VendorStatus { CONSIDERING, BOOKED, DROPPED, OTHER }
+
+/**
+ * Someone the wedding is made with. Not a data class: its name and contact details are not to be printed.
+ *
+ * @param agreedPrice what was agreed; null while nothing is
+ * @param committed what its payments that are not dropped come to
+ */
+class Vendor(
+    val id: String,
+    val name: String,
+    val status: VendorStatus,
+    val categoryId: String?,
+    val contactPerson: String,
+    val phone: String,
+    val email: String,
+    val website: String,
+    val address: String,
+    val notes: String,
+    val agreedPrice: Long?,
+    val committed: Long,
+    val paid: Long,
+    val inspirations: Int,
+) {
+    override fun toString(): String = "Vendor[id=$id]"
+}
+
+/** [OTHER] is a state a newer server knows and this app does not. */
+enum class GuestStatus { NOT_INVITED, INVITED, CONFIRMED, DECLINED, MAYBE, OTHER }
+
+/**
+ * A guest. Not a data class: everything about a guest is personal and not to be printed.
+ *
+ * @param sideMemberId the member whose guest this is; null for a guest of both
+ * @param heads how many people this entry stands for: the guest, the plus-one and the children
+ */
+class Guest(
+    val id: String,
+    val name: String,
+    val status: GuestStatus,
+    val sideMemberId: String?,
+    val householdId: String?,
+    val plusOne: Boolean,
+    val children: Int,
+    val heads: Int,
+    val dietaryNeeds: String,
+    val needsAccommodation: Boolean,
+    val phone: String,
+    val email: String,
+    val notes: String,
+) {
+    override fun toString(): String = "Guest[id=$id]"
+}
+
+/** A household guests are invited with. */
+class Household(val id: String, val name: String) {
+    override fun toString(): String = "Household[id=$id]"
+}
+
+/** How many people: the guests on the list by name, their plus-ones, the children, and all three together. */
+data class HeadCount(val guests: Int, val plusOnes: Int, val children: Int, val heads: Int)
+
+/** @param status as the server names it: "CONFIRMED" */
+data class StatusCount(val status: String, val count: HeadCount)
+
+/** @param sideMemberId the member whose guests these are; null for the guests of both */
+data class SideCount(val sideMemberId: String?, val count: HeadCount, val byStatus: List<StatusCount>)
+
+/** The head count as the server counted it. */
+data class GuestCounts(val total: HeadCount, val byStatus: List<StatusCount>, val bySide: List<SideCount>)
+
 /** A board inspirations are collected on. */
 data class Board(val id: String, val name: String)
 
@@ -157,6 +235,15 @@ class Planner(
     val boards: List<Board> = emptyList(),
     /** What was shared to the planner on this phone and is not on the server yet. */
     val shares: List<WaitingShare> = emptyList(),
+    /** The budget's categories, in the couple's order, with or without money. */
+    val budgetLines: List<BudgetLine> = emptyList(),
+    val uncategorised: BudgetRest = BudgetRest(0, 0, 0),
+    /** The vendors with their details, by name. */
+    val vendorList: List<Vendor> = emptyList(),
+    val guests: List<Guest> = emptyList(),
+    val households: List<Household> = emptyList(),
+    /** Null while the head count was not loaded: a copy made by an older version of the app has none. */
+    val guestCounts: GuestCounts? = null,
 ) {
     private val byId = entries.associateBy { it.id }
 
@@ -167,6 +254,14 @@ class Planner(
     fun tasksOf(planItem: Entry): List<Entry> = entries.filter { it.kind == Kind.TASK && it.parentId == planItem.id }
 
     fun entry(id: String): Entry? = byId[id]
+
+    fun vendor(id: String): Vendor? = vendorList.firstOrNull { it.id == id }
+
+    /** The plan items, tasks and payments that concern a vendor, in the list's order. */
+    fun entriesOf(vendor: Vendor): List<Entry> = entries.filter { it.vendorId == vendor.id }
+
+    /** What a member is called; null for someone who is not one of the two. */
+    fun memberName(id: String): String? = members.firstOrNull { it.id == id }?.displayName
 
     /** How many changes made on this phone are on their way to the server. */
     val waiting: Int get() = entries.count { it.waiting == Waiting.TO_BE_SENT }

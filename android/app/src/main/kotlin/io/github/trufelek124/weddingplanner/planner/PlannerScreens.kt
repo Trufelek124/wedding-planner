@@ -59,12 +59,16 @@ import io.github.trufelek124.weddingplanner.data.WaitingShare
 import io.github.trufelek124.weddingplanner.ui.QuietButton
 import java.time.Clock
 
-/** The three screens a signed-in person moves between. */
+/** The places a signed-in person moves between, each with its own place in the bar below. */
 private enum class Place(val route: String, val title: Int, val label: Int, val icon: Int) {
     HOME("home", R.string.app_name, R.string.nav_home, R.drawable.ic_home),
     PLAN("plan", R.string.nav_plan, R.string.nav_plan, R.drawable.ic_plan),
     TASKS("tasks", R.string.nav_tasks, R.string.nav_tasks, R.drawable.ic_tasks),
+    MORE("more", R.string.nav_more, R.string.nav_more, R.drawable.ic_more),
 }
+
+/** The budget: reached from More and from Home's glance at the money. It belongs to More, which stays selected. */
+private const val BUDGET = "budget"
 
 /** Where a task is added or changed: "task?id=…" for an existing one, "task?parent=…" for a new one under a step. */
 private const val TASK = "task"
@@ -172,7 +176,8 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
     val navigation = rememberNavController()
     val current by navigation.currentBackStackEntryAsState()
     val route = current?.destination?.route
-    val here = Place.entries.firstOrNull { it.route == route } ?: Place.HOME
+    val onTheBudget = route == BUDGET
+    val here = if (onTheBudget) Place.MORE else Place.entries.firstOrNull { it.route == route } ?: Place.HOME
     val onTheForm = route == TASK_ROUTE
     val changingATask = onTheForm && current?.arguments?.getString("id") != null
     val loadedOn = moment(planner.loadedAt, clock.zone)
@@ -187,12 +192,16 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
         topBar = {
             TopAppBar(
                 title = {
-                    val title = if (onTheForm) (if (changingATask) R.string.task_change else R.string.task_add) else here.title
+                    val title = when {
+                        onTheForm -> if (changingATask) R.string.task_change else R.string.task_add
+                        onTheBudget -> R.string.budget_title
+                        else -> here.title
+                    }
                     Text(stringResource(title), modifier = Modifier.semantics { heading() })
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 navigationIcon = {
-                    if (onTheForm) {
+                    if (onTheForm || onTheBudget) {
                         IconButton(onClick = { navigation.popBackStack() }) {
                             Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back))
                         }
@@ -215,11 +224,13 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                         NavigationBarItem(
                             selected = place == here,
                             onClick = {
+                                // The budget is More's: pressing More there leads back to the list, not to the budget again.
+                                val leavingTheBudget = onTheBudget && place == here
                                 navigation.navigate(place.route) {
                                     // One of each screen, and Back from any of them leads to Home.
-                                    popUpTo(navigation.graph.findStartDestination().id) { saveState = true }
+                                    popUpTo(navigation.graph.findStartDestination().id) { saveState = !leavingTheBudget }
                                     launchSingleTop = true
-                                    restoreState = true
+                                    restoreState = !leavingTheBudget
                                 }
                             },
                             icon = { Icon(painterResource(place.icon), contentDescription = null) },
@@ -273,7 +284,7 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                 val today = todayAt(planner, clock.instant())
                 NavHost(navController = navigation, startDestination = Place.HOME.route) {
                     composable(Place.HOME.route) {
-                        HomeContent(planner, today = today, actions = actions) {
+                        HomeContent(planner, today = today, actions = actions, onBudget = { navigation.navigate(BUDGET) }) {
                             Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 loaded()
                                 SignedInAs(userName, unsent = planner.unsent, onSignOut = onSignOut)
@@ -282,6 +293,15 @@ private fun Places(planner: Planner, ui: PlannerUi, userName: String, clock: Clo
                     }
                     composable(Place.PLAN.route) { PlanContent(planner, today = today, actions = actions, foot = loaded) }
                     composable(Place.TASKS.route) { TasksContent(planner, actions = actions, foot = loadedUnderTheButton) }
+                    composable(Place.MORE.route) {
+                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                loaded()
+                                SignedInAs(userName, unsent = planner.unsent, onSignOut = onSignOut)
+                            }
+                        }
+                    }
+                    composable(BUDGET) { BudgetContent(planner, foot = loaded) }
                     composable(
                         route = TASK_ROUTE,
                         arguments = listOf(

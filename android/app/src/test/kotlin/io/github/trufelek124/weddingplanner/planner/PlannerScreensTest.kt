@@ -266,7 +266,7 @@ class PlannerScreensTest : SignedInPhoneTest() {
     // ---------------------------------------------------------------- moving between them
 
     @Test
-    fun `the bar at the bottom moves between the three, and Back leads to Home`() {
+    fun `the bar at the bottom moves between its places, and Back leads to Home`() {
         open()
         compose.onNode(hasText("Home") and isSelectable()).assertIsSelected()
         compose.onNode(hasText("Wedding planner") and isHeading()).assertIsDisplayed()

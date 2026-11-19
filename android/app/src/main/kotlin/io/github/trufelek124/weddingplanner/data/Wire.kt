@@ -65,3 +65,76 @@ class InspirationWire(val id: String, val pictures: List<PictureWire>)
 /** @param preview true when the server fetched it from the link; false when a person sent it */
 @Serializable
 class PictureWire(val preview: Boolean)
+
+/** The whole budget: what the couple means to spend, and every category against its plan. */
+@Serializable
+class WholeBudgetWire(
+    val total: Long?,
+    val planned: Long,
+    val committed: Long,
+    val paid: Long,
+    val categories: List<BudgetLineWire>,
+    val uncategorised: BudgetRestWire,
+)
+
+@Serializable
+class BudgetLineWire(val categoryId: String, val name: String, val planned: Long?, val committed: Long, val paid: Long, val payments: Int)
+
+/** The payments that are filed under no category. */
+@Serializable
+class BudgetRestWire(val committed: Long, val paid: Long, val payments: Int)
+
+/** A vendor with its contact details and its money. Names and contact details are personal: nothing of it gets printed. */
+@Serializable
+class VendorWire(
+    val id: String,
+    val name: String,
+    val status: String,
+    val categoryId: String?,
+    val contactPerson: String,
+    val phone: String,
+    val email: String,
+    val website: String,
+    val address: String,
+    val notes: String,
+    val agreedPrice: Long?,
+    val committed: Long,
+    val paid: Long,
+    val planItems: Int,
+    val tasks: Int,
+    val payments: Int,
+    val inspirations: Int,
+)
+
+/** A guest. Everything here is about a person: nothing of it gets printed. */
+@Serializable
+class GuestWire(
+    val id: String,
+    val name: String,
+    val status: String,
+    val sideMemberId: String?,
+    val householdId: String?,
+    val plusOne: Boolean,
+    val children: Int,
+    val heads: Int,
+    val dietaryNeeds: String,
+    val needsAccommodation: Boolean,
+    val phone: String,
+    val email: String,
+    val notes: String,
+)
+
+/** How many people: the guests on the list by name, their plus-ones, the children, and all three together. */
+@Serializable
+data class HeadCountWire(val guests: Int, val plusOnes: Int, val children: Int, val heads: Int)
+
+@Serializable
+data class StatusCountWire(val status: String, val count: HeadCountWire)
+
+/** @param sideMemberId the member whose guests these are; null for the guests of both */
+@Serializable
+data class SideCountWire(val sideMemberId: String?, val count: HeadCountWire, val byStatus: List<StatusCountWire>)
+
+/** The head count as the server counts it: every status and every side, also with nobody in it. */
+@Serializable
+data class GuestCountsWire(val total: HeadCountWire, val byStatus: List<StatusCountWire>, val bySide: List<SideCountWire>)

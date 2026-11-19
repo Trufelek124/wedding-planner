@@ -36,6 +36,7 @@
     <string name="nav_home">Home</string>
     <string name="nav_plan">Plan</string>
     <string name="nav_tasks">Tasks</string>
+    <string name="nav_more">More</string>
     <string name="load_again">Load again</string>
     <string name="notice_no_connection">No connection. This is what was loaded on %1$s.</string>
     <string name="notice_not_loaded">The latest could not be loaded. This is what was loaded on %1$s.</string>
@@ -46,7 +47,21 @@
     <string name="home_overdue">Overdue</string>
     <string name="home_next">Next</string>
     <string name="home_budget">Budget</string>
+    <string name="home_budget_open">Open the budget</string>
     <string name="home_next_payments">Next payments</string>
+
+    <!-- More, and the budget it leads to -->
+    <string name="more_budget">Budget</string>
+    <string name="budget_title">Budget</string>
+    <string name="budget_figure_budget">Budget</string>
+    <string name="budget_figure_planned">Planned</string>
+    <string name="budget_figure_committed">Committed</string>
+    <string name="budget_figure_paid">Paid</string>
+    <string name="budget_by_category">By category</string>
+    <string name="budget_no_category">No category</string>
+    <string name="budget_no_category_hint">Give these a category in the web app to count them against a plan.</string>
+    <string name="budget_nothing_in_categories">Nothing is planned or paid in any category yet.</string>
+    <string name="budget_empty">No budget yet. Say what you mean to spend in the web app, in all or per category. What you pay shows up here by itself: a task with an amount is a payment.</string>
 
     <!-- The plan and the tasks -->
     <string name="filter_to_do">To do</string>

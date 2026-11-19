@@ -20,6 +20,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -85,9 +86,31 @@ class PlannerRepositoryTest {
                 budget = StandIn.budget(total = 6000000, planned = 5000000, committed = 250000, paid = 0),
             ),
             categories = listOf(StandIn.category("c1", "Venue"), StandIn.category("c2", "Attire")),
-            vendors = listOf(StandIn.vendor("v1", "Palace on the Hill")),
+            vendors = listOf(
+                StandIn.vendor(
+                    "v1", "Palace on the Hill", categoryId = "c1", contactPerson = "Jolanta", phone = "+48 555 010 020", email = "hall@palace.example",
+                    website = "https://palace.example", address = "1 Hill Road", notes = "Ask about the piano", agreedPrice = 1200000,
+                    planItems = 1, tasks = 1, payments = 1, committed = 250000, paid = 0, inspirations = 2,
+                ),
+            ),
+            budget = StandIn.wholeBudget(
+                total = 6000000, lines = lines, rest = StandIn.Rest(committed = 30000, paid = 10000, payments = 2),
+            ),
+            guests = listOf(guestAnna, guestJan),
+            households = listOf(StandIn.household("h1", "The Nowak family", guests = 1)),
+            guestCounts = StandIn.guestCounts(listOf(StandIn.Counted("CONFIRMED", StandIn.ANNA, plusOne = true, children = 2), StandIn.Counted("MAYBE"))),
         )
     }
+
+    private val lines = listOf(
+        StandIn.Line("c1", "Venue", planned = 5000000, committed = 250000, paid = 0, payments = 1),
+        StandIn.Line("c2", "Attire", planned = null, committed = 0, paid = 0, payments = 0),
+    )
+    private val guestAnna = StandIn.guest(
+        "g1", "Jan Nowak", status = "CONFIRMED", sideMemberId = StandIn.ANNA, householdId = "h1", plusOne = true, children = 2,
+        dietaryNeeds = "vegetarian", needsAccommodation = true, phone = "+48 555 030 040", email = "jan@guests.example", notes = "Allergic to nuts",
+    )
+    private val guestJan = StandIn.guest("g2", "Ewa Kowal", status = "MAYBE")
 
     @Test
     fun `holds nothing before the first load`() = runBlocking {
@@ -132,8 +155,105 @@ class PlannerRepositoryTest {
         assertEquals(listOf("Pay the deposit", "Go to the tasting"), held.tasksOf(held.entry("p1")!!).map { it.title })
         // Every call carried the access token.
         assertTrue(server.calls.all { it.authorization == "Bearer access-1" })
-        // The wedding, Home, the entries, the categories, the vendors and the boards: one request each.
-        assertEquals(6, server.calls.size)
+        // The wedding, Home, the entries, the categories, the vendors, the boards, the budget, the guests,
+        // the households and the head count: one request each.
+        assertEquals(10, server.calls.size)
+    }
+
+    @Test
+    fun `holds the budget as it was loaded, category by category`() = runBlocking {
+        aWedding()
+        planner.load()
+
+        val held = planner.planner.first()!!
+        assertEquals(
+            listOf(BudgetLine("c1", "Venue", planned = 5000000, committed = 250000, paid = 0, payments = 1), BudgetLine("c2", "Attire", null, 0, 0, 0)),
+            held.budgetLines,
+        )
+        assertEquals(BudgetRest(committed = 30000, paid = 10000, payments = 2), held.uncategorised)
+    }
+
+    @Test
+    fun `holds the vendors with their details, their money and what points to them`() = runBlocking {
+        aWedding()
+        planner.load()
+
+        val held = planner.planner.first()!!
+        val palace = held.vendorList.single()
+        assertEquals("Palace on the Hill", palace.name)
+        assertEquals(VendorStatus.BOOKED, palace.status)
+        assertEquals("c1", palace.categoryId)
+        assertEquals("Jolanta", palace.contactPerson)
+        assertEquals("+48 555 010 020", palace.phone)
+        assertEquals("hall@palace.example", palace.email)
+        assertEquals("https://palace.example", palace.website)
+        assertEquals("1 Hill Road", palace.address)
+        assertEquals("Ask about the piano", palace.notes)
+        assertEquals(1200000L, palace.agreedPrice)
+        assertEquals(250000L, palace.committed)
+        assertEquals(0L, palace.paid)
+        assertEquals(2, palace.inspirations)
+        assertSame(palace, held.vendor("v1"))
+        assertNull(held.vendor("nobody"))
+        assertEquals(listOf("Pay the deposit", "Book the venue"), held.entriesOf(palace).map { it.title })
+        // What the phone has long used of vendors, the names, is still there.
+        assertEquals(mapOf("v1" to "Palace on the Hill"), held.vendors)
+    }
+
+    @Test
+    fun `holds the guests, their households and the head count`() = runBlocking {
+        aWedding()
+        planner.load()
+
+        val held = planner.planner.first()!!
+        assertEquals(listOf("Jan Nowak", "Ewa Kowal"), held.guests.map { it.name })
+        val jan = held.guests.first()
+        assertEquals(GuestStatus.CONFIRMED, jan.status)
+        assertEquals(StandIn.ANNA, jan.sideMemberId)
+        assertEquals("h1", jan.householdId)
+        assertTrue(jan.plusOne)
+        assertEquals(2, jan.children)
+        assertEquals(4, jan.heads)
+        assertEquals("vegetarian", jan.dietaryNeeds)
+        assertTrue(jan.needsAccommodation)
+        assertEquals("+48 555 030 040", jan.phone)
+        assertEquals("jan@guests.example", jan.email)
+        assertEquals("Allergic to nuts", jan.notes)
+        assertEquals(listOf("The Nowak family"), held.households.map { it.name })
+        assertEquals("Anna", held.memberName(StandIn.ANNA))
+        assertNull(held.memberName("someone-else"))
+
+        val counts = held.guestCounts!!
+        assertEquals(HeadCount(guests = 2, plusOnes = 1, children = 2, heads = 5), counts.total)
+        assertEquals(listOf("NOT_INVITED", "INVITED", "CONFIRMED", "DECLINED", "MAYBE"), counts.byStatus.map { it.status })
+        assertEquals(HeadCount(1, 1, 2, 4), counts.byStatus.first { it.status == "CONFIRMED" }.count)
+        // The two members in the wedding's order, then both sides, also where nobody is.
+        assertEquals(listOf<String?>(StandIn.ANNA, StandIn.MAREK, null), counts.bySide.map { it.sideMemberId })
+        assertEquals(HeadCount(0, 0, 0, 0), counts.bySide[1].count)
+        assertEquals(HeadCount(1, 0, 0, 1), counts.bySide[2].byStatus.last().count)
+    }
+
+    @Test
+    fun `a vendor's or a guest's state that a newer server knows is OTHER and breaks nothing`() = runBlocking {
+        server.planner(
+            vendors = listOf(StandIn.vendor("v1", "Palace on the Hill", status = "ARCHIVED")),
+            guests = listOf(StandIn.guest("g1", "Jan Nowak", status = "ON_THE_WAY")),
+        )
+
+        assertEquals(Load.LOADED, planner.load())
+
+        val held = planner.planner.first()!!
+        assertEquals(VendorStatus.OTHER, held.vendorList.single().status)
+        assertEquals(GuestStatus.OTHER, held.guests.single().status)
+    }
+
+    @Test
+    fun `reads a head count to which a newer server adds a field`() = runBlocking {
+        server.planner(guestCounts = StandIn.guestCounts().dropLast(1) + ""","byDiet":[]}""")
+
+        assertEquals(Load.LOADED, planner.load())
+
+        assertEquals(0, planner.planner.first()!!.guestCounts!!.total.heads)
     }
 
     @Test
@@ -272,6 +392,11 @@ class PlannerRepositoryTest {
         assertFalse(onDisk.contains("Palace on the Hill"))
         assertFalse(onDisk.contains("Pay the deposit"))
         assertFalse(onDisk.contains("Marek"))
+        // Nor what is about vendors and guests: their names, contact details and needs.
+        for (personal in listOf("Jan Nowak", "Ewa Kowal", "Nowak family", "vegetarian", "+48 555 010 020", "+48 555 030 040", "palace.example", "guests.example", "Allergic", "Jolanta", "Hill Road", "piano")) {
+            assertFalse(personal, onDisk.contains(personal))
+        }
+        assertTrue(planner.planner.first() == null)
     }
 
     @Test
@@ -312,8 +437,8 @@ class PlannerRepositoryTest {
         planner.load()
         val held = planner.planner.first()!!
 
-        val printed = "$held ${held.members}"
-        for (personal in listOf("Anna", "Marek", "Palace", "deposit", "venue")) {
+        val printed = "$held ${held.members} ${held.vendorList} ${held.guests} ${held.households} ${held.vendorList.single()} ${held.guests.first()}"
+        for (personal in listOf("Anna", "Marek", "Palace", "deposit", "venue", "Nowak", "Kowal", "555", "example", "vegetarian", "nuts", "Jolanta", "piano")) {
             assertFalse(printed.contains(personal, ignoreCase = true))
         }
     }

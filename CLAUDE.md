@@ -141,8 +141,14 @@ first uses it, at the version D-005 names.
   value from a fixed set as text, so a field or a value a newer server adds does not break an app that is already
   on a phone. `WireAgreesWithTheContractTest` holds them against the generated models, and the tests' own answers
   (`StandIn`) against the contract.
-- How a fact reads is in `planner/Words.kt`, the same words as the web's `labels.ts`; money is `money()` in
-  `money/Money.kt`, on whole numbers of the smallest unit as on the web. Screen texts are in `strings.xml`.
+- How a fact reads is in `planner/Words.kt` (the budget's in `planner/BudgetWords.kt`), the same words as the web's
+  pages and its `labels.ts`; money is `money()` in `money/Money.kt`, on whole numbers of the smallest unit as on the
+  web. Screen texts are in `strings.xml`.
+- The bar at the bottom has four places: Home, Plan, Tasks and More. What has no place of its own is a row in More
+  (`planner/MoreContent.kt`) and a route in `PlannerScreens.kt`, shown with the arrow back at the top and More still
+  chosen below. The budget is only shown on the phone; it is set on the web (S01 §4).
+- A copy that an older version of the app made lacks what a newer one keeps until it is loaded again. A screen
+  leaves out what such a copy cannot know and never shows it as nothing (`categoriesKnown` in `BudgetWords.kt`).
 - The plan's timeline (`planner/timeline/`) is drawn by us, like the web's chart (D-001): where a bar lies is
   arithmetic on its dates (`TimelineLayout.kt`), tested without a screen. It only shows: nothing on it can be
   moved. Time scrolls sideways on a node of its own, around the list that scrolls up and down; putting both on

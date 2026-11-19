@@ -1,8 +1,17 @@
 package io.github.trufelek124.weddingplanner.data
 
 import io.github.trufelek124.weddingplanner.api.model.Board
+import io.github.trufelek124.weddingplanner.api.model.Budget
 import io.github.trufelek124.weddingplanner.api.model.BudgetGlance
+import io.github.trufelek124.weddingplanner.api.model.BudgetLine
+import io.github.trufelek124.weddingplanner.api.model.BudgetRest
 import io.github.trufelek124.weddingplanner.api.model.Category
+import io.github.trufelek124.weddingplanner.api.model.Guest
+import io.github.trufelek124.weddingplanner.api.model.GuestCounts
+import io.github.trufelek124.weddingplanner.api.model.GuestsBySide
+import io.github.trufelek124.weddingplanner.api.model.GuestsByStatus
+import io.github.trufelek124.weddingplanner.api.model.HeadCount
+import io.github.trufelek124.weddingplanner.api.model.Household
 import io.github.trufelek124.weddingplanner.api.model.Home
 import io.github.trufelek124.weddingplanner.api.model.Inspiration
 import io.github.trufelek124.weddingplanner.api.model.Picture
@@ -42,9 +51,31 @@ class WireAgreesWithTheContractTest {
     fun `the money at a glance`() = agree(serializer<BudgetWire>().descriptor, serializer<BudgetGlance>().descriptor)
 
     @Test
-    fun `a category and a vendor by name`() {
+    fun `a category, a vendor and a household by name`() {
         agree(serializer<NameWire>().descriptor, serializer<Category>().descriptor)
         agree(serializer<NameWire>().descriptor, serializer<Vendor>().descriptor)
+        agree(serializer<NameWire>().descriptor, serializer<Household>().descriptor)
+    }
+
+    @Test
+    fun `the whole budget, its categories and what is under none`() {
+        agree(serializer<WholeBudgetWire>().descriptor, serializer<Budget>().descriptor)
+        agree(serializer<BudgetLineWire>().descriptor, serializer<BudgetLine>().descriptor)
+        agree(serializer<BudgetRestWire>().descriptor, serializer<BudgetRest>().descriptor)
+    }
+
+    @Test
+    fun `a vendor with its details`() = agree(serializer<VendorWire>().descriptor, serializer<Vendor>().descriptor)
+
+    @Test
+    fun `a guest`() = agree(serializer<GuestWire>().descriptor, serializer<Guest>().descriptor)
+
+    @Test
+    fun `the head count by status and by side`() {
+        agree(serializer<GuestCountsWire>().descriptor, serializer<GuestCounts>().descriptor)
+        agree(serializer<HeadCountWire>().descriptor, serializer<HeadCount>().descriptor)
+        agree(serializer<StatusCountWire>().descriptor, serializer<GuestsByStatus>().descriptor)
+        agree(serializer<SideCountWire>().descriptor, serializer<GuestsBySide>().descriptor)
     }
 
     @Test
@@ -86,6 +117,28 @@ class WireAgreesWithTheContractTest {
         assertEquals(2, strict.decodeFromString<Wedding>(StandIn.wedding()).members.size)
         assertEquals("Venue", strict.decodeFromString<Category>(StandIn.category("c1", "Venue")).name)
         assertEquals("Palace", strict.decodeFromString<Vendor>(StandIn.vendor("v1", "Palace")).name)
+        val vendor = strict.decodeFromString<Vendor>(
+            StandIn.vendor("v2", "Studio Light", status = "CONSIDERING", categoryId = "c1", phone = "+48 000 000 000", agreedPrice = 100000, payments = 1),
+        )
+        assertEquals(Vendor.Status.CONSIDERING, vendor.status)
+        val lines = listOf(StandIn.Line("c1", "Venue", planned = 500000, committed = 450000, paid = 100000, payments = 2), StandIn.Line("c2", "Music"))
+        val budget = strict.decodeFromString<Budget>(StandIn.wholeBudget(total = 900000, lines = lines, rest = StandIn.Rest(committed = 20000, payments = 1)))
+        assertEquals(470000L, budget.committed)
+        assertEquals(null, budget.categories[1].planned)
+        assertEquals(1, budget.uncategorised.payments)
+        val guest = strict.decodeFromString<Guest>(StandIn.guest("g1", "Jan", plusOne = true, children = 2, sideMemberId = StandIn.ANNA, householdId = "h1"))
+        assertEquals(4, guest.heads)
+        assertEquals(2, strict.decodeFromString<Household>(StandIn.household("h1", "Kowalski", guests = 2)).guests)
+        val counts = strict.decodeFromString<GuestCounts>(
+            StandIn.guestCounts(listOf(StandIn.Counted("CONFIRMED", StandIn.ANNA, plusOne = true, children = 1), StandIn.Counted("INVITED"))),
+        )
+        assertEquals(4, counts.total.heads)
+        assertEquals(5, counts.byStatus.size)
+        assertEquals(listOf<String?>(StandIn.ANNA, StandIn.MAREK, null), counts.bySide.map { it.sideMemberId })
+        assertEquals(
+            GuestsByStatus.Status.entries.toList(),
+            strict.decodeFromString<GuestCounts>(StandIn.guestCounts()).byStatus.map { it.status },
+        )
         assertEquals("Dress", strict.decodeFromString<Board>(StandIn.board("b1", "Dress")).name)
         assertEquals(3, strict.decodeFromString<Inspiration>(StandIn.inspiration("i1", url = "https://example.com/x", boardId = "b1", pictures = 2, previews = 1)).pictures.size)
         assertEquals(0, strict.decodeFromString<Inspiration>(StandIn.inspiration("i2")).pictures.size)

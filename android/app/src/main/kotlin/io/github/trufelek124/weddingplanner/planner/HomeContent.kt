@@ -1,5 +1,6 @@
 package io.github.trufelek124.weddingplanner.planner
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -29,6 +31,7 @@ import java.time.LocalDate
  * next, and the money.
  *
  * @param today the date where the wedding takes place, by the phone's clock
+ * @param onBudget what pressing the glance at the money does; null where it only shows
  * @param foot what stands under everything: when this was loaded, who is signed in, the way out
  */
 @Composable
@@ -37,6 +40,7 @@ fun HomeContent(
     today: LocalDate,
     modifier: Modifier = Modifier,
     actions: TaskActions? = null,
+    onBudget: (() -> Unit)? = null,
     foot: @Composable () -> Unit = {},
 ) {
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
@@ -50,7 +54,7 @@ fun HomeContent(
         }
 
         if (hasMoney(planner.budget)) {
-            item(key = "budget") { BudgetAtAGlance(planner) }
+            item(key = "budget") { BudgetAtAGlance(planner, onBudget) }
         }
         if (planner.nextPayments.isNotEmpty()) {
             item(key = "payments-title") { GroupTitle(stringResource(R.string.home_next_payments)) }
@@ -104,11 +108,15 @@ private fun Hero(planner: Planner, today: LocalDate) {
     }
 }
 
-/** The sums in one sentence and one bar. */
+/** The sums in one sentence and one bar; pressing it opens the budget. */
 @Composable
-private fun BudgetAtAGlance(planner: Planner) {
+private fun BudgetAtAGlance(planner: Planner, onOpen: (() -> Unit)?) {
     val budget = planner.budget
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val open = stringResource(R.string.home_budget_open)
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = if (onOpen == null) Modifier else Modifier.clickable(onClickLabel = open, role = Role.Button, onClick = onOpen),
+    ) {
         GroupTitle(stringResource(R.string.home_budget))
         Text(budgetInWords(budget, planner.currency), style = MaterialTheme.typography.bodyLarge)
         if (budget.committed > 0) {

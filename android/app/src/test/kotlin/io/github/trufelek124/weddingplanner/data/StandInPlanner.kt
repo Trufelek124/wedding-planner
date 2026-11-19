@@ -81,10 +81,116 @@ object StandIn {
             """"previewTitle":"","pictures":[${held.joinToString(",")}],"version":0,"createdAt":"2026-11-18T13:05:00Z","updatedAt":"2026-11-18T13:05:00Z"}"""
     }
 
-    fun vendor(id: String, name: String): String =
-        """{"id":"$id","name":"$name","categoryId":null,"status":"BOOKED","contactPerson":"","phone":"","email":"","website":"",""" +
-            """"address":"","notes":"","agreedPrice":null,"planItems":0,"tasks":0,"payments":0,"committed":0,"paid":0,""" +
-            """"inspirations":0,"version":0,"createdAt":"2026-11-01T10:00:00Z","updatedAt":"2026-11-01T10:00:00Z"}"""
+    /** @param categoryId the vendor's category, or null */
+    fun vendor(
+        id: String,
+        name: String,
+        status: String = "BOOKED",
+        categoryId: String? = null,
+        contactPerson: String = "",
+        phone: String = "",
+        email: String = "",
+        website: String = "",
+        address: String = "",
+        notes: String = "",
+        agreedPrice: Long? = null,
+        planItems: Int = 0,
+        tasks: Int = 0,
+        payments: Int = 0,
+        committed: Long = 0,
+        paid: Long = 0,
+        inspirations: Int = 0,
+        version: Int = 0,
+    ): String =
+        """{"id":"$id","name":"$name","categoryId":${text(categoryId)},"status":"$status","contactPerson":"$contactPerson","phone":"$phone",""" +
+            """"email":"$email","website":"$website","address":"$address","notes":"$notes","agreedPrice":$agreedPrice,""" +
+            """"planItems":$planItems,"tasks":$tasks,"payments":$payments,"committed":$committed,"paid":$paid,""" +
+            """"inspirations":$inspirations,"version":$version,"createdAt":"2026-11-01T10:00:00Z","updatedAt":"2026-11-01T10:00:00Z"}"""
+
+    /** A category of the budget as the server sends it; [planned] null while nothing is planned for it. */
+    class Line(
+        val categoryId: String,
+        val name: String,
+        val planned: Long? = null,
+        val committed: Long = 0,
+        val paid: Long = 0,
+        val payments: Int = 0,
+    )
+
+    /** The payments under no category. */
+    class Rest(val committed: Long = 0, val paid: Long = 0, val payments: Int = 0)
+
+    /**
+     * The whole budget. Its sums are worked out from the lines, as the server does, so that a
+     * fixture cannot contradict itself.
+     */
+    fun wholeBudget(total: Long? = null, lines: List<Line> = emptyList(), rest: Rest = Rest(), version: Int = 0): String {
+        val categories = lines.joinToString(",", "[", "]") {
+            """{"categoryId":"${it.categoryId}","name":"${it.name}","planned":${it.planned},"committed":${it.committed},""" +
+                """"paid":${it.paid},"payments":${it.payments}}"""
+        }
+        return """{"total":$total,"planned":${lines.sumOf { it.planned ?: 0 }},"committed":${lines.sumOf { it.committed } + rest.committed},""" +
+            """"paid":${lines.sumOf { it.paid } + rest.paid},"categories":$categories,""" +
+            """"uncategorised":{"committed":${rest.committed},"paid":${rest.paid},"payments":${rest.payments}},"version":$version}"""
+    }
+
+    /** Home's glance at the money, worked out from the same lines as [wholeBudget]. */
+    fun glanceOf(total: Long? = null, lines: List<Line> = emptyList(), rest: Rest = Rest()): String =
+        budget(
+            total = total, planned = lines.sumOf { it.planned ?: 0 }, committed = lines.sumOf { it.committed } + rest.committed,
+            paid = lines.sumOf { it.paid } + rest.paid,
+        )
+
+    /** A guest as the server sends one. [heads] is the guest, the plus-one and the children. */
+    fun guest(
+        id: String,
+        name: String,
+        status: String = "INVITED",
+        sideMemberId: String? = null,
+        householdId: String? = null,
+        plusOne: Boolean = false,
+        children: Int = 0,
+        dietaryNeeds: String = "",
+        needsAccommodation: Boolean = false,
+        phone: String = "",
+        email: String = "",
+        notes: String = "",
+        version: Int = 0,
+    ): String =
+        """{"id":"$id","name":"$name","status":"$status","sideMemberId":${text(sideMemberId)},"householdId":${text(householdId)},""" +
+            """"plusOne":$plusOne,"children":$children,"heads":${1 + (if (plusOne) 1 else 0) + children},"dietaryNeeds":"$dietaryNeeds",""" +
+            """"needsAccommodation":$needsAccommodation,"phone":"$phone","email":"$email","notes":"$notes","version":$version,""" +
+            """"createdAt":"2026-11-01T10:00:00Z","updatedAt":"2026-11-01T10:00:00Z"}"""
+
+    fun household(id: String, name: String, guests: Int = 0): String = """{"id":"$id","name":"$name","guests":$guests}"""
+
+    private val statuses = listOf("NOT_INVITED", "INVITED", "CONFIRMED", "DECLINED", "MAYBE")
+
+    private fun heads(people: List<Triple<String, Boolean, Int>>): String {
+        val plusOnes = people.count { it.second }
+        val children = people.sumOf { it.third }
+        return """{"guests":${people.size},"plusOnes":$plusOnes,"children":$children,"heads":${people.size + plusOnes + children}}"""
+    }
+
+    /**
+     * The head count, worked out from [guests] as the server does: every status in its order and every
+     * side (the members in the wedding's order, then both sides) is listed, also with nobody in it.
+     * @param guests a status, a side (null for both) and a plus-one and children count for each
+     */
+    fun guestCounts(guests: List<Counted> = emptyList(), sides: List<String> = listOf(ANNA, MAREK)): String {
+        fun statusLines(of: List<Counted>) =
+            statuses.joinToString(",", "[", "]") { status ->
+                """{"status":"$status","count":${heads(of.filter { it.status == status }.map { Triple(it.status, it.plusOne, it.children) })}}"""
+            }
+        val bySide = (sides + null).joinToString(",", "[", "]") { side ->
+            val its = guests.filter { it.sideMemberId == side }
+            """{"sideMemberId":${text(side)},"count":${heads(its.map { Triple(it.status, it.plusOne, it.children) })},"byStatus":${statusLines(its)}}"""
+        }
+        return """{"total":${heads(guests.map { Triple(it.status, it.plusOne, it.children) })},"byStatus":${statusLines(guests)},"bySide":$bySide}"""
+    }
+
+    /** What the head count needs to know of a guest. */
+    class Counted(val status: String, val sideMemberId: String? = null, val plusOne: Boolean = false, val children: Int = 0)
 }
 
 /** Makes the stand-in server answer everything the phone asks for when it loads the planner. */
@@ -95,7 +201,15 @@ fun StandInServer.planner(
     categories: List<String> = emptyList(),
     vendors: List<String> = emptyList(),
     boards: List<String> = emptyList(),
+    budget: String = StandIn.wholeBudget(),
+    guests: List<String> = emptyList(),
+    households: List<String> = emptyList(),
+    guestCounts: String = StandIn.guestCounts(),
 ) {
+    json("GET /api/budget", budget)
+    json("GET /api/guests", guests.joinToString(",", "[", "]"))
+    json("GET /api/households", households.joinToString(",", "[", "]"))
+    json("GET /api/guests/counts", guestCounts)
     json("GET /api/boards", boards.joinToString(",", "[", "]"))
     json("GET /api/wedding", wedding)
     json("GET /api/home", home)
@@ -106,5 +220,5 @@ fun StandInServer.planner(
 
 /** The server goes away: nothing of the planner can be asked for. */
 fun StandInServer.plannerUnreachable() {
-    listOf("wedding", "home", "entries", "categories", "vendors", "boards").forEach { unreachable("GET /api/$it") }
+    listOf("wedding", "home", "entries", "categories", "vendors", "boards", "budget", "guests", "households", "guests/counts").forEach { unreachable("GET /api/$it") }
 }

@@ -1,5 +1,6 @@
 package io.github.trufelek124.weddingplanner.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -41,8 +42,68 @@ data class EntryRow(
 @Entity(tableName = "category")
 data class CategoryRow(@PrimaryKey val id: String, val position: Int, val name: String)
 
+/**
+ * A vendor, with its contact details and what its payments come to. The columns that came with
+ * version 4 say what they hold in a copy an older version of the app made, until it is loaded again.
+ */
 @Entity(tableName = "vendor")
-class VendorRow(@PrimaryKey val id: String, val name: String)
+class VendorRow(
+    @PrimaryKey val id: String,
+    val name: String,
+    @ColumnInfo(defaultValue = "0") val position: Int = 0,
+    @ColumnInfo(defaultValue = "") val status: String = "",
+    val categoryId: String? = null,
+    @ColumnInfo(defaultValue = "") val contactPerson: String = "",
+    @ColumnInfo(defaultValue = "") val phone: String = "",
+    @ColumnInfo(defaultValue = "") val email: String = "",
+    @ColumnInfo(defaultValue = "") val website: String = "",
+    @ColumnInfo(defaultValue = "") val address: String = "",
+    @ColumnInfo(defaultValue = "") val notes: String = "",
+    /** What was agreed, in the smallest unit of the wedding's currency; null while nothing is agreed. */
+    val agreedPrice: Long? = null,
+    @ColumnInfo(defaultValue = "0") val committed: Long = 0,
+    @ColumnInfo(defaultValue = "0") val paid: Long = 0,
+    @ColumnInfo(defaultValue = "0") val planItems: Int = 0,
+    @ColumnInfo(defaultValue = "0") val tasks: Int = 0,
+    @ColumnInfo(defaultValue = "0") val payments: Int = 0,
+    @ColumnInfo(defaultValue = "0") val inspirations: Int = 0,
+)
+
+/** A category of the budget: what is planned for it, and what its payments come to. */
+@Entity(tableName = "budget_line")
+data class BudgetLineRow(
+    @PrimaryKey val categoryId: String,
+    val position: Int,
+    val name: String,
+    val planned: Long?,
+    val committed: Long,
+    val paid: Long,
+    val payments: Int,
+)
+
+/** A guest. Not a data class: what it holds is about a person and is not to be printed. */
+@Entity(tableName = "guest")
+class GuestRow(
+    @PrimaryKey val id: String,
+    val position: Int,
+    val name: String,
+    val status: String,
+    /** The member whose guest this is; null for a guest of both. */
+    val sideMemberId: String?,
+    val householdId: String?,
+    val plusOne: Boolean,
+    val children: Int,
+    /** How many people this entry stands for: the guest, the plus-one and the children. */
+    val heads: Int,
+    val dietaryNeeds: String,
+    val needsAccommodation: Boolean,
+    val phone: String,
+    val email: String,
+    val notes: String,
+)
+
+@Entity(tableName = "household")
+class HouseholdRow(@PrimaryKey val id: String, val position: Int, val name: String)
 
 @Entity(tableName = "member")
 class MemberRow(@PrimaryKey val id: String, val position: Int, val displayName: String, val you: Boolean)
@@ -71,6 +132,12 @@ data class PlannerRow(
     val overdueIds: String,
     val nextIds: String,
     val nextPaymentIds: String,
+    /** The payments filed under no category: what they come to, what of it is paid, and how many they are. */
+    @ColumnInfo(defaultValue = "0") val uncategorisedCommitted: Long = 0,
+    @ColumnInfo(defaultValue = "0") val uncategorisedPaid: Long = 0,
+    @ColumnInfo(defaultValue = "0") val uncategorisedPayments: Int = 0,
+    /** The head count as the server counted it, as JSON; empty while it was not loaded. */
+    @ColumnInfo(defaultValue = "") val guestCounts: String = "",
 ) {
     companion object {
         const val ONLY = 1
@@ -137,4 +204,7 @@ class Stored(
     val changes: List<ChangeRow> = emptyList(),
     val boards: List<BoardRow> = emptyList(),
     val shares: List<ShareRow> = emptyList(),
+    val budgetLines: List<BudgetLineRow> = emptyList(),
+    val guests: List<GuestRow> = emptyList(),
+    val households: List<HouseholdRow> = emptyList(),
 )
