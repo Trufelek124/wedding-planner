@@ -165,6 +165,7 @@ export function planningServer(entries: Entry[], extra: Record<string, Handler> 
     'GET /api/categories': Response.json([VENUE, FLOWERS]),
     'GET /api/vendors': Response.json([]),
     'GET /api/suggestions': Response.json([]),
+    'GET /api/suggestions/settings': Response.json({ addsByItself: true, threshold: 85 }),
     'GET /api/entries': (request) => {
       const kind = new URL(request.url).searchParams.get('kind')
       return Response.json(entries.filter((candidate) => kind === null || candidate.kind === kind))

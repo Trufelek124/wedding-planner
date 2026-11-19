@@ -621,3 +621,113 @@ describe('the ways to the page', () => {
     expect(screen.queryByRole('link', { name: /e-mail/i })).toBeNull()
   })
 })
+
+describe('how sure the import has to be before it adds by itself', () => {
+  const settingsServer = (settings = { addsByItself: true, threshold: 85 }, extra: Record<string, Handler> = {}) =>
+    serverWith(mail(), { 'GET /api/suggestions/settings': () => Response.json(settings), ...extra })
+
+  it('is not there while the import is not set up', async () => {
+    serverWith(mail({ setUp: false }))
+    open('/mail')
+
+    await screen.findByText(/The e-mail import is not set up on this server/)
+    expect(screen.queryByRole('heading', { name: 'Adding by itself' })).not.toBeInTheDocument()
+  })
+
+  it('shows the wedding’s setting, says that both see it, and what is never added by itself', async () => {
+    settingsServer()
+    open('/mail')
+
+    const section = within(await screen.findByRole('region', { name: 'Adding by itself' }))
+    expect(await section.findByRole('radio', { name: 'Add tasks and steps by themselves when the import is at least this sure' })).toBeChecked()
+    expect(section.getByRole('radio', { name: /^Never/ })).not.toBeChecked()
+    expect(section.getByLabelText('At least this sure, in percent (50 to 100)')).toHaveValue('85')
+    expect(section.getByText(/you and Piotr see and change the same one/)).toBeInTheDocument()
+    expect(section.getByText(/A payment or a new vendor is never added by itself/)).toBeInTheDocument()
+    expect(section.getByText(/it adds nothing that already waits and undoes nothing that was added/)).toBeInTheDocument()
+  })
+
+  it('sends both values, and says once that it was saved', async () => {
+    const server = settingsServer(undefined, {
+      'PUT /api/suggestions/settings': (request) => request.json().then((body) => Response.json(body)),
+    })
+    open('/mail')
+    const field = await screen.findByLabelText('At least this sure, in percent (50 to 100)')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, '70')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved. It applies from now on.')).toBeInTheDocument()
+    expect(await server.requests('PUT /api/suggestions/settings')[0]?.json()).toEqual({ addsByItself: true, threshold: 70 })
+    expect(server.requests('PUT /api/suggestions/settings')).toHaveLength(1)
+    expect(screen.getAllByText('Saved. It applies from now on.')).toHaveLength(1)
+  })
+
+  it('puts the server’s message next to the number when it refuses it, and says nothing was saved', async () => {
+    settingsServer(undefined, {
+      'PUT /api/suggestions/settings': problem(400, 'bad-request', 'Bad request', {
+        fieldProblems: [{ field: 'threshold', message: 'Choose a number from 50 to 100.' }],
+      }),
+    })
+    open('/mail')
+    const field = await screen.findByLabelText('At least this sure, in percent (50 to 100)')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, '30')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Choose a number from 50 to 100.')).toBeInTheDocument()
+    expect(field).toHaveAccessibleDescription('Choose a number from 50 to 100.')
+    expect(screen.queryByText(/Saved\./)).not.toBeInTheDocument()
+  })
+
+  it('does not send what is not a number', async () => {
+    const server = settingsServer()
+    open('/mail')
+    const field = await screen.findByLabelText('At least this sure, in percent (50 to 100)')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, 'high')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Choose a number from 50 to 100.')).toBeInTheDocument()
+    expect(server.requests('PUT /api/suggestions/settings')).toHaveLength(0)
+  })
+
+  it('switches to Never and keeps the number for when it is switched on again', async () => {
+    const server = settingsServer({ addsByItself: true, threshold: 92 }, {
+      'PUT /api/suggestions/settings': (request) => request.json().then((body) => Response.json(body)),
+    })
+    open('/mail')
+    const field = await screen.findByLabelText('At least this sure, in percent (50 to 100)')
+
+    await userEvent.click(screen.getByRole('radio', { name: /^Never/ }))
+    expect(field).toBeDisabled()
+    expect(field).toHaveValue('92')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved. It applies from now on.')).toBeInTheDocument()
+    expect(await server.requests('PUT /api/suggestions/settings')[0]?.json()).toEqual({ addsByItself: false, threshold: 92 })
+    expect(screen.getByLabelText('At least this sure, in percent (50 to 100)')).toHaveValue('92')
+    expect(screen.getByRole('radio', { name: /^Never/ })).toBeChecked()
+  })
+
+  it('shows a setting that is on Never as it is, with the number that was kept', async () => {
+    settingsServer({ addsByItself: false, threshold: 60 })
+    open('/mail')
+
+    expect(await screen.findByRole('radio', { name: /^Never/ })).toBeChecked()
+    expect(screen.getByLabelText('At least this sure, in percent (50 to 100)')).toHaveValue('60')
+  })
+
+  it('says so when the server cannot be reached, and changes nothing', async () => {
+    settingsServer(undefined, { 'PUT /api/suggestions/settings': new TypeError('Failed to fetch') })
+    open('/mail')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('The server cannot be reached, so nothing was changed. Try again.')).toBeInTheDocument()
+    expect(screen.queryByText(/Saved\./)).not.toBeInTheDocument()
+  })
+})

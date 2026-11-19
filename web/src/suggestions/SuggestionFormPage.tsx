@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { ApiError } from '../api/client.ts'
 import { moneyToType, moneyTyped } from '../money/money.ts'
@@ -9,12 +9,13 @@ import { Field } from '../ui/Field.tsx'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
 import { listVendors, type Vendor } from '../vendors/vendorsApi.ts'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
-import { alreadyDecided, isAlreadyDecided, type Notice } from './decisions.ts'
+import { alreadyDecided, decide, isAlreadyDecided, type Decision, type Notice, type Trouble } from './decisions.ts'
+import { NoticeText } from './NoticeText.tsx'
 import { Decided, Proposal, Source, type Names } from './parts.tsx'
 import {
   acceptSuggestion,
   KIND_LABEL,
-  listSuggestions,
+  getSuggestion,
   type Suggestion,
   type SuggestionAcceptance,
   type SuggestionKind,
@@ -42,44 +43,59 @@ export function SuggestionFormPage() {
   const waiting = useWaiting()
   const location = useLocation()
   const back = cameFrom(location.state) ?? '/suggestions'
-  // There is no call for one suggestion: it is found among all of them.
-  const all = useLoaded(id, (signal) => listSuggestions('ALL', signal))
+  const backLabel = back.startsWith('/suggestions') ? 'Back to the suggestions' : 'Back'
+  const one = useLoaded(id, (signal) => getSuggestion(id, signal))
   const categories = useLoaded('categories', listCategories)
   const vendors = useLoaded('vendors', (signal) => listVendors({}, signal))
   const [said, setSaid] = useState<Notice | null>(null)
+  const sayBox = useRef<HTMLDivElement>(null)
+  const saidKey = said?.key
 
-  if (all.state.status === 'failed' || categories.state.status === 'failed' || vendors.state.status === 'failed') {
+  // What was said about a decision takes the keyboard, as in the inbox.
+  useEffect(() => {
+    if (saidKey !== undefined) {
+      sayBox.current?.focus({ preventScroll: true })
+    }
+  }, [saidKey])
+
+  // One request at a time, and nothing is sent again by the page itself.
+  const sending = useRef(false)
+  const [sendingNow, setSendingNow] = useState<Decision | null>(null)
+  const [trouble, setTrouble] = useState<Trouble | null>(null)
+
+  if (one.state.status === 'failed' || categories.state.status === 'failed' || vendors.state.status === 'failed') {
     return (
       <PageRetry
         message="This could not be loaded. Try again, or go back to the suggestions."
         onRetry={() => {
-          all.retry()
+          one.retry()
           categories.retry()
           vendors.retry()
         }}
       />
     )
   }
-  if (all.state.status === 'loading' || categories.state.status === 'loading' || vendors.state.status === 'loading') {
+  if (one.state.status === 'loading' || categories.state.status === 'loading' || vendors.state.status === 'loading') {
     return <PageWaiting what="Loading…" />
   }
 
-  const suggestion = all.state.data.find((one) => one.id === id)
-  if (suggestion === undefined) {
+  const suggestion = one.state.data
+  if (suggestion === null) {
     return (
       <div className="stack page-note">
         <p role="alert" className="alert">
-          This suggestion does not exist.
+          The e-mail this came from is no longer here: the suggestion does not exist any more.
         </p>
         <div>
           <Link className="button" to={back}>
-            Back to the suggestions
+            {backLabel}
           </Link>
         </div>
       </div>
     )
   }
 
+  const shown: Suggestion = suggestion
   const names: Names = {
     categories: new Map(categories.state.data.map((one) => [one.id, one.name])),
     vendors: new Map(vendors.state.data.map((one) => [one.id, one.name])),
@@ -88,16 +104,37 @@ export function SuggestionFormPage() {
   async function tellAlreadyDecided(tried: Suggestion) {
     setSaid(await alreadyDecided(tried.id, tried.title, 'accept', wedding.members, wedding.timeZone))
     // The page then shows the suggestion as it now stands: decided.
-    all.reload()
+    one.reload()
     waiting.reload()
+  }
+
+  async function settle(decision: Decision) {
+    if (sending.current) {
+      return
+    }
+    sending.current = true
+    setSendingNow(decision)
+    setTrouble(null)
+    const outcome = await decide(shown, decision, wedding.members, wedding.timeZone)
+    if ('trouble' in outcome) {
+      setTrouble(outcome.trouble)
+    } else {
+      setSaid(outcome.notice)
+      one.reload()
+      waiting.reload()
+    }
+    sending.current = false
+    setSendingNow(null)
   }
 
   return (
     <div className="form-page">
       {said !== null && (
-        <p role="alert" className="alert">
-          {said.lead}: {said.title}
-        </p>
+        <div className="notices" role="group" aria-label="What happened" tabIndex={-1} ref={sayBox}>
+          <p className={said.tone === 'alert' ? 'alert' : 'notice'} role={said.tone === 'alert' ? 'alert' : 'status'}>
+            <NoticeText notice={said} back={back} />
+          </p>
+        </div>
       )}
       {suggestion.state !== 'WAITING' ? (
         <>
@@ -107,10 +144,29 @@ export function SuggestionFormPage() {
             <Proposal suggestion={suggestion} names={names} />
             <Source suggestion={suggestion} />
             <Decided suggestion={suggestion} back={back} />
+            {trouble !== null && (
+              <div role="alert" className="alert stack-tight">
+                {trouble.kind === 'unreachable' ? (
+                  <p>The server cannot be reached, so nothing was decided. Try again.</p>
+                ) : (
+                  <p>{trouble.kind === 'other' ? trouble.text : trouble.messages.join(' ')}</p>
+                )}
+              </div>
+            )}
+            {suggestion.state === 'ADDED' && (
+              <div className="actions suggestion-actions">
+                <button type="button" className="button" disabled={sendingNow !== null} onClick={() => void settle('undo')}>
+                  {sendingNow === 'undo' ? 'Undoing…' : 'Undo'}
+                </button>
+                <button type="button" className="button button-quiet" disabled={sendingNow !== null} onClick={() => void settle('keep')}>
+                  {sendingNow === 'keep' ? 'Keeping…' : 'Keep'}
+                </button>
+              </div>
+            )}
           </section>
           <div>
             <Link className="button button-quiet" to={back}>
-              Back to the suggestions
+              {backLabel}
             </Link>
           </div>
         </>

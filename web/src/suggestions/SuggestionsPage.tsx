@@ -1,18 +1,16 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
-import { ApiError } from '../api/client.ts'
 import { listCategories } from '../planning/planningApi.ts'
 import { useLoaded } from '../planning/useLoaded.ts'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
 import { listVendors } from '../vendors/vendorsApi.ts'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
-import { alreadyDecided, isAlreadyDecided, plainNotice, whatHappened, type Decision, type Notice } from './decisions.ts'
+import { decide as send, whatHappened, type Decision, type Notice, type Trouble } from './decisions.ts'
+import { NoticeText } from './NoticeText.tsx'
 import { Decided, Proposal, Source, type Names } from './parts.tsx'
 import {
-  acceptSuggestion,
   KIND_LABEL,
   listSuggestions,
-  rejectSuggestion,
   SHOWN_STATES,
   STATE_LABEL,
   type ShownState,
@@ -20,10 +18,11 @@ import {
 } from './suggestionsApi.ts'
 import { useWaiting } from './WaitingContext.ts'
 
-/** What goes wrong with one card, said on the card. */
-type Trouble = { kind: 'refused'; messages: string[] } | { kind: 'unreachable' } | { kind: 'other'; text: string }
-
 const NOTICES_KEPT = 3
+
+/** Said once above the part: it is not a list to work through. */
+export const ADDED_LEAD =
+  'These are already in your plan. Undo what should not be there; what nobody undoes counts as kept after thirty days.'
 
 function cameBackWith(state: unknown): Suggestion | null {
   return typeof state === 'object' && state !== null && 'decided' in state ? (state.decided as Suggestion) : null
@@ -47,7 +46,7 @@ export function SuggestionsPage() {
 
   // A decision is sent once: while one is on its way no other button works, and nothing is sent again by itself.
   const sending = useRef(false)
-  const [sendingId, setSendingId] = useState<string | null>(null)
+  const [sendingNow, setSending] = useState<{ id: string; decision: Decision } | null>(null)
   const [troubles, setTroubles] = useState<Record<string, Trouble>>({})
   const [notices, setNotices] = useState<Notice[]>([])
   const noticeBox = useRef<HTMLDivElement>(null)
@@ -57,7 +56,7 @@ export function SuggestionsPage() {
   const arrived = cameBackWith(location.state)
   useEffect(() => {
     if (arrived !== null) {
-      setNotices((before) => [...before, whatHappened(arrived)].slice(-NOTICES_KEPT))
+      say(whatHappened(arrived))
       void navigate(`${location.pathname}${location.search}`, { replace: true, state: null })
     }
   }, [arrived, navigate, location.pathname, location.search])
@@ -88,43 +87,22 @@ export function SuggestionsPage() {
       return
     }
     sending.current = true
-    setSendingId(suggestion.id)
+    setSending({ id: suggestion.id, decision })
     setTroubles((before) => Object.fromEntries(Object.entries(before).filter(([key]) => key !== suggestion.id)))
-    try {
-      const decided = decision === 'accept' ? await acceptSuggestion(suggestion.id) : await rejectSuggestion(suggestion.id)
-      say(whatHappened(decided))
-    } catch (error) {
-      if (isAlreadyDecided(error)) {
-        say(await alreadyDecided(suggestion.id, suggestion.title, decision, wedding.members, wedding.timeZone))
-      } else if (error instanceof ApiError && error.is('urn:wedding-planner:problem:not-found')) {
-        say(plainNotice('alert', 'This suggestion no longer exists', suggestion.title))
-      } else if (error instanceof ApiError) {
-        const messages = (error.problem.fieldProblems ?? []).map((one) => one.message)
-        setTroubles((before) => ({
-          ...before,
-          [suggestion.id]:
-            messages.length > 0
-              ? { kind: 'refused', messages }
-              : { kind: 'other', text: error.problem.detail ?? 'That did not work. Try again.' },
-        }))
-        sending.current = false
-        setSendingId(null)
-        return
-      } else {
-        setTroubles((before) => ({ ...before, [suggestion.id]: { kind: 'unreachable' } }))
-        sending.current = false
-        setSendingId(null)
-        return
+    const outcome = await send(suggestion, decision, wedding.members, wedding.timeZone)
+    if ('trouble' in outcome) {
+      setTroubles((before) => ({ ...before, [suggestion.id]: outcome.trouble }))
+    } else {
+      say(outcome.notice)
+      // Decided, one way or the other: the card goes at once, the lists read again, and the counts with them.
+      if (state === 'WAITING' || state === 'ADDED') {
+        suggestions.set({ shown: state, items: shownNow.filter((one) => one.id !== suggestion.id) })
       }
+      suggestions.reload()
+      waiting.reload()
     }
-    // Decided, one way or the other: the card goes at once, the lists read again, and the count with them.
-    if (state === 'WAITING') {
-      suggestions.set({ shown: state, items: shownNow.filter((one) => one.id !== suggestion.id) })
-    }
-    suggestions.reload()
-    waiting.reload()
     sending.current = false
-    setSendingId(null)
+    setSending(null)
   }
 
   if (suggestions.state.status === 'failed' || categories.state.status === 'failed' || vendors.state.status === 'failed') {
@@ -161,7 +139,7 @@ export function SuggestionsPage() {
       <div className="page-head">
         <h1>Suggestions</h1>
       </div>
-      <p className="muted suggestions-lead">What the e-mail import proposes. Nothing changes in the planner until one of you accepts it.{' '}
+      <p className="muted suggestions-lead">What the e-mail import found. A payment or a new vendor waits until one of you accepts it; a task or a step it is sure of is added by itself, and you can undo it.{' '}
         <Link to="/mail">E-mail import</Link>: connect or disconnect your Gmail.
       </p>
 
@@ -182,17 +160,24 @@ export function SuggestionsPage() {
         <div className="notices" role="group" aria-label="What happened" tabIndex={-1} ref={noticeBox}>
           {notices.map((notice) => (
             <p key={notice.key} className={notice.tone === 'alert' ? 'alert' : 'notice'} role={notice.tone === 'alert' ? 'alert' : 'status'}>
-              {notice.lead}
-              {notice.title !== undefined && ': '}
-              {notice.link === undefined ? notice.title : <Link to={notice.link.to} state={{ back }}>{notice.link.label}</Link>}
+              <NoticeText notice={notice} back={back} />
             </p>
           ))}
         </div>
       )}
 
+      {state === 'ADDED' && <p className="muted suggestions-lead">{ADDED_LEAD}</p>}
+
       {items.length === 0 ? (
         <p className="empty">
-          {state === 'WAITING' ? 'Nothing waits for you.' : state === 'ACCEPTED' ? 'Nothing has been accepted yet.' : 'Nothing has been rejected.'}
+          {
+            {
+              WAITING: 'Nothing waits for you.',
+              ADDED: 'Nothing was added by itself.',
+              ACCEPTED: 'Nothing has been accepted yet.',
+              REJECTED: 'Nothing has been rejected.',
+            }[state]
+          }
         </p>
       ) : (
         <ul className="suggestions">
@@ -202,7 +187,7 @@ export function SuggestionsPage() {
                 suggestion={suggestion}
                 names={names}
                 back={back}
-                busy={sendingId !== null}
+                sending={sendingNow}
                 trouble={troubles[suggestion.id]}
                 onDecide={(decision) => void decide(suggestion, decision)}
               />
@@ -218,13 +203,15 @@ interface CardProps {
   suggestion: Suggestion
   names: Names
   back: string
-  busy: boolean
+  sending: { id: string; decision: Decision } | null
   trouble: Trouble | undefined
   onDecide: (decision: Decision) => void
 }
 
-function Card({ suggestion, names, back, busy, trouble, onDecide }: CardProps) {
+function Card({ suggestion, names, back, sending, trouble, onDecide }: CardProps) {
   const heading = useId()
+  const busy = sending !== null
+  const now = (decision: Decision) => sending?.id === suggestion.id && sending.decision === decision
   return (
     <article className="suggestion" aria-labelledby={heading}>
       <p className="suggestion-kind">{KIND_LABEL[suggestion.kind]}</p>
@@ -249,6 +236,17 @@ function Card({ suggestion, names, back, busy, trouble, onDecide }: CardProps) {
           )}
           {trouble.kind === 'unreachable' && <p>The server cannot be reached, so nothing was decided. Try again.</p>}
           {trouble.kind === 'other' && <p>{trouble.text}</p>}
+        </div>
+      )}
+
+      {suggestion.state === 'ADDED' && (
+        <div className="actions suggestion-actions">
+          <button type="button" className="button" disabled={busy} onClick={() => onDecide('undo')}>
+            {now('undo') ? 'Undoing…' : 'Undo'}
+          </button>
+          <button type="button" className="button button-quiet" disabled={busy} onClick={() => onDecide('keep')}>
+            {now('keep') ? 'Keeping…' : 'Keep'}
+          </button>
         </div>
       )}
 

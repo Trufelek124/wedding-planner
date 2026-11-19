@@ -225,6 +225,15 @@ function EntryForm({ existing, kind, parentAsked, vendorAsked, categories, planI
     <div className="form-page">
       <h1>{existing === null ? `Add a ${what}` : `Change this ${what}`}</h1>
 
+      {existing?.fromSuggestionId != null && (
+        <p className="from-mail">
+          <Link to={`/suggestions/${existing.fromSuggestionId}`} state={{ back: location.pathname }}>
+            From e-mail
+          </Link>
+          <span className="muted">See who wrote it and what it said.</span>
+        </p>
+      )}
+
       {changedMeanwhile && (
         <div role="alert" className="alert stack">
           <p>Someone else changed this in the meantime, so your change was not saved.</p>

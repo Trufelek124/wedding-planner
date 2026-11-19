@@ -10,7 +10,7 @@ import { useLoaded } from '../planning/useLoaded.ts'
 import { useStatusChange, type PendingStatus } from '../planning/useStatusChange.ts'
 import { Field } from '../ui/Field.tsx'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
-import { useWaiting, waitingInWords } from '../suggestions/WaitingContext.ts'
+import { addedInWords, useWaiting, waitingInWords } from '../suggestions/WaitingContext.ts'
 import { countdown, longDate } from '../wedding/dates.ts'
 import { useCurrentWedding, useWeddingUpdate } from '../wedding/WeddingContext.ts'
 import { changeWedding } from '../wedding/weddingApi.ts'
@@ -47,6 +47,12 @@ export function HomePage() {
       {waiting.count !== null && waiting.count > 0 && (
         <p className="home-suggestions">
           <Link to="/suggestions">{waitingInWords(waiting.count)}</Link>
+        </p>
+      )}
+
+      {waiting.added !== null && waiting.added > 0 && (
+        <p className="home-suggestions">
+          <Link to="/suggestions?state=ADDED">{addedInWords(waiting.added)}</Link>
         </p>
       )}
 

@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { money } from '../money/money.ts'
 import { PAYMENT_KIND_LABEL, shortDate } from '../planning/labels.ts'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
-import { atTime, madeThing, mailAddress, memberName, type Suggestion } from './suggestionsApi.ts'
+import { atTime, madeThing, mailAddress, memberName, standing, type Suggestion } from './suggestionsApi.ts'
 
 /** What the planner knows by id, to say a category or a vendor by its name. */
 export interface Names {
@@ -105,15 +105,10 @@ export function Source({ suggestion }: { suggestion: Suggestion }) {
 /** Who decided it and when, and the way to what accepting made. */
 export function Decided({ suggestion, back }: { suggestion: Suggestion; back: string }) {
   const wedding = useCurrentWedding()
-  const by = memberName(suggestion.decidedBy, wedding.members)
-  const made = suggestion.state === 'ACCEPTED' ? madeThing(suggestion) : null
-  const when = suggestion.decidedAt === null ? '' : `, ${atTime(suggestion.decidedAt, wedding.timeZone)}`
+  const made = suggestion.state === 'ACCEPTED' || suggestion.state === 'ADDED' ? madeThing(suggestion) : null
   return (
     <p className="suggestion-decided">
-      <span>
-        {suggestion.state === 'ACCEPTED' ? 'Accepted' : 'Rejected'} by {by}
-        {when}
-      </span>
+      <span>{standing(suggestion, wedding.members, wedding.timeZone)}</span>
       {made !== null && (
         <Link to={made.to} state={{ back }}>
           {made.open}

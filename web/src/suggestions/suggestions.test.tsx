@@ -2,8 +2,9 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import App from '../App.tsx'
-import { ANNA_MEMBER, FLOWERS, PIOTR_MEMBER, home, planningServer, problem, suggestion, vendor, VENUE, type Handler } from '../test-server.ts'
+import { ANNA_MEMBER, entry, FLOWERS, PIOTR_MEMBER, home, planningServer, problem, suggestion, vendor, VENUE, type Handler } from '../test-server.ts'
 import type { Schemas } from '../api/client.ts'
+import { alreadyDecided } from './decisions.ts'
 
 type Suggestion = Schemas['Suggestion']
 
@@ -16,6 +17,11 @@ const DALE = vendor({ name: 'Palace on the Hill' })
 
 /** A server that answers the suggestions the way the real one does: by the state that was asked for. */
 function inbox(all: Suggestion[], extra: Record<string, Handler> = {}) {
+  // One suggestion by its id, as it stands in `all` when it is asked for.
+  const byId: Record<string, Handler> = {}
+  for (const one of all) {
+    byId[`GET /api/suggestions/${one.id}`] = () => Response.json(all.find((other) => other.id === one.id) ?? one)
+  }
   return {
     dale: DALE,
     server: planningServer([], {
@@ -24,6 +30,7 @@ function inbox(all: Suggestion[], extra: Record<string, Handler> = {}) {
         const state = new URL(request.url).searchParams.get('state') ?? 'WAITING'
         return Response.json(all.filter((one) => state === 'ALL' || one.state === state))
       },
+      ...byId,
       ...extra,
     }),
   }
@@ -391,6 +398,7 @@ describe('deciding', () => {
       const state = new URL(request.url).searchParams.get('state')
       return Response.json(state === 'REJECTED' || state === 'ALL' ? [taken] : [])
     })
+    server.answer(`GET /api/suggestions/${one.id}`, () => Response.json(taken))
 
     await userEvent.click(card('Contested').getByRole('button', { name: 'Accept' }))
 
@@ -411,6 +419,7 @@ describe('deciding', () => {
     server.answer('GET /api/suggestions', (request) =>
       Response.json(new URL(request.url).searchParams.get('state') === 'ALL' ? [taken] : []),
     )
+    server.answer(`GET /api/suggestions/${one.id}`, () => Response.json(taken))
 
     await userEvent.click(card('Contested').getByRole('button', { name: 'Reject' }))
 
@@ -630,7 +639,8 @@ describe('change and accept', () => {
         theyDecided = true
         return problem(409, 'already-decided')
       },
-      'GET /api/suggestions': () => Response.json([theyDecided ? taken : one]),
+      'GET /api/suggestions': () => Response.json(theyDecided ? [] : [one]),
+      [`GET /api/suggestions/${one.id}`]: () => Response.json(theyDecided ? taken : one),
     })
     open(`/suggestions/${one.id}`)
     await userEvent.click(await screen.findByRole('button', { name: 'Accept with these values' }))
@@ -643,9 +653,9 @@ describe('change and accept', () => {
   })
 
   it('says so for a suggestion that does not exist', async () => {
-    inbox([])
+    inbox([], { 'GET /api/suggestions/55555555-5555-4555-8555-00000000ffff': problem(404, 'not-found') })
     open('/suggestions/55555555-5555-4555-8555-00000000ffff')
-    expect(await screen.findByText('This suggestion does not exist.')).toBeInTheDocument()
+    expect(await screen.findByText(/no longer here: the suggestion does not exist any more/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to the suggestions' })).toHaveAttribute('href', '/suggestions')
   })
 
@@ -683,5 +693,393 @@ describe('home and the way around', () => {
     await screen.findByText(/No task is waiting for you/)
     expect(within(screen.getByRole('main')).queryByText(/suggestion/i)).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Suggestions' })).toHaveAttribute('href', '/suggestions')
+  })
+})
+
+const MADE = 'eeeeeeee-eeee-4eee-8eee-0000000000a1'
+
+/** One that the import added by itself and nobody has kept or undone. */
+function added(overrides: Partial<Suggestion> = {}): Suggestion {
+  return suggestion({ state: 'ADDED', title: 'Send the signed form', confidence: 91, madeEntryId: MADE, ...overrides })
+}
+
+/** An inbox whose keep and undo change what it holds, as the real server does. */
+function keeping(all: Suggestion[], extra: Record<string, Handler> = {}) {
+  const settle = (state: 'ACCEPTED' | 'REJECTED') => (request: Request) => {
+    const id = new URL(request.url).pathname.split('/')[3]
+    const found = all.find((one) => one.id === id)
+    if (found === undefined) return problem(404, 'not-found')
+    Object.assign(found, { state, decidedBy: ANNA_MEMBER, decidedAt: '2026-11-19T12:00:00Z', madeEntryId: state === 'REJECTED' ? null : found.madeEntryId })
+    return Response.json(found)
+  }
+  const routes: Record<string, Handler> = { [`GET /api/entries/${MADE}`]: Response.json(entry({ id: MADE })) }
+  for (const one of all) {
+    routes[`POST /api/suggestions/${one.id}/undo`] = settle('REJECTED')
+    routes[`POST /api/suggestions/${one.id}/keep`] = settle('ACCEPTED')
+  }
+  return inbox(all, { ...routes, ...extra })
+}
+
+const posts = (server: { calls: string[] }) => server.calls.filter((call) => call.startsWith('POST /api/suggestions'))
+
+describe('what was added by itself', () => {
+  it('is a part of the inbox, kept in the address, with a line saying it is not a list to work through', async () => {
+    const one = added()
+    inbox([suggestion({ title: 'Still open' }), one])
+    open('/suggestions')
+    await screen.findByRole('article', { name: 'Still open' })
+
+    await userEvent.selectOptions(screen.getByLabelText('Show'), 'Added by itself')
+
+    expect(await screen.findByRole('article', { name: 'Send the signed form' })).toBeInTheDocument()
+    expect(window.location.search).toBe('?state=ADDED')
+    expect(
+      screen.getByText(
+        'These are already in your plan. Undo what should not be there; what nobody undoes counts as kept after thirty days.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('article', { name: 'Still open' })).not.toBeInTheDocument()
+  })
+
+  it('shows what was added, where it comes from, how sure the import was, and Undo and Keep, with a way to the entry', async () => {
+    const one = added({ dueDate: '2026-11-30', categoryId: VENUE.id, notes: 'Both signatures.' })
+    const step = added({ kind: 'PLAN_ITEM', title: 'Tasting', startDate: '2027-01-10', dueDate: '2027-01-12', madeEntryId: MADE, inboxMemberId: PIOTR_MEMBER })
+    inbox([one, step])
+    open('/suggestions?state=ADDED')
+
+    await screen.findByRole('article', { name: 'Send the signed form' })
+    const t = card('Send the signed form')
+    expect(t.getByText('Task')).toBeInTheDocument()
+    expect(t.getByText('Due').nextSibling).toHaveTextContent('30 Nov 2026')
+    expect(t.getByText('Category').nextSibling).toHaveTextContent('Venue')
+    expect(t.getByText('Both signatures.')).toBeInTheDocument()
+    expect(t.getByText('From').nextSibling).toHaveTextContent('Jan from Palace on the Hill (jan@palace.example)')
+    expect(t.getByText('Subject').nextSibling).toHaveTextContent('Your booking')
+    expect(t.getByText('Please send the signed form by the end of the month.').tagName).toBe('BLOCKQUOTE')
+    expect(t.getByText('91% sure')).toBeInTheDocument()
+    expect(t.getByText('Added by itself')).toBeInTheDocument()
+    expect(t.getByRole('link', { name: 'Open the task' })).toHaveAttribute('href', `/entries/${MADE}`)
+    expect(t.getByRole('link', { name: 'Open the e-mail' })).toBeInTheDocument()
+    expect(t.getByRole('button', { name: 'Undo' })).toBeEnabled()
+    expect(t.getByRole('button', { name: 'Keep' })).toBeEnabled()
+    // Nothing here is for accepting or rejecting.
+    expect(t.queryByRole('button', { name: /accept|reject/i })).not.toBeInTheDocument()
+
+    const s = card('Tasting')
+    expect(s.getByText('Step of the plan')).toBeInTheDocument()
+    expect(s.getByText('Starts').nextSibling).toHaveTextContent('10 Jan 2027')
+    expect(s.getByRole('link', { name: 'Open the step of the plan' })).toBeInTheDocument()
+    expect(s.getByText('Arrived').nextSibling).toHaveTextContent('in Piotr’s inbox')
+    expect(s.queryByRole('link', { name: 'Open the e-mail' })).not.toBeInTheDocument()
+  })
+
+  it('says plainly that nothing was added, with no button that leads nowhere', async () => {
+    inbox([suggestion({ title: 'Still open' })])
+    open('/suggestions?state=ADDED')
+
+    expect(await screen.findByText('Nothing was added by itself.')).toBeInTheDocument()
+    expect(within(screen.getByRole('main')).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('undoes with one request, says that the entry was removed, takes the card away and puts the keyboard on the notice', async () => {
+    const one = added()
+    const other = added({ title: 'Book the florist' })
+    const { server } = keeping([one, other])
+    open('/suggestions?state=ADDED')
+    await screen.findByRole('article', { name: 'Send the signed form' })
+
+    await userEvent.click(card('Send the signed form').getByRole('button', { name: 'Undo' }))
+
+    const said = await screen.findByRole('group', { name: 'What happened' })
+    expect(said).toHaveTextContent('Undone: “Send the signed form”. It was removed from your plan.')
+    await waitFor(() => expect(screen.queryByRole('article', { name: 'Send the signed form' })).not.toBeInTheDocument())
+    expect(screen.getByRole('article', { name: 'Book the florist' })).toBeInTheDocument()
+    await waitFor(() => expect(said).toHaveFocus())
+    const request = server.requests(`POST /api/suggestions/${one.id}/undo`)[0]
+    expect(await (request as Request).text()).toBe('')
+    // One press, one request; nothing was asked a second time.
+    expect(posts(server)).toEqual([`POST /api/suggestions/${one.id}/undo`])
+  })
+
+  it('keeps with one request, says that it stays, leads to the entry and takes the card away', async () => {
+    const one = added()
+    const { server } = keeping([one])
+    open('/suggestions?state=ADDED')
+    await screen.findByRole('article', { name: 'Send the signed form' })
+
+    await userEvent.click(card('Send the signed form').getByRole('button', { name: 'Keep' }))
+
+    const said = await screen.findByRole('group', { name: 'What happened' })
+    expect(said).toHaveTextContent('Kept: “Send the signed form”.')
+    expect(within(said).getByRole('link', { name: 'Send the signed form' })).toHaveAttribute('href', `/entries/${MADE}`)
+    await waitFor(() => expect(screen.queryByRole('article', { name: 'Send the signed form' })).not.toBeInTheDocument())
+    await waitFor(() => expect(said).toHaveFocus())
+    expect(posts(server)).toEqual([`POST /api/suggestions/${one.id}/keep`])
+    expect(await screen.findByText('Nothing was added by itself.')).toBeInTheDocument()
+  })
+
+  it('says which button is at work and disables both while a request is on its way', async () => {
+    const one = added()
+    let answer: (response: Response) => void = () => undefined
+    keeping([one], {
+      [`POST /api/suggestions/${one.id}/undo`]: () => new Promise<Response>((resolve) => (answer = resolve)),
+    })
+    open('/suggestions?state=ADDED')
+    await screen.findByRole('article', { name: 'Send the signed form' })
+
+    await userEvent.click(card('Send the signed form').getByRole('button', { name: 'Undo' }))
+
+    expect(await card('Send the signed form').findByRole('button', { name: 'Undoing…' })).toBeDisabled()
+    expect(card('Send the signed form').getByRole('button', { name: 'Keep' })).toBeDisabled()
+    answer(Response.json({ ...one, state: 'REJECTED', madeEntryId: null }))
+    expect(await screen.findByText(/It was removed from your plan/)).toBeInTheDocument()
+  })
+
+  it('shows the server’s sentence when the entry was changed, takes the card away, and leads to the entry that stays', async () => {
+    const one = added()
+    const sentence =
+      'This entry was changed after it was added, so it stays in your plan and this suggestion counts as kept. You can change or remove the entry like any other.'
+    const { server } = keeping([one], {
+      [`POST /api/suggestions/${one.id}/undo`]: () => {
+        Object.assign(one, { state: 'ACCEPTED', decidedBy: ANNA_MEMBER, decidedAt: '2026-11-19T12:00:00Z' })
+        return problem(409, 'entry-changed', 'Entry changed', { detail: sentence })
+      },
+    })
+    open('/suggestions?state=ADDED')
+    await screen.findByRole('article', { name: 'Send the signed form' })
+
+    await userEvent.click(card('Send the signed form').getByRole('button', { name: 'Undo' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(sentence)
+    expect(alert).not.toHaveTextContent(/Undone/)
+    expect(within(alert).getByRole('link', { name: 'Open the task' })).toHaveAttribute('href', `/entries/${MADE}`)
+    await waitFor(() => expect(screen.queryByRole('article', { name: 'Send the signed form' })).not.toBeInTheDocument())
+    expect(posts(server)).toHaveLength(1)
+  })
+
+  it('says it as the server says it when the entry is gone, and offers no way to it', async () => {
+    const one = added()
+    const sentence = 'This entry is no longer in your plan: one of you removed it already. This suggestion counts as kept.'
+    keeping([one], {
+      [`POST /api/suggestions/${one.id}/undo`]: () => {
+        Object.assign(one, { state: 'ACCEPTED', decidedBy: ANNA_MEMBER })
+        return problem(409, 'entry-changed', 'Entry changed', { detail: sentence })
+      },
+      [`GET /api/entries/${MADE}`]: problem(404, 'not-found'),
+    })
+    open('/suggestions?state=ADDED')
+    await screen.findByRole('article', { name: 'Send the signed form' })
+
+    await userEvent.click(card('Send the signed form').getByRole('button', { name: 'Undo' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(sentence)
+    expect(within(alert).queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('says that it was kept, by whom, when the other owner kept it first, and undoes nothing', async () => {
+    const one = added()
+    const { server } = keeping([one], {
+      [`POST /api/suggestions/${one.id}/undo`]: () => {
+        Object.assign(one, { state: 'ACCEPTED', decidedBy: PIOTR_MEMBER, decidedAt: '2026-11-19T11:00:00Z' })
+        return problem(409, 'already-decided')
+      },
+    })
+    open('/suggestions?state=ADDED')
+    await screen.findByRole('article', { name: 'Send the signed form' })
+
+    await userEvent.click(card('Send the signed form').getByRole('button', { name: 'Undo' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('“Send the signed form” was already kept by Piotr.')
+    await waitFor(() => expect(screen.queryByRole('article', { name: 'Send the signed form' })).not.toBeInTheDocument())
+    expect(posts(server)).toEqual([`POST /api/suggestions/${one.id}/undo`])
+  })
+
+  it('says that it was undone, by whom, when keeping comes too late', async () => {
+    const one = added()
+    keeping([one], {
+      [`POST /api/suggestions/${one.id}/keep`]: () => {
+        Object.assign(one, { state: 'REJECTED', decidedBy: ANNA_MEMBER, decidedAt: '2026-11-19T11:00:00Z', madeEntryId: null })
+        return problem(409, 'already-decided')
+      },
+    })
+    open('/suggestions?state=ADDED')
+    await screen.findByRole('article', { name: 'Send the signed form' })
+
+    await userEvent.click(card('Send the signed form').getByRole('button', { name: 'Keep' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('“Send the signed form” was already undone by you.')
+  })
+
+  it('never says somebody decided what nobody decided', async () => {
+    const one = added()
+    const timeOut = { ...one, state: 'ACCEPTED' as const, decidedBy: null, decidedAt: '2026-11-19T00:00:00Z' }
+    keeping([one], { [`POST /api/suggestions/${one.id}/undo`]: problem(409, 'already-decided') })
+    open('/suggestions?state=ADDED')
+    await screen.findByRole('article', { name: 'Send the signed form' })
+    // Meanwhile the thirty days have passed.
+    Object.assign(one, timeOut)
+
+    await userEvent.click(card('Send the signed form').getByRole('button', { name: 'Undo' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('“Send the signed form” counted as kept after thirty days.')
+    expect(alert).not.toHaveTextContent(/somebody|someone|already/i)
+  })
+
+  it('says that one that was added by itself is to be kept or undone when it is accepted or rejected', async () => {
+    const one = added()
+    inbox([one])
+    const members = [{ id: ANNA_MEMBER, displayName: 'Anna', you: true }]
+    for (const tried of ['accept', 'reject'] as const) {
+      const notice = await alreadyDecided(one.id, one.title, tried, members, 'Europe/Warsaw')
+      expect(notice.tone).toBe('alert')
+      expect(`${notice.lead}“${notice.title}”${notice.tail}`).toBe('“Send the signed form” was added by itself. Keep it or undo it.')
+    }
+  })
+
+  it('says in the Accepted part that one counted as kept after thirty days, and who decided the others', async () => {
+    const lapsed = suggestion({ title: 'Lapsed', state: 'ACCEPTED', decidedBy: null, decidedAt: '2026-11-01T00:00:00Z', madeEntryId: MADE })
+    const taken = suggestion({ title: 'Taken', state: 'ACCEPTED', decidedBy: PIOTR_MEMBER, decidedAt: '2026-11-15T09:30:00Z', madeEntryId: MADE })
+    inbox([lapsed, taken])
+    open('/suggestions?state=ACCEPTED')
+
+    await screen.findByRole('article', { name: 'Lapsed' })
+    expect(card('Lapsed').getByText('Added by itself; kept after thirty days')).toBeInTheDocument()
+    expect(card('Lapsed').queryByText(/Accepted by/)).not.toBeInTheDocument()
+    expect(card('Lapsed').queryByRole('button')).not.toBeInTheDocument()
+    expect(card('Taken').getByText('Accepted by Piotr, 15 Nov 2026, 10:30')).toBeInTheDocument()
+  })
+
+  it('shows markup in a title or a passage letter for letter, with no link made of it', async () => {
+    const one = added({ title: '<b>Pay</b> now', passage: '<a href="https://evil.example">click</a>' })
+    keeping([one])
+    open('/suggestions?state=ADDED')
+
+    expect(await screen.findByText('<a href="https://evil.example">click</a>')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '<b>Pay</b> now' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'click' })).not.toBeInTheDocument()
+    await userEvent.click(card('<b>Pay</b> now').getByRole('button', { name: 'Keep' }))
+    const said = await screen.findByRole('group', { name: 'What happened' })
+    expect(said).toHaveTextContent('Kept: “<b>Pay</b> now”.')
+    expect(said.querySelector('b')).toBeNull()
+  })
+})
+
+describe('where an entry comes from', () => {
+  it('shows an accepted one’s source: who wrote, the subject, when, the passage, and the way to the e-mail', async () => {
+    const one = suggestion({ title: 'Taken', state: 'ACCEPTED', decidedBy: PIOTR_MEMBER, decidedAt: '2026-11-15T09:30:00Z', madeEntryId: MADE })
+    inbox([one])
+    open(`/suggestions/${one.id}`)
+
+    expect(await screen.findByRole('heading', { name: 'Taken' })).toBeInTheDocument()
+    expect(screen.getByText('From').nextSibling).toHaveTextContent('Jan from Palace on the Hill (jan@palace.example)')
+    expect(screen.getByText('Subject').nextSibling).toHaveTextContent('Your booking')
+    expect(screen.getByText('Arrived').nextSibling).toHaveTextContent('12 Nov 2026, 14:05, in your inbox')
+    expect(screen.getByText('Please send the signed form by the end of the month.')).toBeInTheDocument()
+    expect(screen.getByText('Accepted by Piotr, 15 Nov 2026, 10:30')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open the e-mail' })).toHaveAttribute('href', 'https://mail.google.com/mail/u/0/#all/abc123')
+    expect(screen.queryByRole('button', { name: /undo|keep/i })).not.toBeInTheDocument()
+  })
+
+  it('shows one that was added by itself with Undo and Keep, and undoes it from there', async () => {
+    const one = added()
+    const { server } = keeping([one])
+    open(`/suggestions/${one.id}`)
+
+    expect(await screen.findByRole('heading', { name: 'Send the signed form' })).toBeInTheDocument()
+    expect(screen.getByText('Added by itself')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Keep' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }))
+
+    const said = await screen.findByRole('group', { name: 'What happened' })
+    expect(said).toHaveTextContent('Undone: “Send the signed form”. It was removed from your plan.')
+    await waitFor(() => expect(said).toHaveFocus())
+    expect(await screen.findByText('Rejected by you, 19 Nov 2026, 13:00')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument()
+    expect(posts(server)).toEqual([`POST /api/suggestions/${one.id}/undo`])
+  })
+
+  it('keeps one from there', async () => {
+    const one = added()
+    const { server } = keeping([one])
+    open(`/suggestions/${one.id}`)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Keep' }))
+
+    expect(await screen.findByRole('group', { name: 'What happened' })).toHaveTextContent('Kept: “Send the signed form”.')
+    expect(await screen.findByText('Accepted by you, 19 Nov 2026, 13:00')).toBeInTheDocument()
+    expect(posts(server)).toEqual([`POST /api/suggestions/${one.id}/keep`])
+  })
+
+  it('says that one counted as kept after thirty days is the source of an entry, not a thing to decide', async () => {
+    const one = suggestion({ title: 'Lapsed', state: 'ACCEPTED', decidedBy: null, decidedAt: '2026-11-01T00:00:00Z', madeEntryId: MADE })
+    inbox([one])
+    open(`/suggestions/${one.id}`)
+
+    expect(await screen.findByText('Added by itself; kept after thirty days')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /undo|keep/i })).not.toBeInTheDocument()
+  })
+
+  it('says that the source is no longer there for a suggestion that cannot be found', async () => {
+    inbox([], { 'GET /api/suggestions/55555555-5555-4555-8555-00000000ffff': problem(404, 'not-found') })
+    open('/suggestions/55555555-5555-4555-8555-00000000ffff')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The e-mail this came from is no longer here')
+  })
+})
+
+describe('the two numbers', () => {
+  function counted(waitingCount: number, addedCount: number) {
+    const waiting = Array.from({ length: waitingCount }, () => suggestion())
+    const addedOnes = Array.from({ length: addedCount }, () => added())
+    return inbox([...waiting, ...addedOnes])
+  }
+
+  it('says on Home how many were added, with a way to that part, apart from how many wait', async () => {
+    counted(2, 3)
+    open('/')
+
+    expect(await screen.findByRole('link', { name: '3 entries were added from your e-mail' })).toHaveAttribute('href', '/suggestions?state=ADDED')
+    expect(screen.getByRole('link', { name: '2 suggestions wait for you' })).toBeInTheDocument()
+    expect(screen.queryByText(/5 /)).not.toBeInTheDocument()
+  })
+
+  it('says it in the singular, and when none wait', async () => {
+    counted(0, 1)
+    open('/')
+
+    expect(await screen.findByRole('link', { name: '1 entry was added from your e-mail' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /wait/ })).not.toBeInTheDocument()
+  })
+
+  it('says nothing about either on Home where there is nothing', async () => {
+    counted(0, 0)
+    open('/')
+
+    await screen.findByRole('heading', { name: 'Anna & Piotr' })
+    expect(screen.queryByRole('link', { name: /added from your e-mail/ })).not.toBeInTheDocument()
+  })
+
+  it('says in the top bar how many wait and, quieter, how many were added, each in words for a screen reader', async () => {
+    counted(2, 3)
+    open('/suggestions')
+
+    const link = await screen.findByRole('link', { name: 'Suggestions, 2 waiting, 3 added by themselves' })
+    expect(link).toHaveTextContent('Suggestions2, 2 waiting+3, 3 added by themselves')
+  })
+
+  it('counts down what was added when it is kept or undone', async () => {
+    const one = added()
+    const two = added({ title: 'Book the florist' })
+    keeping([one, two])
+    open('/suggestions?state=ADDED')
+    await screen.findByRole('link', { name: 'Suggestions, 2 added by themselves' })
+
+    await userEvent.click(card('Send the signed form').getByRole('button', { name: 'Keep' }))
+
+    expect(await screen.findByRole('link', { name: 'Suggestions, 1 added by themselves' })).toBeInTheDocument()
   })
 })

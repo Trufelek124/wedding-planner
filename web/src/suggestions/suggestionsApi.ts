@@ -1,4 +1,4 @@
-import { api, unwrap, type Schemas } from '../api/client.ts'
+import { api, ApiError, unwrap, type Schemas } from '../api/client.ts'
 import type { paths } from '../api/generated/schema.ts'
 
 export type Suggestion = Schemas['Suggestion']
@@ -6,11 +6,18 @@ export type SuggestionAcceptance = Schemas['SuggestionAcceptance']
 export type SuggestionKind = Suggestion['kind']
 export type SuggestionState = NonNullable<NonNullable<paths['/api/suggestions']['get']['parameters']['query']>['state']>
 
-/** The three places a suggestion can stand, in the order the inbox offers them. */
-export const SHOWN_STATES = ['WAITING', 'ACCEPTED', 'REJECTED'] as const
+/** The four places a suggestion can stand, in the order the inbox offers them. */
+export const SHOWN_STATES = ['WAITING', 'ADDED', 'ACCEPTED', 'REJECTED'] as const
 export type ShownState = (typeof SHOWN_STATES)[number]
 
-export const STATE_LABEL: Record<ShownState, string> = { WAITING: 'Waiting', ACCEPTED: 'Accepted', REJECTED: 'Rejected' }
+export const STATE_LABEL: Record<ShownState, string> = {
+  WAITING: 'Waiting',
+  ADDED: 'Added by itself',
+  ACCEPTED: 'Accepted',
+  REJECTED: 'Rejected',
+}
+
+export type SuggestionSettings = Schemas['SuggestionSettings']
 
 export const KIND_LABEL: Record<SuggestionKind, string> = {
   TASK: 'Task',
@@ -22,6 +29,36 @@ export const KIND_LABEL: Record<SuggestionKind, string> = {
 /** The newest message first. */
 export async function listSuggestions(state: SuggestionState, signal?: AbortSignal): Promise<Suggestion[]> {
   return unwrap(await api.GET('/api/suggestions', { params: { query: { state } }, signal }))
+}
+
+/** One suggestion; null when there is none of that id (any more). */
+export async function getSuggestion(id: string, signal?: AbortSignal): Promise<Suggestion | null> {
+  try {
+    return unwrap(await api.GET('/api/suggestions/{id}', { params: { path: { id } }, signal }))
+  } catch (error) {
+    if (error instanceof ApiError && error.is('urn:wedding-planner:problem:not-found')) {
+      return null
+    }
+    throw error
+  }
+}
+
+/** Says "this belongs in our plan" of one that was added by itself. @throws ApiError `already-decided` when it was undone */
+export async function keepSuggestion(id: string): Promise<Suggestion> {
+  return unwrap(await api.POST('/api/suggestions/{id}/keep', { params: { path: { id } } }))
+}
+
+/** Removes the entry that was added and rejects the suggestion. @throws ApiError `entry-changed` (it then counts as kept), `already-decided` */
+export async function undoSuggestion(id: string): Promise<Suggestion> {
+  return unwrap(await api.POST('/api/suggestions/{id}/undo', { params: { path: { id } } }))
+}
+
+export async function getSettings(signal?: AbortSignal): Promise<SuggestionSettings> {
+  return unwrap(await api.GET('/api/suggestions/settings', { signal }))
+}
+
+export async function changeSettings(settings: SuggestionSettings): Promise<SuggestionSettings> {
+  return unwrap(await api.PUT('/api/suggestions/settings', { body: settings }))
 }
 
 /**
@@ -91,4 +128,18 @@ export function atTime(iso: string, timeZone: string): string {
 export function memberName(memberId: string | null, members: { id: string; displayName: string; you: boolean }[]): string {
   const member = members.find((one) => one.id === memberId)
   return member === undefined ? 'someone' : member.you ? 'you' : member.displayName
+}
+
+/** How it stands: waiting for nobody, kept after thirty days, or who decided it and when. */
+export function standing(suggestion: Suggestion, members: { id: string; displayName: string; you: boolean }[], timeZone: string): string {
+  if (suggestion.state === 'ADDED') {
+    return 'Added by itself'
+  }
+  if (suggestion.state === 'ACCEPTED' && suggestion.decidedBy === null) {
+    // Nobody decided: the thirty days passed.
+    return 'Added by itself; kept after thirty days'
+  }
+  const by = memberName(suggestion.decidedBy, members)
+  const when = suggestion.decidedAt === null ? '' : `, ${atTime(suggestion.decidedAt, timeZone)}`
+  return `${suggestion.state === 'ACCEPTED' ? 'Accepted' : 'Rejected'} by ${by}${when}`
 }

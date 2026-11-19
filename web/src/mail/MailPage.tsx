@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { ApiError } from '../api/client.ts'
 import { useLoaded } from '../planning/useLoaded.ts'
+import { changeSettings, getSettings, type SuggestionSettings } from '../suggestions/suggestionsApi.ts'
+import { Field } from '../ui/Field.tsx'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
 import { Warning } from '../ui/Warning.tsx'
 import { useCurrentWedding } from '../wedding/WeddingContext.ts'
@@ -104,6 +106,7 @@ function Loaded({ mail, onChanged, say }: LoadedProps) {
     <>
       <Yours mail={mail} onChanged={onChanged} say={say} />
       <Partner partner={mail.partner} />
+      <AddsByItself say={say} />
       <Reading reading={mail.reading} />
     </>
   )
@@ -402,5 +405,126 @@ function Partner({ partner }: { partner: PartnersMailConnection }) {
               : `${name} has not connected their Gmail.`}
       </p>
     </section>
+  )
+}
+
+const THRESHOLD_MESSAGE = 'Choose a number from 50 to 100.'
+
+/** How sure the import has to be before it adds a task or a step by itself: the wedding's setting, the same for both owners. */
+function AddsByItself({ say }: { say: (tone: Notice['tone'], text: string) => void }) {
+  const settings = useLoaded('suggestion-settings', getSettings)
+  const { members } = useCurrentWedding()
+  const partner = members.find((member) => !member.you)?.displayName ?? 'your partner'
+  return (
+    <section className="group mail-adds" aria-labelledby="mail-adds">
+      <h2 id="mail-adds">Adding by itself</h2>
+      {settings.state.status === 'failed' ? (
+        <PageRetry message="The setting could not be loaded. Try again." onRetry={settings.retry} />
+      ) : settings.state.status === 'loading' ? (
+        <PageWaiting what="Loading…" />
+      ) : (
+        <>
+          <p>
+            This is the wedding’s setting: you and {partner} see and change the same one. A payment or a new vendor is never added by itself; it always
+            waits for one of you.
+          </p>
+          <ThresholdForm key={`${settings.state.data.addsByItself}-${settings.state.data.threshold}`} saved={settings.state.data} onSaved={settings.set} say={say} />
+          <p className="muted">
+            A change applies from now on: it adds nothing that already waits and undoes nothing that was added.
+          </p>
+        </>
+      )}
+    </section>
+  )
+}
+
+function ThresholdForm({
+  saved,
+  onSaved,
+  say,
+}: {
+  saved: SuggestionSettings
+  onSaved: (settings: SuggestionSettings) => void
+  say: (tone: Notice['tone'], text: string) => void
+}) {
+  const [adds, setAdds] = useState(saved.addsByItself)
+  const [typed, setTyped] = useState(String(saved.threshold))
+  const [refused, setRefused] = useState<string | undefined>(undefined)
+  const [trouble, setTrouble] = useState<string | null>(null)
+  const sending = useRef(false)
+  const [busy, setBusy] = useState(false)
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault()
+    if (sending.current) {
+      return
+    }
+    const valid = /^\d{1,3}$/.test(typed.trim())
+    // Never keeps the number: it is sent as it stands, and a number nobody can use stays what it was.
+    if (adds && !valid) {
+      setRefused(THRESHOLD_MESSAGE)
+      return
+    }
+    sending.current = true
+    setBusy(true)
+    setRefused(undefined)
+    setTrouble(null)
+    try {
+      const threshold = valid ? Number(typed.trim()) : saved.threshold
+      const now = await changeSettings({ addsByItself: adds, threshold })
+      say('notice', 'Saved. It applies from now on.')
+      onSaved(now)
+    } catch (error) {
+      const message = error instanceof ApiError ? error.fieldMessage('threshold') : undefined
+      if (message !== undefined) {
+        setRefused(message)
+      } else {
+        setTrouble(error instanceof ApiError ? 'That did not work. Nothing was changed. Try again.' : 'The server cannot be reached, so nothing was changed. Try again.')
+      }
+    }
+    sending.current = false
+    setBusy(false)
+  }
+
+  return (
+    <form className="stack" onSubmit={(event) => void save(event)} noValidate aria-label="Adding by itself">
+      <fieldset className="choice">
+        <legend>When should the import add by itself?</legend>
+        <label>
+          <input type="radio" name="adds" checked={adds} onChange={() => setAdds(true)} />
+          Add tasks and steps by themselves when the import is at least this sure
+        </label>
+        <label>
+          <input type="radio" name="adds" checked={!adds} onChange={() => setAdds(false)} />
+          Never: nothing is added by itself, everything waits for you
+        </label>
+      </fieldset>
+      <Field label="At least this sure, in percent (50 to 100)" error={refused}>
+        {(control) => (
+          <input
+            {...control}
+            name="threshold"
+            inputMode="numeric"
+            autoComplete="off"
+            value={typed}
+            disabled={!adds}
+            onChange={(event) => {
+              setTyped(event.target.value)
+              setRefused(undefined)
+            }}
+          />
+        )}
+      </Field>
+      {trouble !== null && (
+        <p role="alert" className="alert">
+          {trouble}
+        </p>
+      )}
+      <div>
+        <button type="submit" className="button" disabled={busy}>
+          {busy ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+    </form>
   )
 }

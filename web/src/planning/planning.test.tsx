@@ -577,3 +577,41 @@ describe('getting around', () => {
     expect(window.location.pathname).toBe('/')
   })
 })
+
+describe('where an entry comes from', () => {
+  const FROM = '55555555-5555-4555-8555-0000000000f1'
+
+  it('says "From e-mail" on a task that a suggestion made, and leads to the suggestion', async () => {
+    const made = entry({ title: 'Send the signed form', fromSuggestionId: FROM })
+    planningServer([made], { [`GET /api/entries/${made.id}`]: Response.json(made) })
+    open(`/entries/${made.id}`)
+
+    const mark = await screen.findByRole('link', { name: 'From e-mail' })
+    expect(mark).toHaveAttribute('href', `/suggestions/${FROM}`)
+  })
+
+  it('says it on a step of the plan too', async () => {
+    const made = entry({ kind: 'PLAN_ITEM', title: 'Tasting', fromSuggestionId: FROM })
+    planningServer([made], { [`GET /api/entries/${made.id}`]: Response.json(made) })
+    open(`/entries/${made.id}`)
+
+    expect(await screen.findByRole('link', { name: 'From e-mail' })).toHaveAttribute('href', `/suggestions/${FROM}`)
+  })
+
+  it('says nothing of it on an entry made by hand', async () => {
+    const byHand = entry({ title: 'Buy rings' })
+    planningServer([byHand], { [`GET /api/entries/${byHand.id}`]: Response.json(byHand) })
+    open(`/entries/${byHand.id}`)
+
+    await screen.findByRole('heading', { name: /Change this/i })
+    expect(screen.queryByText(/From e-mail/)).not.toBeInTheDocument()
+  })
+
+  it('says nothing of it on the form for a new entry', async () => {
+    planningServer([])
+    open('/entries/new?kind=TASK')
+
+    await screen.findByRole('heading', { name: /Add a/i })
+    expect(screen.queryByText(/From e-mail/)).not.toBeInTheDocument()
+  })
+})

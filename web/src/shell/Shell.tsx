@@ -28,9 +28,19 @@ export function Shell({ onSignOut }: { onSignOut: () => void }) {
   const bar = useRef<HTMLUListElement>(null)
   // How many suggestions wait: shown beside the page's name, and read again by whatever decides one.
   const suggestions = useLoaded('waiting-suggestions', (signal) => listSuggestions('WAITING', signal))
+  const addedByThemselves = useLoaded('added-suggestions', (signal) => listSuggestions('ADDED', signal))
+  const reloadWaiting = suggestions.reload
+  const reloadAdded = addedByThemselves.reload
   const waiting = useMemo(
-    () => ({ count: suggestions.state.status === 'ready' ? suggestions.state.data.length : null, reload: suggestions.reload }),
-    [suggestions.state, suggestions.reload],
+    () => ({
+      count: suggestions.state.status === 'ready' ? suggestions.state.data.length : null,
+      added: addedByThemselves.state.status === 'ready' ? addedByThemselves.state.data.length : null,
+      reload: () => {
+        reloadWaiting()
+        reloadAdded()
+      },
+    }),
+    [suggestions.state, addedByThemselves.state, reloadWaiting, reloadAdded],
   )
 
   // A page opened from a link or a form starts at its top, and the keyboard continues inside it rather than
@@ -52,7 +62,7 @@ export function Shell({ onSignOut }: { onSignOut: () => void }) {
   // view whenever the page changes and when the window is first drawn. Only the row moves, never the page.
   useEffect(() => {
     bar.current?.querySelector('a[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'center' })
-  }, [pathname, waiting.count])
+  }, [pathname, waiting.count, waiting.added])
 
   // The row fades at an edge that has more behind it, so that "more" is seen without a scroll bar.
   useEffect(() => {
@@ -92,6 +102,15 @@ export function Shell({ onSignOut }: { onSignOut: () => void }) {
                         {waiting.count}
                       </span>
                       <span className="visually-hidden">, {waiting.count} waiting</span>
+                    </>
+                  )}
+                  {/* A second, quieter mark: to have a look at, not to decide. Never added to the first. */}
+                  {page.to === '/suggestions' && waiting.added !== null && waiting.added > 0 && (
+                    <>
+                      <span className="nav-added" aria-hidden="true">
+                        +{waiting.added}
+                      </span>
+                      <span className="visually-hidden">, {waiting.added} added by themselves</span>
                     </>
                   )}
                 </NavLink>
