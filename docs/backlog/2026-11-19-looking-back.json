@@ -1,0 +1,53 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP7-S1-T6",
+   "story": "EP7-S1",
+   "title": "Spec and decision: earlier mail is read only when its owner asks for it",
+   "description": "The owner asked, with the planner published, that the first load of mail be started by a button on the e-mail page, for about the last thirty days, instead of three months being scanned at connecting. S03 says the new behaviour (connecting notes where the mailbox stands and nothing of what is in it; looking back 7 to 90 days, 30 to begin with, is asked for by the mailbox's owner and can be asked for again), D-009 records why and what becomes of mail the old first look noted, and S01's two lines on e-mail history follow. Done when the documents are committed and mirrored.",
+   "dependsOn": [],
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "documentation"
+   ]
+  },
+  {
+   "key": "EP7-S1-T7",
+   "story": "EP7-S1",
+   "title": "Backend and web: looking back through a mailbox is started by its owner on the e-mail page",
+   "description": "As S03 section 5 and D-009 say. Backend: connecting no longer notes the last ninety days; POST /api/mail/gmail/look-back with a number of days (7 to 90) asks for the caller's own mailbox to be looked through, starts within moments, goes on after a restart and counts only when complete; GET /api/mail says how far back was asked, whether it is under way or when it was done, and how many messages it found; mail noted by the old first look and not read yet is let go of by the migration. Web: the e-mail page offers 'Read earlier mail' with the choice of how far back, says what it does and how it stands, and 'what connecting means' no longer promises three months. The API description and the web's generated types follow. Done when the backend's and the web's tests cover S03 sections 2 and 5, the page was looked at as rendered pictures, and the gate passes.",
+   "dependsOn": [
+    "EP7-S1-T6"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "react"
+   ]
+  },
+  {
+   "key": "EP1-S3-T6",
+   "story": "EP1-S3",
+   "title": "The gate says which Node it needs instead of failing in four tests",
+   "description": "On the owner's Mac the publishing script's checks failed in four picture-upload tests of the web app with a timeout each: the Mac's Node was 25, and the project is built and tested on Node 22 (the image builds its web app with Node 22 as well). Nothing said so. The gate's web part checks the Node version first and refuses with one sentence that names the version it needs and the one it found. Done when the gate refuses that way under another Node and passes under Node 22.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "shell"
+   ]
+  }
+ ]
+}

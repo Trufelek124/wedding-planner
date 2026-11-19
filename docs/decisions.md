@@ -486,3 +486,43 @@ ends in front of a person. Adding by itself is the one place where it does not.
   for example only from senders that are already vendors of the planner.
 - How often the import is sure and wrong is not known: nothing has run against the AI service. The sample set
   (S04 section 10) measures it; until then 85 is S01's starting value, not a finding.
+
+## D-009 — Earlier mail is read only when its owner asks for it
+
+**Date:** 2026-11-19 · **Task:** WP-TS-87 · **Applies to:** the e-mail import (S03 section 5, S04)
+
+### Context
+
+S01 section 6 has the last three months of a mailbox scanned the moment it is connected, and S03 built that: the
+first look noted ninety days of mail, and the reading (S04) then went through all of it. With the planner
+published, the owner asked for the first load to be something a person starts — a button on the e-mail page, for
+about the last thirty days.
+
+### What was compared
+
+| Question | Chosen | The alternative, and why not |
+|---|---|---|
+| What connecting reads | **New mail only**, from that moment | Ninety days at once: every message of three months goes to the AI service, at a cost and over days, before anyone has said that they want it — and nothing on the page starts or stops it |
+| How earlier mail is read | **When its owner asks**, on the e-mail page, for their own mailbox | For both mailboxes at once: one owner would send the other's mail to be read |
+| How far back | **30 days to begin with, 7 to 90** | A fixed thirty: the weeks in which a venue was booked may lie further back. More than ninety: S01's bound, and the cost grows with every week |
+| Asking again | **Harmless**: what is noted is not noted twice, what was read is not read again | Once only: a first try with fourteen days would shut the door on the rest |
+| Mail noted by the old first look and not read yet | **Let go of** when the server is updated; a message that was read keeps its verdict | Keeping it: on a server that was connected before the update, three months would still be read unasked |
+
+### Decision
+
+1. **Connecting notes where the mailbox stands and nothing of what is in it.** New mail is picked up from then on.
+2. **Looking back is asked for by the owner of the mailbox**, for the last 7 to 90 days, 30 to begin with; it can
+   be asked for again and for longer.
+3. What is found by looking back is **read like new mail**, under the same limits (S04 section 8).
+4. This takes the place of "On connect the last 3 months are scanned" in S01 section 6.
+
+### What it costs, and what would change the decision
+
+- Somebody who connects and never presses the button gets proposals from new mail only. The page says so where
+  the button is.
+- A message that arrived between connecting and the update that brought this in, and was not read yet, is found
+  again only by looking back. On a server where the reading was not yet switched on that is every message noted
+  so far: each owner presses the button once after the update.
+- The limits of S04 hold for a look back too: at most fifty new suggestions from one mailbox in a day. Thirty
+  days of busy wedding mail can therefore take several days to appear; the limit is a setting.
+

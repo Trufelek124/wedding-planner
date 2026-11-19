@@ -6,9 +6,9 @@ lists what the owner does once there is a server. **Builds on:** S01 section 6, 
 
 ## 1. What this covers
 
-Each owner connects their Gmail once; from then on the server knows which messages are in that inbox and notices
-new ones within minutes. This spec says how connecting and disconnecting work, what the server keeps, how it keeps
-up, and what an owner sees of it.
+Each owner connects their Gmail once; from then on the server notices new messages in that inbox within minutes.
+Mail that was there before is looked at only when its owner asks for it (D-009). This spec says how connecting
+and disconnecting work, what the server keeps, how it keeps up and looks back, and what an owner sees of it.
 
 It does **not** cover reading the messages. Deciding which message concerns the wedding and proposing entries
 (WP-US-21) come next. Until they exist the sync only **notes which messages are there** — an identifier per
@@ -24,13 +24,16 @@ owner's mail is not connected. It has no entry of its own in the top bar: it is 
 | The import is not set up on this server | That it is not set up, and nothing to press |
 | You are not connected | What connecting means (below), and **Connect Gmail** |
 | You are connected | The address that is connected, since when, when the server last looked, how many messages it has noted, and **Disconnect** |
+| You are connected, and have not looked back | **Read earlier mail**: how far back — the last 30 days to begin with, 7 to 90 — and a button. Said next to it: that only your own mailbox is looked through, that it can be asked for again or for longer, and what happens to what is found (it is read like new mail, S04) |
+| You asked to look back | How far back, that it is under way or when it was done, and how many messages it found. The choice and the button stay, for looking further back |
 | Google no longer lets the server in (access was withdrawn, or expired) | That it has to be connected again, and **Connect Gmail** |
 | Your partner | Whether they are connected and when the server last looked — not their address |
 | The import is set up | How far the reading of the mail is, and what it has cost (S04 section 8) |
 
 **Before connecting the page says, in plain words:** the planner asks Google for permission to *read* your mail and
-nothing else — it cannot send, change or delete anything; it looks at the last three months and then at new
-mail every few minutes; of a message that does not concern the wedding it keeps only that it was looked at; and
+nothing else — it cannot send, change or delete anything; from the moment you connect it looks at new mail every
+few minutes, and at earlier mail only when you ask for it on this page; of a message that does not concern the
+wedding it keeps only that it was looked at; and
 the sender, the subject and the beginning of every message are sent to the AI service that decides whether it
 concerns the wedding, a message that does in full, attachments never (S04 section 3) — or, on a server where
 reading is not set up, that nothing is sent yet and what will be. Google will show
@@ -72,11 +75,16 @@ date and the passage — is S02's and WP-US-21's.
 
 - **Every five minutes** the server looks at each connected mailbox, one after the other; a look that is still
   running is not started a second time.
-- **The first look** notes the received messages of the last **90 days**. Not what the owner sent, not drafts,
-  not spam, not the bin, not chats.
-- **Every later look** asks Google what was added since the last one. If Google no longer knows that far back
-  (its marker has grown too old), the server looks through the days since its last successful look again; a
-  message it has already noted is not noted twice.
+- **The first look** notes where the mailbox stands and **nothing of what is already in it** (D-009).
+- **Every later look** asks Google what was added since the last one: received messages — not what the owner
+  sent, not drafts, not spam, not the bin, not chats. If Google no longer knows that far back (its marker has
+  grown too old), the server looks through the days since its last successful look again; a message it has
+  already noted is not noted twice.
+- **Looking back, when the owner asks.** The received messages of the last so many days — 30 to begin with, 7 to
+  90 — are noted, the newest first, and read like any other (S04). It is the owner's own mailbox and nobody
+  else's. It starts within moments of being asked and goes on after a restart; like every look it counts only
+  when it is complete. Asking again, or for longer, is harmless: a message that is already noted is not noted
+  twice, and one that was read is not read again. While Google refuses, it waits with the mailbox.
 - **A look counts only when it is complete.** Where the sync stands moves forward only after everything the look
   found is stored, so a look that was cut off — by a restart, by Google being slow — is simply done again.
 - **When Google refuses**: too many requests or a failure on Google's side — the mailbox is left for the next
@@ -90,8 +98,9 @@ date and the passage — is S02's and WP-US-21's.
 
 Disconnecting tells Google to withdraw the permission (if Google cannot be reached, the rest still happens),
 removes the token, where the sync stood and the list of noted messages, and stops the sync for that mailbox.
-Suggestions that already exist stay: they are part of the planner (S02). Connecting again later starts with the
-last 90 days; a proposal that was already made is not made twice (S02's source key).
+Suggestions that already exist stay: they are part of the planner (S02). Connecting again later starts with new
+mail only, and looking back is asked for anew; a proposal that was already made is not made twice (S02's source
+key).
 
 Removing an owner's access to the planner (taking the address off the allow-list) does not by itself withdraw
 Google's permission: the owner disconnects first, or withdraws it in their Google account.
@@ -112,6 +121,7 @@ All calls need a signed-in owner except the return address.
 | `POST /api/mail/gmail/connection` | Starts connecting: answers with Google's address to go to |
 | `GET /api/mail/gmail/return` | Where Google sends the browser back. **Answers without a sign-in** (section 3); always ends in a redirect to the page |
 | `DELETE /api/mail/gmail/connection` | Disconnects your mailbox |
+| `POST /api/mail/gmail/look-back` | Looks through the last so many days of your mailbox (`days`, 7 to 90). Answers at once; `GET /api/mail` says how far it is |
 
 The import is **off unless the server is given everything it needs**: the Google client's id and secret, the
 planner's own public address (the return address is made from it), and the key that encrypts the tokens. With
@@ -126,8 +136,9 @@ Tracked as a task of the owner's in WP-US-20; `docs/deployment.md` has the steps
    return address to the web client, add the read-only Gmail scope to the consent screen, and set the consent
    screen to **In production** (D-006 says why "Testing" does not work).
 2. Give the server the client's secret and a new random key for the tokens, in its environment file.
-3. Connect both mailboxes and check after more than a week that both are still connected. If Google's route
-   does not hold, say so: the fallback is IMAP (D-006).
+3. Connect both mailboxes — each owner then asks once for the earlier mail they want read — and check after
+   more than a week that both are still connected. If Google's route does not hold, say so: the fallback is
+   IMAP (D-006).
 
 ## 10. Open, and where it is tracked
 

@@ -28,7 +28,7 @@ A private wedding planner for the two of you: a web app, a native Android app an
 | Users | The two of you; Google sign-in |
 | E-mail providers | Gmail now; Outlook may follow |
 | E-mail findings | Added automatically when the AI is confident; otherwise queued for review |
-| E-mail history | Last 3 months when an inbox is connected, then continuously |
+| E-mail history | New mail continuously from the moment an inbox is connected; earlier mail, up to 3 months back, when its owner asks for it (D-009) |
 | In the first version | Plan + Gantt, tasks, priorities, inspirations with Android share, e-mail import, budget and payments, vendors, guest list |
 | Tracker | A project of its own in infokuznia, code `WP`; the LG flow may be changed where it helps |
 | Starter checklist | Yes: one wedding with Polish and Ukrainian formalities combined; anything on it can be deleted |
@@ -116,7 +116,8 @@ An AI that ranks entries is left out of v1.
 
 1. **Connect.** Each of you connects Gmail once, right after the first sign-in. Access is read-only: the app never
    sends, changes or deletes mail.
-2. **Read.** On connect the last 3 months are scanned; afterwards new mail is picked up every few minutes.
+2. **Read.** From the moment of connecting, new mail is picked up every few minutes. Earlier mail — up to the
+   last 3 months — is scanned when its owner asks for it (D-009).
 3. **Triage.** A small Claude model sees the sender, the subject and the beginning of each message and answers one
    question: does this concern the wedding?
 4. **Extract.** For messages that do, a larger model reads the full text with its thread and proposes entries: kind,

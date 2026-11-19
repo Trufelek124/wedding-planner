@@ -702,6 +702,24 @@
    "publicId": "WP-TS-86",
    "id": "6c426bcb-6a3e-43b7-b9b0-e482c909bf64",
    "title": "Backend tests: the stand-in for the AI service listens on one address and is named by it"
+  },
+  "EP7-S1-T6": {
+   "type": "task",
+   "publicId": "WP-TS-87",
+   "id": "80d80b74-8b1a-45c4-b3e9-483925844d56",
+   "title": "Spec and decision: earlier mail is read only when its owner asks for it"
+  },
+  "EP7-S1-T7": {
+   "type": "task",
+   "publicId": "WP-TS-88",
+   "id": "bfa77ad5-d1fc-4a7e-9216-88aab380bd27",
+   "title": "Backend and web: looking back through a mailbox is started by its owner on the e-mail page"
+  },
+  "EP1-S3-T6": {
+   "type": "task",
+   "publicId": "WP-TS-89",
+   "id": "099cd17f-576b-4f2a-8df6-677ee6e0a331",
+   "title": "The gate says which Node it needs instead of failing in four tests"
   }
  }
 }
