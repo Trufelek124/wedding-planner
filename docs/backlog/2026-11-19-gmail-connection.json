@@ -1,0 +1,93 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP7-S1-T1",
+   "story": "EP7-S1",
+   "title": "Spec and decision: connecting Gmail and keeping up with it",
+   "description": "Before anything is built: a spec that says how an owner connects and disconnects Gmail, what the server keeps, how it keeps up with the mailbox and what an owner sees of it; and a decision on the route to read-only access for two private accounts, from Google's documentation, with the fallback. The server does not exist yet, so nothing is tried against Google. Done when docs/specs/S03-mail-connection-and-sync.md and D-006 are committed and mirrored.",
+   "dependsOn": [],
+   "type": "ARCHITECTURE",
+   "mandatory": true,
+   "requiredRoles": [
+    "ARCHITECT"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S1-T2",
+   "story": "EP7-S1",
+   "title": "Backend: an owner connects and disconnects Gmail",
+   "description": "The connection as S03 sections 3, 4, 6 and 8 describe it: a one-time ticket, Google's consent for the read-only scope, the return address as the one path without a sign-in, the token kept encrypted with a key from outside the database, one connection per owner, disconnecting with withdrawal at Google, and the import off unless the server is given everything it needs. Tests use a stand-in for Google and never call the real one. Nothing of a token or an address in the log. Done when the backend's tests cover those sections and the gate passes.",
+   "dependsOn": [
+    "EP7-S1-T1"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S1-T3",
+   "story": "EP7-S1",
+   "title": "Backend: the sync notes which messages are in a connected mailbox",
+   "description": "The sync as S03 sections 5 and 7 describe it: every five minutes, the first look over the received mail of the last 90 days, later looks from Google's marker with a look by days when the marker has grown too old, no message noted twice also after a restart, a look that counts only when complete, growing pauses when Google refuses, a connection marked as needing to be connected again when the permission is gone, and the mail source behind one interface. Nothing of a message is kept but its identifiers. Done when the backend's tests cover those sections against a stand-in for Gmail and the gate passes.",
+   "dependsOn": [
+    "EP7-S1-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "spring-boot"
+   ]
+  },
+  {
+   "key": "EP7-S1-T4",
+   "story": "EP7-S1",
+   "title": "Web: the e-mail import page",
+   "description": "The page of S03 section 2: what the import is and what connecting means in plain words, Connect Gmail, the state of your connection (address, since when, last look, messages noted), the partner's state without their address, that it has to be connected again when Google no longer lets the server in, Disconnect with what it removes, and that the import is not set up where the server lacks its settings. Reached from the signed-in block of the top bar and from the suggestions inbox. Done when the web's tests cover it and the page was looked at as rendered pictures.",
+   "dependsOn": [
+    "EP7-S1-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ]
+  },
+  {
+   "key": "EP7-S1-T5",
+   "story": "EP7-S1",
+   "title": "Owner: switch the Gmail API on, set the consent screen to production, give the server its secret and key, and connect both mailboxes",
+   "description": "When the server exists (docs/deployment.md has the steps, S03 section 9 and D-006 the reasons): in the Google project of the sign-in client switch the Gmail API on, add the planner's return address to the web client, add the read-only Gmail scope to the consent screen and set it to In production; give the server the client's secret and a new random key for the tokens; connect both mailboxes and check after more than a week that both are still connected. If Google's route does not hold, say so: the fallback is IMAP with an app password.",
+   "dependsOn": [
+    "EP7-S1-T3",
+    "EP7-S1-T4"
+   ],
+   "type": "OTHER",
+   "mandatory": true,
+   "requiredRoles": [
+    "PRODUCT_OWNER"
+   ],
+   "requiredSkills": [
+    "google-cloud"
+   ]
+  }
+ ]
+}

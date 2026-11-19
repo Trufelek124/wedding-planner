@@ -588,6 +588,36 @@
    "publicId": "WP-TS-67",
    "id": "32b31584-5753-448d-8e08-0a458c4ac054",
    "title": "Web: the top bar holds eight entries on wide and narrow screens"
+  },
+  "EP7-S1-T1": {
+   "type": "task",
+   "publicId": "WP-TS-68",
+   "id": "dad13d40-9ff0-4ead-bb48-63ac2f38e956",
+   "title": "Spec and decision: connecting Gmail and keeping up with it"
+  },
+  "EP7-S1-T2": {
+   "type": "task",
+   "publicId": "WP-TS-69",
+   "id": "7398e0b0-87d3-4099-bf70-67f5fd436c7e",
+   "title": "Backend: an owner connects and disconnects Gmail"
+  },
+  "EP7-S1-T3": {
+   "type": "task",
+   "publicId": "WP-TS-70",
+   "id": "5f138d5c-86af-45e7-9b4e-88bcc08bcc12",
+   "title": "Backend: the sync notes which messages are in a connected mailbox"
+  },
+  "EP7-S1-T4": {
+   "type": "task",
+   "publicId": "WP-TS-71",
+   "id": "9971e110-ada9-4e24-ab3f-79b5771f69ad",
+   "title": "Web: the e-mail import page"
+  },
+  "EP7-S1-T5": {
+   "type": "task",
+   "publicId": "WP-TS-72",
+   "id": "14b0f6a6-53e5-4742-b912-7d8170b89185",
+   "title": "Owner: switch the Gmail API on, set the consent screen to production, give the server its secret and key, and connect both mailboxes"
   }
  }
 }

@@ -327,3 +327,65 @@ Roborazzi 1.79.0 on Robolectric 4.18.
 - A picture is Robolectric's drawing of the screen, close to a phone's and not identical.
 - With everything in, the debug app is about 45 MB; the release build shrinks it.
 - A container written by hand is checked by nothing but its use; a missing object shows when a screen opens, in a test.
+
+## D-006 — Reading Gmail: Google's own permission, read-only, as an app in production that is not verified
+
+**Date:** 2026-11-19 · **Task:** WP-TS-68 · **Applies to:** the e-mail import (S03, WP-US-20 and WP-US-21)
+
+### Context
+
+The import has to read two private Gmail inboxes without their owners being there (S01 section 6). Google sorts
+read access to Gmail among its *restricted* permissions, which an app open to the public may only ask for after
+Google's verification and a yearly security assessment by a third party. S01 left "to verify when this is built"
+whether two private accounts get by without that. The server does not exist yet, so nothing could be tried
+against Google; this records what Google's own documentation said on 2026-11-19 and what follows from it.
+
+### What was compared
+
+| Route | What it costs | Verdict |
+|---|---|---|
+| Google's permission with the read-only scope, consent screen **In production**, app not verified | Google shows "this app is not verified" once per person, to be clicked through; at most 100 people may ever allow it. Google's exception for apps used by a few people the developer knows personally says the verification can be skipped | **Chosen** |
+| The same with the consent screen left in **Testing** | Every permission, and with it the server's long-lived token, **ends after seven days**: both owners would connect again every week | No |
+| Verification and the security assessment | Weeks, a paid assessor every year | Not for two people |
+| IMAP with an app password | No consent screen and no warning. But an app password opens the whole mailbox, writing and deleting included — more than the planner needs — and it needs Google's two-step sign-in | **The fallback** |
+| A narrower Gmail scope (headers only) | The text of a message could not be read, so nothing could be proposed from it | No |
+
+### Decision
+
+1. **Google's permission, asking for `gmail.readonly` and nothing else.** The planner can read; it cannot send,
+   change or delete. The scope is asked for only when an owner connects their mail, never at sign-in.
+2. **The consent screen is set to In production and left unverified.** The owners click through Google's warning
+   once each; the page says so before they start (S03 section 2).
+3. **The token is kept encrypted**, with a key that is given to the server from outside and is not in the
+   database, so that a copy of the database alone does not open anyone's mail. Disconnecting withdraws the
+   permission at Google and removes the token.
+4. **The mail source is one replaceable part** (S03 section 7). If Google's route does not hold — the warning
+   turns into a refusal, or the permission keeps ending — IMAP with an app password takes its place without
+   touching what reads and judges messages.
+
+### What it costs, and what would change the decision
+
+- **Not tried against Google.** The owner checks it with both accounts when the server exists, and again after
+  more than a week (S03 section 9). Until then this decision rests on documentation.
+- Google's policy asks apps that keep restricted data on a server for the security assessment. The exception for
+  personal use is about skipping verification as a whole; Google could enforce more than it does today. That
+  is the case for the fallback.
+- An app password would be a wider permission than the one chosen here. If the fallback is ever needed, that
+  trade is to be decided again, with the owner.
+
+### Sources (read on 2026-11-19)
+
+- Google Cloud Console Help, "Manage App Audience": a permission given to an app in Testing ends after seven
+  days, and so does its token; https://support.google.com/cloud/answer/15549945
+- Google for Developers, "OAuth app state overview": apps in production that are not verified show the warning
+  and are capped at 100 people; https://developers.google.com/identity/protocols/oauth2/production-readiness/overview
+- Google for Developers, "Restricted scope verification" and "Choose Gmail API scopes": `gmail.readonly` is a
+  restricted scope; what verification asks for;
+  https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification and
+  https://developers.google.com/workspace/gmail/api/auth/scopes
+- Google Cloud Console Help, "Verification requirements" and its questions and answers: verification can be
+  skipped for an app used by fewer than 100 people the developer knows personally;
+  https://support.google.com/cloud/answer/13464321 and https://support.google.com/cloud/answer/13463817
+- Google for Developers, "Synchronize clients with Gmail" and `users.history.list`: how to keep up, and that a
+  marker that has grown too old is answered with 404 and a full look;
+  https://developers.google.com/workspace/gmail/api/guides/sync
