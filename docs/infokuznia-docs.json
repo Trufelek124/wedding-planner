@@ -160,6 +160,18 @@
    "id": "fa67b2e7-da39-4e90-bc81-abe759ae2387",
    "sha256": "8c2c98b1e29f5b7b88301d908c44a79a7859d1e30e5bc9c2b7bbe77268f43a15",
    "commit": "d3598ca"
+  },
+  "docs/specs/S06-tasks-from-a-file.md": {
+   "publicId": "WP-DOC-20",
+   "id": "f49f6855-e4ce-4e11-b976-1f614fdb8981",
+   "sha256": "0292013e3b2cb5afce555b8fedbd792f09b8685e4f4fc5ec86e24aa7c54ede41",
+   "commit": "f2acc29"
+  },
+  "docs/decisions.md#D-013": {
+   "publicId": "WP-DOC-21",
+   "id": "91ef2ff6-6c99-4061-aaf4-ceafb8e4a340",
+   "sha256": "04ae81b03e5fbd3cce2783be53ef501a0cb5db9bfde84cdf9f30b0d33ef9abf9",
+   "commit": "f2acc29"
   }
  }
 }
