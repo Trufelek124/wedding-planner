@@ -1,6 +1,7 @@
 # S06 — Tasks from a file
 
-**Status:** written on 2026-11-20 at the owner's request. **Builds on:** S01 section 4 (the plan and its tasks),
+**Status:** written on 2026-11-20 at the owner's request, and built: the server (WP-TS-97) and the page
+(WP-TS-98), tested against stand-ins; no file made by another tool has been tried yet. **Builds on:** S01 section 4 (the plan and its tasks),
 D-004 (a payment is a task with an amount), D-013. **Story:** WP-US-25.
 
 ## 1. What this covers

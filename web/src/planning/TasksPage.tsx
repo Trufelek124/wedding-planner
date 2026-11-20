@@ -5,6 +5,7 @@ import { FilterBar } from './FilterBar.tsx'
 import { useFilters } from './filters.ts'
 import { listCategories, listEntries } from './planningApi.ts'
 import { TaskRow } from './TaskRow.tsx'
+import { UploadTasks } from './UploadTasks.tsx'
 import { useLoaded } from './useLoaded.ts'
 import { useStatusChange } from './useStatusChange.ts'
 
@@ -88,6 +89,12 @@ export function TasksPage() {
           ))}
         </ul>
       )}
+      <UploadTasks
+        onApplied={() => {
+          tasks.reload()
+          categories.reload()
+        }}
+      />
     </>
   )
 }

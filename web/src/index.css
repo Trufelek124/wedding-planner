@@ -2190,3 +2190,75 @@ a.button {
   display: grid;
   gap: 0.25rem;
 }
+
+/* Upload tasks: the part at the bottom of the task list */
+
+.upload-tasks {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.upload-tasks h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.upload-tasks ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.375rem;
+}
+
+.upload-tasks li {
+  overflow-wrap: anywhere;
+}
+
+.upload-tasks li > ul {
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+}
+
+.upload-tasks .upload-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.upload-file,
+.upload-tasks .upload-said,
+.upload-trouble {
+  overflow-wrap: anywhere;
+}
+
+.upload-tasks .upload-said {
+  margin-bottom: 0;
+}
+
+.upload-trouble {
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+}
+
+.upload-trouble:focus,
+.upload-said:focus {
+  outline: none;
+}
+
+.upload-trouble:focus-visible,
+.upload-said:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.upload-apply {
+  justify-self: start;
+  max-width: 100%;
+  text-align: center;
+}

@@ -114,6 +114,13 @@ closing comment quotes its summary lines and its exit code.
   "Earlier mail" asks the server to look back through your own mailbox — a choice of days, 30 to begin with, one
   request per press — and, while that is under way, asks the server again every few seconds until it is done or
   the page is left.
+- **Upload tasks** (`src/planning/UploadTasks.tsx`, S06) is the last part of the task list, whatever the filters
+  show. Choosing a file reads it in the browser and checks it at once; `taskFileApi.ts` sends the file's text as
+  it stands (a body serializer keeps the client from turning it into a quoted string). The report is said in the
+  page's own words (`taskFileWords.ts`), at most a hundred lines of each kind; one button says what it will do
+  and sends one request; `task-file-refused` checks the file again. Everything from a file or a report is plain
+  text. The two links lead to the static files in `web/public/formats/`, not to `/api`: they are the published
+  format, and are changed only together with the server (a later version gets new files).
 - The top bar is one row from 64rem up. Below that the name and the signed-in block share a row and the entries
   are one row that moves sideways, with the entry of the page that is shown brought into view; the entries stay a
   plain list of links at every width, with no menu button.
