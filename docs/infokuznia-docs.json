@@ -111,8 +111,8 @@
   "docs/specs/S04-reading-the-mail.md": {
    "publicId": "WP-DOC-12",
    "id": "8f8b9b00-2f5f-4d46-9609-aa87121e7b56",
-   "sha256": "9e0ec3973b29cfc876e6d5ef56f032b1c39113fa21fe12cb7357dc5fcd72480b",
-   "commit": "fa0b710"
+   "sha256": "11b0c6c8ddf0fe87015784bac59ca0f5ecd8d994ed4be6bf2339971673ed639d",
+   "commit": "d3598ca"
   },
   "docs/decisions.md#D-007": {
    "publicId": "WP-DOC-13",
@@ -149,6 +149,12 @@
    "id": "742b6fdb-6025-43d5-9c68-2ec0c6e9d217",
    "sha256": "b987683ed73f85b79110651907a0a268dc6b7cb8344f03ca5e3eba7d637fd56e",
    "commit": "fa0b710"
+  },
+  "docs/decisions.md#D-012": {
+   "publicId": "WP-DOC-19",
+   "id": "fa67b2e7-da39-4e90-bc81-abe759ae2387",
+   "sha256": "8c2c98b1e29f5b7b88301d908c44a79a7859d1e30e5bc9c2b7bbe77268f43a15",
+   "commit": "d3598ca"
   }
  }
 }
