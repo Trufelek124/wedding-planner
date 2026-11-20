@@ -1,0 +1,37 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP7-S2-T11",
+   "story": "EP7-S2",
+   "title": "Spec and decision: messages of one thread that wait together are read as one",
+   "description": "When earlier mail is looked through, whole conversations wait at once, and each of their messages was read on its own: the thread was sent to the AI service once per message, and an older message could propose what a later one had already changed. The owner asked for whole threads to be read on the first load. S04 says that the newest waiting message of a thread is read with the earlier ones that wait - one triage, one extraction told to propose what the conversation asks as it stands after its last message - that the earlier ones sent with it are done without being sent again, what happens to one that did not fit or is a copy of a letter already read, and that their own PDF documents are looked at afterwards. D-012 records why and what it costs. Done when the documents are committed and mirrored.",
+   "dependsOn": [],
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "documentation"
+   ]
+  },
+  {
+   "key": "EP7-S2-T12",
+   "story": "EP7-S2",
+   "title": "Backend: the reading takes the waiting messages of one thread together",
+   "description": "As S04 and D-012 say. The mail module tells, for each earlier message of a letter's thread, whether it is noted in the same mailbox and not read yet, what it is known by across mailboxes, and whether it lists PDF documents. The round reads the newest waiting message of a thread with its waiting earlier ones: triage of the newest only, one extraction whose request marks the earlier messages that were not read before and allows eight proposals, and then the earlier ones that were sent are marked about the wedding with no proposals of their own (their documents still to be looked at where they list any), the copies among them as copies, before the newest is marked last. One that did not fit stays waiting. Nothing of a message is kept or logged, and the HTTP API does not change. Done when the backend's tests cover it against the stand-ins, the samples for measuring hold a thread read whole in each language, and the gate passes.",
+   "dependsOn": [
+    "EP7-S2-T11"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java"
+   ]
+  }
+ ]
+}

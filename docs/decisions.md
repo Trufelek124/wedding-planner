@@ -624,3 +624,53 @@ asked for attachments to be read — and only where the planner is quite sure th
   thread. The estimate of D-007 holds per message without documents; the e-mail page shows what it comes to.
 - Word files, spreadsheets and pictures stay unread. Each would be a decision like this one.
 
+
+## D-012 — Messages of one thread that wait together are read as one
+
+**Date:** 2026-11-20 · **Task:** WP-TS-94 · **Decided by:** the owner asked for it · **Applies to:** reading the mail (S04)
+
+### Context
+
+Every noted message went its own way: triage, then extraction with the earlier messages of its thread as
+background. That is right for mail that arrives one message at a time. When an owner asks for earlier mail
+(D-009), a conversation of eight messages waits all at once, and each of the eight was read on its own: the
+thread went to the larger model up to eight times, and a message from three weeks ago proposed a day that a
+message from last week had moved. Telling the model what was already proposed (WP-TS-93) kept most of it from
+coming twice; it did not make an old message know what came after it. The owner asked for whole threads to be
+read on the first load.
+
+### What was compared
+
+| Question | Chosen | The alternative, and why not |
+|---|---|---|
+| What is read together | **The messages of one thread, in one mailbox, that wait at the same moment** | Only what a look back noted: the same thing happens when two replies arrive between two rounds, and "how it was noted" would be one more thing to keep with a message |
+| From where the thread is read | **Its newest waiting message**, with the earlier ones marked as read before or not | A step of its own that sums the thread up first: one more call, and one more answer nobody could check against the mail |
+| What an earlier message becomes | **About the wedding, with no proposals of its own**, done for good | Its own triage and verdict: a call per message for an answer the thread has already given |
+| Earlier messages that were read before | **Background, as until now**; what they proposed is told | Reading the whole thread anew each time: paid again, and proposed again |
+| How many proposals | **Eight** for a thread read like this, the most important first | Five: too few for a conversation of weeks. More: a flood of suggestions is the thing section 5 of S04 guards against |
+| PDF documents of the earlier messages | **Afterwards**, by the second look that D-011 already has | In the same request: three documents and 40,000 characters would then be shared by a whole thread, and the offer that matters could be the one that does not fit |
+
+### Decision
+
+1. **The newest waiting message of a thread is read with the earlier ones that wait**: one triage, of the
+   newest; one extraction, told which earlier messages are read now and to propose what the conversation asks
+   as it stands after its last message.
+2. **The earlier ones that were sent with it are done** — about the wedding, no proposals of their own — and are
+   not sent anywhere again. One that did not fit stays waiting; a copy of a letter that was read is a copy.
+3. **What the thread proposed stands under its newest message.** "Open the e-mail" leads there; Gmail shows the
+   conversation around it.
+4. **Their PDF documents are looked at afterwards**, each with its own message.
+
+### What it costs, and what would change the decision
+
+- An earlier message is called "about the wedding" because its thread is; nobody asked about it alone. The
+  page's number of messages about the wedding counts conversations more generously than before.
+- Whether the newest message concerns the wedding is asked of the newest alone, as before. A thread whose last
+  message is a bare "thank you" can be called a "no"; then the message before it takes its place and the thread
+  is read from there, without the "thank you".
+- Eight proposals for a long conversation are a choice of the most important. If whole threads turn out to hold
+  more that matters, the limit is the thing to change, not the way of reading.
+- It is cheaper: a conversation costs one extraction instead of one per message. D-007's estimate was per
+  message and is now an upper bound for earlier mail.
+- A later message still does not change an entry that an earlier reading produced (WP-US-22): this only keeps
+  the stale proposal from being made when both wait together.

@@ -30,6 +30,25 @@ noted ──▶ fetched from Gmail ──▶ triage ──┬─ not about the w
   under the inbox of the copy that was read.
 - The newest messages are read first, a few at a time, so that the first days after connecting bring what is
   current before what is three months old.
+- **Messages of one thread that wait together are read as one** (D-012). When earlier mail is looked through,
+  a whole conversation waits at once. Reading each of its messages on its own would send the thread again and
+  again, and an older message would propose what a later one has already changed. So the newest waiting
+  message of a thread is read **with the earlier ones that wait**:
+  - triage is asked once, of the newest; if it is not about the wedding, only that message is done and the next
+    one of the thread takes its place;
+  - extraction is asked once, over the thread, and is told which earlier messages were not read before: it
+    proposes what the conversation asks **as it stands after its last message** — what a later message
+    changed is proposed as it stands last, what a later message settled or took back is not proposed;
+  - the earlier messages that were sent with it are then done as well — about the wedding, with no proposals
+    of their own — and are never sent anywhere again. What the thread proposed stands under its newest
+    message;
+  - an earlier message that did not fit into the request (section 3) stays "not read yet" and is read later
+    in the same way; one that is a copy of a letter that was read in the other mailbox is not read again and
+    gets the verdict of a copy;
+  - a PDF document that came with one of the earlier messages is looked at afterwards, as for a message that
+    was read before its documents could be (section 3).
+
+  A message that arrives by itself goes the same way: it is then a thread with one message that waits.
 - A message that cannot be fetched for now is left as it is and tried again later, at growing intervals; the
   others are read on. Nothing is asked of the AI service about a message from which nothing could be proposed
   (its mailbox was disconnected meanwhile).
@@ -43,7 +62,7 @@ things that make the proposals usable; both are listed here so that they are a d
 | Step | What is sent to the AI service |
 |---|---|
 | Triage, for every message | The sender's name and address, the subject, when it arrived, and the beginning of its text: the first 1,500 characters. |
-| Extraction, for a message that concerns the wedding | The same, the full text of the message, and the text of the earlier messages of its thread — up to 60,000 characters in all; what is beyond is left out, and the model is told that it was. |
+| Extraction, for a message that concerns the wedding | The same, the full text of the message, and the text of the earlier messages of its thread — up to 60,000 characters in all; what is beyond is left out, and the model is told that it was. Each earlier message says whether it was read before or is read now, with this one (section 2). |
 | Also with extraction | **Today's date and the wedding's date** (so that "two weeks before the wedding" can become a day), and **what was already proposed** — from the same thread, and lately from any mail of the wedding (the last thirty proposals of the last thirty days, each with its kind, title, day and amount) — so that a reply, a forwarded copy or a second mail about the same thing is not proposed again. |
 | With extraction, when triage was at least 80 in 100 sure that the message concerns the wedding | **The text of the message's PDF documents** (D-011): of up to three documents, none larger than 10 MB, the first fifty pages of each, up to 40,000 characters in all. An offer or a contract usually says there what the mail only mentions: the further payments and their days. |
 
@@ -54,8 +73,8 @@ what the mail itself says.
 
 ### Messages that were read before their documents could be
 
-A message that concerned the wedding and was read before the planner could read documents is **read once more,
-for its documents only**: the same message with their text, with what it already proposed told to the model so
+A message that concerned the wedding and was read before the planner could read documents — or was read with
+its thread, as an earlier message of it (section 2) — is **read once more, for its documents only**: the same message with their text, with what it already proposed told to the model so
 that nothing is proposed twice. What comes of it are further suggestions from the same message. It happens by
 itself, once per message, under the same limits as all reading; a message without a PDF costs one look at
 Gmail and nothing else. A letter that is in both mailboxes has its documents looked at once: the copy that is
@@ -68,7 +87,7 @@ reached second is done with, with nothing asked.
   is less sure than 60 in 100** (a setting) is read on as if it were a "yes": missing a message that concerns the
   wedding is worse than paying for one extraction that proposes nothing.
 - **Extraction** answers with at most **five** proposals — **eight** when documents were read with the message,
-  since an offer often names several payments. Each has a kind (task, payment, step of the plan,
+  since an offer often names several payments, or when earlier messages of its thread are read with it. Each has a kind (task, payment, step of the plan,
   vendor), a title in the language of the message, and what applies of: notes, a first day, a day it is due, an
   amount as the mail writes it with the kind of payment, a category by name, a vendor by name with what
   contact details the message gives, how sure it is (0–100), and **the passage** it rests on, quoted from the
@@ -98,7 +117,8 @@ A message is written by anybody, and the models read it. So:
   exactly one of the planner's. Otherwise the name stays what S02 calls a name the planner does not have yet.
   A vendor the planner already has — by its name, by the address the message gives for it, or because it is the
   sender introducing itself — is not proposed again; a known sender introducing somebody else is.
-- **At most five proposals from one message, eight with its documents.** An answer with more is not used at all,
+- **At most five proposals from one message, eight with its documents or with the earlier messages of its
+  thread that wait.** An answer with more is not used at all,
   and the message is marked as one that could not be read: a mail that floods is not a mail to act on.
 - **Fifty new suggestions from one mailbox in a day, and its reading goes on the next day.** The message that
   reaches the limit is still handled whole; nothing is lost, the other mailbox is read on, and nobody can fill

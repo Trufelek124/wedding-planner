@@ -744,6 +744,18 @@
    "publicId": "WP-TS-93",
    "id": "4127ecbe-e317-4827-9528-766391571801",
    "title": "Backend: one letter in both mailboxes is read once, and what was proposed lately is not proposed again"
+  },
+  "EP7-S2-T11": {
+   "type": "task",
+   "publicId": "WP-TS-94",
+   "id": "af4ee9e9-3c33-4776-ac44-0755751c5819",
+   "title": "Spec and decision: messages of one thread that wait together are read as one"
+  },
+  "EP7-S2-T12": {
+   "type": "task",
+   "publicId": "WP-TS-95",
+   "id": "fb78e149-d6e7-4c66-9744-27fe0179d9c0",
+   "title": "Backend: the reading takes the waiting messages of one thread together"
   }
  }
 }
