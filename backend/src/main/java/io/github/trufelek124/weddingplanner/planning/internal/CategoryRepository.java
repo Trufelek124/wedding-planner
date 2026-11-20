@@ -44,6 +44,29 @@ class CategoryRepository {
                 > 0;
     }
 
+    /**
+     * Adds the category unless the wedding has one of that name already (however it is capitalised); never fails
+     * for that reason, so that a transaction that goes on is not broken by it.
+     */
+    void insertIfAbsent(UUID weddingId, UUID id, String name) {
+        jdbc.sql("""
+                INSERT INTO category (id, wedding_id, name, position)
+                VALUES (?, ?, ?, (SELECT COALESCE(max(position), 0) + 1 FROM category WHERE wedding_id = ?))
+                ON CONFLICT DO NOTHING
+                """)
+                .params(id, weddingId, name, weddingId)
+                .update();
+    }
+
+    /** Whether the starter list was offered to the wedding already. */
+    boolean offered(UUID weddingId) {
+        return jdbc.sql("SELECT count(*) FROM planning_setup WHERE wedding_id = ?")
+                        .param(weddingId)
+                        .query(Integer.class)
+                        .single()
+                > 0;
+    }
+
     /** @return false when the wedding has a category of that name already (however it is capitalised) */
     boolean insert(UUID weddingId, UUID id, String name) {
         try {

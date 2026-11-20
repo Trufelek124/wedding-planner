@@ -47,6 +47,11 @@ public enum ProblemCode {
     MAIL_NOT_CONNECTED(HttpStatus.CONFLICT, "mail-not-connected", "Your mailbox is not connected"),
     /** What was sent is larger than the server takes; a picture, for instance. */
     UPLOAD_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "upload-too-large", "That is too large to upload"),
+    /**
+     * A file of tasks was applied and cannot be taken: nothing was changed. The fields name what is wrong as
+     * {@code tasks[<row>].<field>}; the check shows it in full.
+     */
+    TASK_FILE_REFUSED(HttpStatus.UNPROCESSABLE_CONTENT, "task-file-refused", "The file of tasks cannot be taken"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "method-not-allowed", "Method not allowed"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "internal-error", "Something went wrong on the server");
 

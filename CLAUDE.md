@@ -270,6 +270,16 @@ uses another only through the types in that module's own package, and never in a
   and what its payments come to) and `VendorCategories`. A new kind of record that can point to a vendor implements
   `VendorUse` in its own module.
 - `inspirations` uses `planning` (`PlanItems.exists`).
+- **A file of tasks** (S06, D-013) is checked and applied by `planning` itself (`TaskFileService`):
+  `POST /api/tasks/file/check` changes nothing and answers what the file would do, row by row;
+  `POST /api/tasks/file` applies it in one transaction or answers `task-file-refused`. The body is the file's
+  text, read by the server itself (at most 1 MiB), so that what is not JSON ends in words for a person. A row is
+  known again by its key (`entry.task_key`, unique per wedding, in no answer of the API): a known key changes
+  only the fields the row gives, a new key adds a task, and **nothing in this code can remove an entry**. The
+  format is the JSON Schema in `web/public/formats/`, which the server also serves; `TaskFileSchemaAgreementTest`
+  holds the server against it — change both together, and a later version gets new files. The form's rules are
+  in `EntryRules`, for the form and the file alike; an amount never passes through `double`; nothing of a file
+  is logged, only who did it and four numbers.
 - `guests` stands by itself: the guest list, its households and the head count.
 - `suggestions` (S02) uses `wedding`, `planning` and `vendors`, and only `mailreading` uses it. What accepting makes is made by
   those modules' own "add" (`PlanEntries.addEntry`, `VendorRegister.addVendor`), so the same rules and the same

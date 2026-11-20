@@ -1,5 +1,7 @@
 package io.github.trufelek124.weddingplanner.vendors;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,4 +19,7 @@ public interface Vendors {
 
     /** The vendor whose name is exactly this one, compared the same way. Empty when none or more than one. */
     Optional<UUID> named(UUID weddingId, String name);
+
+    /** The names of these vendors of the wedding, as the register spells them; an id the wedding does not have is left out. */
+    Map<UUID, String> namesOf(UUID weddingId, Collection<UUID> vendorIds);
 }

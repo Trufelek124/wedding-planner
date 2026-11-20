@@ -34,10 +34,15 @@ class CategoryService {
     @Transactional
     List<CategoryRow> list(UserId user) {
         UUID weddingId = weddings.membershipOf(user).weddingId();
+        offerStarter(weddingId);
+        return categories.list(weddingId);
+    }
+
+    /** The starter list, the first time anything asks for the wedding's categories. */
+    void offerStarter(UUID weddingId) {
         if (categories.markOffered(weddingId, clock.instant())) {
             STARTER.forEach(name -> categories.insert(weddingId, UUID.randomUUID(), name));
         }
-        return categories.list(weddingId);
     }
 
     @Transactional

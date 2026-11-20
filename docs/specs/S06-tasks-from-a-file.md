@@ -66,7 +66,7 @@ readable.
 | `priority` | | `CRITICAL`, `HIGH`, `NORMAL` or `LOW`; `null` lets the planner set it from the dates, as it does for a task whose priority nobody chose. |
 | `category` | | The name of a category, up to 60 characters, or `null` for none. A name the planner does not have yet **is added** as a category. Compared without regard to capital letters and to spaces around it. |
 | `vendor` | | The name of a vendor the planner has, or `null` for none. Compared the same way. A name the planner does not have, or has twice, is refused: a vendor is not made from a file. |
-| `amount` | | `null`, or `{ "value", "currency" }`: the task is then a payment (D-004). `value` is the amount as people write it without separators — `"12000"`, `"12000.00"`, or the same as a number — with no more decimals than the currency has; `currency` is the wedding's currency. The server turns it into its whole numbers exactly, and refuses what it would have to round. |
+| `amount` | | `null`, or `{ "value", "currency" }`: the task is then a payment (D-004). `value` is the amount as people write it without separators — `"12000"`, `"12000.00"`, or the same as a number — above zero, with no more decimals than the currency has; `currency` is the wedding's currency. The server turns it into its whole numbers exactly, and refuses what it would have to round. |
 | `paymentKind` | | `DEPOSIT`, `INSTALMENT`, `FINAL`, or `null`. |
 | `paidOn` | | The day a payment was paid, or `null`. |
 
@@ -126,7 +126,7 @@ Everything that comes out of a file is shown as plain text.
 | More than 1 MB, more than 1,000 rows, no rows | Which limit. |
 | A row without a key or a title, a key used twice, a field the format does not have | The row, the field, and what is wrong. |
 | A value of the wrong kind or beyond its length; a day that is no day; a status, priority or kind of payment that is not one of the list | The row, the field, and what is expected. |
-| An amount in another currency, with too many decimals, negative, or too large | The row, and what is expected. Nothing is rounded. |
+| An amount in another currency, with too many decimals, with an exponent, zero, negative, or too large | The row, and what is expected. Nothing is rounded. |
 | A vendor the planner does not have, or has twice by that name | The row, and that the vendor is to be added first or left out. |
 | A row that breaks one of the planner's rules (section 3) | The row, the field, and the form's own words. |
 | A key that belongs to a step of the plan | The row, and that it is no longer a task. |

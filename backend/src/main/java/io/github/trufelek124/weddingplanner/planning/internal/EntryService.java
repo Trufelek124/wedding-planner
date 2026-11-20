@@ -113,7 +113,7 @@ class EntryService {
         if (fromSuggestionId != null) {
             entry = entry.madeBy(fromSuggestionId);
         }
-        entries.insert(membership.weddingId(), membership.memberId(), entry);
+        entries.insert(membership.weddingId(), membership.memberId(), entry, null);
         return shown(membership, entry.id());
     }
 
@@ -134,9 +134,9 @@ class EntryService {
         Instant now = clock.instant();
         EntryRow after = new EntryRow(
                 before.id(), before.kind(), before.title(), before.notes(), before.categoryId(), before.startDate(),
-                before.dueDate(), status, completedAt(status, before, now), before.priorityMode(), before.priority(),
+                before.dueDate(), status, EntryRules.completedAt(status, before, now), before.priorityMode(), before.priority(),
                 before.parentId(), before.vendorId(), before.amount(), before.paymentKind(),
-                paidOn(before.amount(), status, null, before, today(membership)), before.assigneeIds(), before.taskCount(),
+                EntryRules.paidOn(before.amount(), status, null, before, today(membership)), before.assigneeIds(), before.taskCount(),
                 before.version(), before.createdAt(), now, before.fromSuggestionId());
         save(membership, after, before.version(), now);
         return shown(membership, id);
@@ -310,7 +310,7 @@ class EntryService {
 
     /** The current date where the wedding takes place. */
     private LocalDate today(Membership membership) {
-        return LocalDate.now(clock.withZone(membership.timeZone()));
+        return EntryRules.today(clock, membership);
     }
 
     private static boolean isOverdue(EntryView view, LocalDate today) {
@@ -381,18 +381,7 @@ class EntryService {
         UUID weddingId = membership.weddingId();
         List<FieldProblem> problems = new ArrayList<>();
 
-        if (kind == Kind.TASK && request.startDate() != null) {
-            problems.add(new FieldProblem("startDate", "A task has only a due date. Leave the start empty."));
-        }
-        if (request.startDate() != null && request.dueDate() == null) {
-            problems.add(new FieldProblem("dueDate", "Enter the end date too, or leave both dates empty."));
-        }
-        if (request.startDate() != null && request.dueDate() != null && request.startDate().isAfter(request.dueDate())) {
-            problems.add(new FieldProblem("dueDate", "The end date cannot be before the start date."));
-        }
-        if (request.priorityMode() == PriorityMode.MANUAL && request.priority() == null) {
-            problems.add(new FieldProblem("priority", "Choose a priority, or let the planner set it."));
-        }
+        problems.addAll(EntryRules.ofTheDates(kind, request));
         if (request.categoryId() != null && !categories.exists(weddingId, request.categoryId())) {
             problems.add(new FieldProblem("categoryId", "Choose one of the categories."));
         }
@@ -411,21 +400,7 @@ class EntryService {
             problems.add(new FieldProblem("vendorId", "Choose one of your vendors."));
         }
         LocalDate today = today(membership);
-        if (request.amount() != null && kind == Kind.PLAN_ITEM) {
-            problems.add(new FieldProblem("amount", "Only a task can carry an amount. Leave it empty here."));
-        }
-        if (request.amount() == null && request.paymentKind() != null) {
-            problems.add(new FieldProblem("paymentKind", "The kind of payment needs an amount. Enter one, or leave the kind empty."));
-        }
-        if (request.paidOn() != null) {
-            if (request.amount() == null) {
-                problems.add(new FieldProblem("paidOn", "Only a payment has a paid date. Enter an amount, or leave the date empty."));
-            } else if (request.status() != Status.DONE) {
-                problems.add(new FieldProblem("paidOn", "A payment has a paid date once it is done. Mark it done, or leave the date empty."));
-            } else if (request.paidOn().isAfter(today)) {
-                problems.add(new FieldProblem("paidOn", "The paid date cannot be in the future."));
-            }
-        }
+        problems.addAll(EntryRules.ofTheMoney(kind, request, today));
         if (!problems.isEmpty()) {
             throw new ApiException(ProblemCode.BAD_REQUEST, "The request is not valid.", problems);
         }
@@ -434,32 +409,10 @@ class EntryService {
         Priority chosen = request.priorityMode() == PriorityMode.MANUAL ? request.priority() : null;
         return new EntryRow(
                 id, kind, request.title().strip(), request.notes().strip(), request.categoryId(), request.startDate(),
-                request.dueDate(), request.status(), completedAt(request.status(), before, now), request.priorityMode(),
+                request.dueDate(), request.status(), EntryRules.completedAt(request.status(), before, now), request.priorityMode(),
                 chosen, request.parentId(), request.vendorId(), request.amount(), request.paymentKind(),
-                paidOn(request.amount(), request.status(), request.paidOn(), before, today), assignees,
+                EntryRules.paidOn(request.amount(), request.status(), request.paidOn(), before, today), assignees,
                 before == null ? 0 : before.taskCount(), before == null ? 0 : before.version(),
                 before == null ? now : before.createdAt(), now, before == null ? null : before.fromSuggestionId());
-    }
-
-    /**
-     * A payment is paid when it is done. The day is the one the person gives; otherwise the one
-     * already recorded, and for a payment that is only now done, today.
-     */
-    private static LocalDate paidOn(Long amount, Status status, LocalDate given, EntryRow before, LocalDate today) {
-        if (amount == null || status != Status.DONE) {
-            return null;
-        }
-        if (given != null) {
-            return given;
-        }
-        return before != null && before.paidOn() != null ? before.paidOn() : today;
-    }
-
-    /** "Done" remembers when it was done; a change that leaves it done keeps that moment. */
-    private static Instant completedAt(Status status, EntryRow before, Instant now) {
-        if (status != Status.DONE) {
-            return null;
-        }
-        return before != null && before.completedAt() != null ? before.completedAt() : now;
     }
 }

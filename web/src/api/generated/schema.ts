@@ -692,6 +692,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Takes a file of tasks
+         * @description Adds the tasks that are new and changes the ones the planner has from an earlier file, in one piece. Nothing is ever removed. With anything wrong in the file nothing is changed, and the answer is the task-file-refused problem: ask the check what is wrong. A body above 1 MB is the upload-too-large problem.
+         */
+        post: operations["applyTaskFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/file/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What a file of tasks would do
+         * @description Checks the file against the planner and changes nothing. Always answers with a report, also for a file that cannot be taken: the report says why. A body above 1 MB is the upload-too-large problem.
+         */
+        post: operations["checkTaskFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vendors": {
         parameters: {
             query?: never;
@@ -1615,7 +1655,7 @@ export interface components {
              * @description The kind of error. Clients decide what to do from this value.
              * @enum {string}
              */
-            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:already-decided" | "urn:wedding-planner:problem:entry-changed" | "urn:wedding-planner:problem:mail-not-set-up" | "urn:wedding-planner:problem:mail-not-connected" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
+            type: "urn:wedding-planner:problem:bad-request" | "urn:wedding-planner:problem:unauthenticated" | "urn:wedding-planner:problem:forbidden" | "urn:wedding-planner:problem:account-not-allowed" | "urn:wedding-planner:problem:not-found" | "urn:wedding-planner:problem:wedding-not-set-up" | "urn:wedding-planner:problem:wedding-already-set-up" | "urn:wedding-planner:problem:wedding-full" | "urn:wedding-planner:problem:changed-meanwhile" | "urn:wedding-planner:problem:entry-has-tasks" | "urn:wedding-planner:problem:dependency-cycle" | "urn:wedding-planner:problem:board-has-inspirations" | "urn:wedding-planner:problem:vendor-in-use" | "urn:wedding-planner:problem:already-decided" | "urn:wedding-planner:problem:entry-changed" | "urn:wedding-planner:problem:mail-not-set-up" | "urn:wedding-planner:problem:mail-not-connected" | "urn:wedding-planner:problem:upload-too-large" | "urn:wedding-planner:problem:task-file-refused" | "urn:wedding-planner:problem:method-not-allowed" | "urn:wedding-planner:problem:internal-error";
         };
         RefreshRequest: {
             /** @description The refresh token; a browser leaves it out, because its cookie carries it. */
@@ -1784,6 +1824,81 @@ export interface components {
             /** Format: int32 */
             count: number;
             tag: string;
+        };
+        /** @description One field of a task that the row changes. */
+        TaskFileChange: {
+            /** @description The file's own name of the field. */
+            field: string;
+            /** @description What the task has now: a day as YYYY-MM-DD; a status, a priority or a kind of payment as its name (null for none, or for a priority the planner sets); a category or a vendor by its name; an amount as the whole number of the currency's smallest unit, in digits; text as it is. */
+            from: string | null;
+            /** @description What it becomes, written the same way. */
+            to: string | null;
+        };
+        /** @description Something wrong with the file as a whole. */
+        TaskFileProblem: {
+            /** @description In words for a person. */
+            message: string;
+        };
+        /** @description What a file of tasks does, or did: the answer of both calls with a file. A file that is not this format at all has no rows, and says why in problems. */
+        TaskFileReport: {
+            /**
+             * Format: int32
+             * @description How many rows are new tasks.
+             */
+            added: number;
+            /** @description true when this call took the file (also when nothing in it differed from the planner); false for a check, which changes nothing, and for a file that cannot be taken. */
+            applied: boolean;
+            /** @description Nothing is wrong anywhere in the file: it can be applied. */
+            canBeApplied: boolean;
+            /**
+             * Format: int32
+             * @description How many rows change a task the planner has.
+             */
+            changed: number;
+            /** @description The categories the file would add (or added), as the file writes them, each once. Empty while the file cannot be applied. */
+            newCategories: string[];
+            /** @description What is wrong with the file as a whole. */
+            problems: components["schemas"]["TaskFileProblem"][];
+            /**
+             * Format: int32
+             * @description How many rows cannot be taken.
+             */
+            refused: number;
+            /** @description One per row of the file, in the file's order. */
+            rows: components["schemas"]["TaskFileRow"][];
+            /**
+             * Format: int32
+             * @description How many rows leave their task as it is.
+             */
+            unchanged: number;
+        };
+        /** @description What becomes of one row of the file. */
+        TaskFileRow: {
+            /** @description For a row that changes a task: each field that changes. Otherwise empty. */
+            changes: components["schemas"]["TaskFileChange"][];
+            /** @description The row's key; null when the row has none that could be read. */
+            key: string | null;
+            /**
+             * @description What becomes of one row: a new task, a change of a task the planner has from an earlier file, no change, or a row that cannot be taken.
+             * @enum {string}
+             */
+            outcome: "NEW" | "CHANGED" | "UNCHANGED" | "REFUSED";
+            /** @description For a row that cannot be taken: what is wrong. Otherwise empty. */
+            problems: components["schemas"]["TaskFileRowProblem"][];
+            /**
+             * Format: int32
+             * @description The row's place in the file, from 1.
+             */
+            row: number;
+            /** @description The row's title; null when the row has none that could be read. */
+            title: string | null;
+        };
+        /** @description Something wrong with one row. */
+        TaskFileRowProblem: {
+            /** @description The file's own name of the field (key, title, notes, dueDate, status, priority, category, vendor, amount, paymentKind, paidOn), or a name the format does not have; null for the row as such. */
+            field: string | null;
+            /** @description In words for a person. */
+            message: string;
         };
         /** @description Someone the wedding is made with: how to reach them, what was agreed, and what hangs on them. Its plan items and tasks are GET /api/entries?vendorId=…, its inspirations GET /api/inspirations?vendorId=…. */
         Vendor: {
@@ -3860,6 +3975,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Suggestion"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    applyTaskFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The file of tasks, as the text it is (JSON, UTF-8, at most 1 MB): the format is published at /formats/wedding-planner-tasks-1.schema.json. */
+        requestBody: {
+            content: {
+                "application/json": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskFileReport"];
+                };
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    checkTaskFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The file of tasks, as the text it is (JSON, UTF-8, at most 1 MB): the format is published at /formats/wedding-planner-tasks-1.schema.json. */
+        requestBody: {
+            content: {
+                "application/json": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskFileReport"];
                 };
             };
             /** @description Any error. */

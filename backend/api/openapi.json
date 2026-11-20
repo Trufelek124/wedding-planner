@@ -1496,9 +1496,9 @@
           },
           "type" : {
             "description" : "The kind of error. Clients decide what to do from this value.",
-            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:already-decided", "urn:wedding-planner:problem:entry-changed", "urn:wedding-planner:problem:mail-not-set-up", "urn:wedding-planner:problem:mail-not-connected", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
+            "enum" : [ "urn:wedding-planner:problem:bad-request", "urn:wedding-planner:problem:unauthenticated", "urn:wedding-planner:problem:forbidden", "urn:wedding-planner:problem:account-not-allowed", "urn:wedding-planner:problem:not-found", "urn:wedding-planner:problem:wedding-not-set-up", "urn:wedding-planner:problem:wedding-already-set-up", "urn:wedding-planner:problem:wedding-full", "urn:wedding-planner:problem:changed-meanwhile", "urn:wedding-planner:problem:entry-has-tasks", "urn:wedding-planner:problem:dependency-cycle", "urn:wedding-planner:problem:board-has-inspirations", "urn:wedding-planner:problem:vendor-in-use", "urn:wedding-planner:problem:already-decided", "urn:wedding-planner:problem:entry-changed", "urn:wedding-planner:problem:mail-not-set-up", "urn:wedding-planner:problem:mail-not-connected", "urn:wedding-planner:problem:upload-too-large", "urn:wedding-planner:problem:task-file-refused", "urn:wedding-planner:problem:method-not-allowed", "urn:wedding-planner:problem:internal-error" ],
             "type" : "string",
-            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "ALREADY_DECIDED", "ENTRY_CHANGED", "MAIL_NOT_SET_UP", "MAIL_NOT_CONNECTED", "UPLOAD_TOO_LARGE", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
+            "x-enum-varnames" : [ "BAD_REQUEST", "UNAUTHENTICATED", "FORBIDDEN", "ACCOUNT_NOT_ALLOWED", "NOT_FOUND", "WEDDING_NOT_SET_UP", "WEDDING_ALREADY_SET_UP", "WEDDING_FULL", "CHANGED_MEANWHILE", "ENTRY_HAS_TASKS", "DEPENDENCY_CYCLE", "BOARD_HAS_INSPIRATIONS", "VENDOR_IN_USE", "ALREADY_DECIDED", "ENTRY_CHANGED", "MAIL_NOT_SET_UP", "MAIL_NOT_CONNECTED", "UPLOAD_TOO_LARGE", "TASK_FILE_REFUSED", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR" ]
           }
         },
         "required" : [ "status", "title", "type" ],
@@ -1770,6 +1770,146 @@
           }
         },
         "required" : [ "count", "tag" ],
+        "type" : "object"
+      },
+      "TaskFileChange" : {
+        "description" : "One field of a task that the row changes.",
+        "properties" : {
+          "field" : {
+            "description" : "The file's own name of the field.",
+            "type" : "string"
+          },
+          "from" : {
+            "description" : "What the task has now: a day as YYYY-MM-DD; a status, a priority or a kind of payment as its name (null for none, or for a priority the planner sets); a category or a vendor by its name; an amount as the whole number of the currency's smallest unit, in digits; text as it is.",
+            "type" : [ "string", "null" ]
+          },
+          "to" : {
+            "description" : "What it becomes, written the same way.",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "field", "from", "to" ],
+        "type" : "object"
+      },
+      "TaskFileProblem" : {
+        "description" : "Something wrong with the file as a whole.",
+        "properties" : {
+          "message" : {
+            "description" : "In words for a person.",
+            "type" : "string"
+          }
+        },
+        "required" : [ "message" ],
+        "type" : "object"
+      },
+      "TaskFileReport" : {
+        "description" : "What a file of tasks does, or did: the answer of both calls with a file. A file that is not this format at all has no rows, and says why in problems.",
+        "properties" : {
+          "added" : {
+            "description" : "How many rows are new tasks.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "applied" : {
+            "description" : "true when this call took the file (also when nothing in it differed from the planner); false for a check, which changes nothing, and for a file that cannot be taken.",
+            "type" : "boolean"
+          },
+          "canBeApplied" : {
+            "description" : "Nothing is wrong anywhere in the file: it can be applied.",
+            "type" : "boolean"
+          },
+          "changed" : {
+            "description" : "How many rows change a task the planner has.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "newCategories" : {
+            "description" : "The categories the file would add (or added), as the file writes them, each once. Empty while the file cannot be applied.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "problems" : {
+            "description" : "What is wrong with the file as a whole.",
+            "items" : {
+              "$ref" : "#/components/schemas/TaskFileProblem"
+            },
+            "type" : "array"
+          },
+          "refused" : {
+            "description" : "How many rows cannot be taken.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "rows" : {
+            "description" : "One per row of the file, in the file's order.",
+            "items" : {
+              "$ref" : "#/components/schemas/TaskFileRow"
+            },
+            "type" : "array"
+          },
+          "unchanged" : {
+            "description" : "How many rows leave their task as it is.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "added", "applied", "canBeApplied", "changed", "newCategories", "problems", "refused", "rows", "unchanged" ],
+        "type" : "object"
+      },
+      "TaskFileRow" : {
+        "description" : "What becomes of one row of the file.",
+        "properties" : {
+          "changes" : {
+            "description" : "For a row that changes a task: each field that changes. Otherwise empty.",
+            "items" : {
+              "$ref" : "#/components/schemas/TaskFileChange"
+            },
+            "type" : "array"
+          },
+          "key" : {
+            "description" : "The row's key; null when the row has none that could be read.",
+            "type" : [ "string", "null" ]
+          },
+          "outcome" : {
+            "description" : "What becomes of one row: a new task, a change of a task the planner has from an earlier file, no change, or a row that cannot be taken.",
+            "enum" : [ "NEW", "CHANGED", "UNCHANGED", "REFUSED" ],
+            "type" : "string"
+          },
+          "problems" : {
+            "description" : "For a row that cannot be taken: what is wrong. Otherwise empty.",
+            "items" : {
+              "$ref" : "#/components/schemas/TaskFileRowProblem"
+            },
+            "type" : "array"
+          },
+          "row" : {
+            "description" : "The row's place in the file, from 1.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "title" : {
+            "description" : "The row's title; null when the row has none that could be read.",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "changes", "key", "outcome", "problems", "row", "title" ],
+        "type" : "object"
+      },
+      "TaskFileRowProblem" : {
+        "description" : "Something wrong with one row.",
+        "properties" : {
+          "field" : {
+            "description" : "The file's own name of the field (key, title, notes, dueDate, status, priority, category, vendor, amount, paymentKind, paidOn), or a name the format does not have; null for the row as such.",
+            "type" : [ "string", "null" ]
+          },
+          "message" : {
+            "description" : "In words for a person.",
+            "type" : "string"
+          }
+        },
+        "required" : [ "field", "message" ],
         "type" : "object"
       },
       "Vendor" : {
@@ -4444,6 +4584,88 @@
         },
         "summary" : "Undoes what was added by itself",
         "tags" : [ "suggestion-controller" ]
+      }
+    },
+    "/api/tasks/file" : {
+      "post" : {
+        "description" : "Adds the tasks that are new and changes the ones the planner has from an earlier file, in one piece. Nothing is ever removed. With anything wrong in the file nothing is changed, and the answer is the task-file-refused problem: ask the check what is wrong. A body above 1 MB is the upload-too-large problem.",
+        "operationId" : "applyTaskFile",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "description" : "The file of tasks, as the text it is (JSON, UTF-8, at most 1 MB): the format is published at /formats/wedding-planner-tasks-1.schema.json.",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TaskFileReport"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "Takes a file of tasks",
+        "tags" : [ "task-file-controller" ]
+      }
+    },
+    "/api/tasks/file/check" : {
+      "post" : {
+        "description" : "Checks the file against the planner and changes nothing. Always answers with a report, also for a file that cannot be taken: the report says why. A body above 1 MB is the upload-too-large problem.",
+        "operationId" : "checkTaskFile",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "description" : "The file of tasks, as the text it is (JSON, UTF-8, at most 1 MB): the format is published at /formats/wedding-planner-tasks-1.schema.json.",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TaskFileReport"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "summary" : "What a file of tasks would do",
+        "tags" : [ "task-file-controller" ]
       }
     },
     "/api/vendors" : {

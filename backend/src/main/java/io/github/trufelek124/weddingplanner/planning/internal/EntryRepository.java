@@ -14,6 +14,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +95,7 @@ class EntryRepository {
     private static final String SELECT = """
             SELECT e.id, e.kind, e.title, e.notes, e.category_id, e.start_date, e.due_date, e.status, e.completed_at,
                    e.priority_mode, e.priority, e.parent_id, e.vendor_id, e.amount, e.payment_kind, e.paid_on,
-                   e.version, e.created_at, e.updated_at, e.from_suggestion_id,
+                   e.version, e.created_at, e.updated_at, e.from_suggestion_id, e.task_key,
                    (SELECT count(*) FROM entry task WHERE task.parent_id = e.id) AS task_count,
                    ARRAY(SELECT a.member_id FROM entry_assignee a WHERE a.entry_id = e.id) AS assignee_ids
             FROM entry e
@@ -162,20 +163,41 @@ class EntryRepository {
         return jdbc.sql(SELECT + where + " ORDER BY e.created_at, e.id").params(params).query(EntryRepository::row).list();
     }
 
-    void insert(UUID weddingId, UUID createdBy, EntryRow entry) {
+    /** An entry together with the key of the row of a file that made it. */
+    record Keyed(String key, EntryRow entry) {}
+
+    /**
+     * The entries of the wedding that came from a file with one of these keys, held until the transaction ends
+     * when {@code hold} is set: nobody saves them meanwhile.
+     */
+    List<Keyed> findByTaskKeys(UUID weddingId, Collection<String> keys, boolean hold) {
+        if (keys.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.sql(SELECT + " WHERE e.wedding_id = :wedding AND e.task_key IN (:keys) ORDER BY e.id"
+                        + (hold ? " FOR UPDATE OF e" : ""))
+                .param("wedding", weddingId)
+                .param("keys", keys)
+                .query((row, number) -> new Keyed(row.getString("task_key"), row(row, number)))
+                .list();
+    }
+
+    /** @param taskKey the key of the row of a file that makes this entry; null for an entry made any other way */
+    void insert(UUID weddingId, UUID createdBy, EntryRow entry, String taskKey) {
         jdbc.sql("""
                 INSERT INTO entry (id, wedding_id, kind, title, notes, category_id, start_date, due_date, status,
                                    completed_at, priority_mode, priority, parent_id, vendor_id, amount, payment_kind,
-                                   paid_on, version, created_by, created_at, updated_at, from_suggestion_id)
+                                   paid_on, version, created_by, created_at, updated_at, from_suggestion_id, task_key)
                 VALUES (:id, :wedding, :kind, :title, :notes, :category, :start, :due, :status,
                         :completed, :mode, :priority, :parent, :vendor, :amount, :paymentKind, :paidOn,
-                        0, :createdBy, :now, :now, :fromSuggestion)
+                        0, :createdBy, :now, :now, :fromSuggestion, :taskKey)
                 """)
                 .params(fields(entry))
                 .param("id", entry.id())
                 .param("wedding", weddingId)
                 .param("createdBy", createdBy)
                 .param("fromSuggestion", entry.fromSuggestionId())
+                .param("taskKey", taskKey)
                 .param("now", at(entry.createdAt()))
                 .update();
         replaceAssignees(entry.id(), entry.assigneeIds());

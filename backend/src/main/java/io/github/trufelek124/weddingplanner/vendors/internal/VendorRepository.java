@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,17 @@ class VendorRepository {
 
     boolean exists(UUID weddingId, UUID id) {
         return jdbc.sql("SELECT count(*) FROM vendor WHERE wedding_id = ? AND id = ?").params(weddingId, id).query(Integer.class).single() > 0;
+    }
+
+    Map<UUID, String> namesOf(UUID weddingId, Collection<UUID> ids) {
+        Map<UUID, String> names = new HashMap<>();
+        jdbc.sql("SELECT id, name FROM vendor WHERE wedding_id = :wedding AND id IN (:ids)")
+                .param("wedding", weddingId)
+                .param("ids", ids)
+                .query(row -> {
+                    names.put(row.getObject("id", UUID.class), row.getString("name"));
+                });
+        return names;
     }
 
     /**
