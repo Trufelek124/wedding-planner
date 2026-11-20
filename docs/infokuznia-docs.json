@@ -57,8 +57,8 @@
   "docs/deployment.md": {
    "publicId": "WP-DOC-3",
    "id": "a3fa59cf-6b77-4714-a7c3-696dc073d3cc",
-   "sha256": "6bf597990bef0323802fc6add08f2e5f369293a3eb0114d9533ae59e74b7c22e",
-   "commit": "fa0b710"
+   "sha256": "d5c83678930cedaa9ac45bc7e5199ba909103487f725ee33a4c17950111f6b92",
+   "commit": "e4ec357"
   },
   "docs/decisions.md#D-002": {
    "publicId": "WP-DOC-4",
@@ -111,8 +111,8 @@
   "docs/specs/S04-reading-the-mail.md": {
    "publicId": "WP-DOC-12",
    "id": "8f8b9b00-2f5f-4d46-9609-aa87121e7b56",
-   "sha256": "11b0c6c8ddf0fe87015784bac59ca0f5ecd8d994ed4be6bf2339971673ed639d",
-   "commit": "d3598ca"
+   "sha256": "6089f5db3b3b9c60e2a9355e0204353b43e5a2963005265e633eb0247891411d",
+   "commit": "e4ec357"
   },
   "docs/decisions.md#D-007": {
    "publicId": "WP-DOC-13",
