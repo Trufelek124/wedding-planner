@@ -354,6 +354,13 @@ uses another only through the types in that module's own package, and never in a
     that was read" before anything else is asked: no step, no link, no proposal. Extraction is told what was
     already proposed — from the thread first, then lately from any mail of the wedding, one line each with kind,
     title, day and amount — so that a forwarded copy proposes nothing again.
+  - **The messages of one thread that wait together are read as one** (D-012): the newest of them goes the way
+    above, and the earlier ones that wait — `mail` says which, in `Letter.earlier` — go with it. One triage, of
+    the newest; one extraction, whose request says of every earlier message whether it was read before or is
+    read now, and which may answer eight proposals. After the hand-in the earlier ones that were sent are marked
+    about the wedding with no proposals of their own (their documents still to be looked at where they list a
+    PDF), a copy among them as a copy, and **the newest last**; one that did not fit, and all of them when no
+    answer came, stay waiting. Everything the thread proposed stands under the newest message's keys.
   - **The PDF documents of a message are read with it** (D-011), only when triage said "yes" and was at least
     `MAIL_READING_DOCUMENTS_SURE` (80) sure; `MAIL_READING_DOCUMENTS_ENABLED=false` fetches none. The server takes
     the text out itself (`PdfText`, PDFBox): text only, nothing in a file is run, followed or fetched, no font of
@@ -370,7 +377,7 @@ uses another only through the types in that module's own package, and never in a
     message, a document, an answer or the key is kept or logged**; of an exception only its kind.
   - What the e-mail page says of the reading, `mail` asks through an interface of its own that this module
     implements (`mail.ReadingReport`, as `vendors` does with `VendorUse`): `mail` cannot use `mailreading`.
-  - How good the two steps are is measured, not tested: sixty-three invented messages in Polish, Ukrainian and
+  - How good the two steps are is measured, not tested: sixty-six invented messages in Polish, Ukrainian and
     English (`backend/src/test/resources/mailreading/samples/`) and `./gradlew measureReading`, which runs the
     steps over them **against the real service** and costs money. Nothing depends on that task, it needs the key and
     `-PspendMoney=yes`, and it is the owner's to run — a session runs at most `-PdryRun=yes`. A change to the

@@ -611,6 +611,79 @@
         ],
         "mustNotPropose": []
       }
+    },
+    {
+      "id": "en-22",
+      "sort": "hard",
+      "from": {
+        "name": "Mina Okafor",
+        "address": "mina@marrow-lane-florals.example"
+      },
+      "subject": "Re: Flowers for 12 June",
+      "arrived": "2026-11-17T08:30:00Z",
+      "text": "Hello Hannah and Daniel,\n\nOne small change: I am away this week, so please pay the deposit of 700 PLN by Wednesday 2 December 2026, not by 27 November. Thank you for choosing the round arch, I am putting it in the order.\n\nKind regards\nMina",
+      "earlier": [
+        {
+          "from": {
+            "name": "Mina Okafor",
+            "address": "mina@marrow-lane-florals.example"
+          },
+          "arrived": "2026-11-09T10:15:00Z",
+          "text": "Hello Hannah and Daniel,\n\nThank you for visiting the studio. For 12 June 2027 I can offer the bridal bouquet, 8 table arrangements and the wedding arch for 2,400 PLN. To hold the date I need a deposit of 600 PLN by Friday 27 November 2026.\n\nKind regards\nMina Okafor\nMarrow Lane Florals",
+          "readNow": true
+        },
+        {
+          "from": {
+            "name": "Hannah and Daniel",
+            "address": "hannah.and.daniel@mail-test.example"
+          },
+          "arrived": "2026-11-10T18:05:00Z",
+          "text": "Hello Mina,\n\nThank you for the offer, we like it very much. We would also like to add 20 buttonholes for the guests. Will that change the price?\n\nHannah and Daniel",
+          "readNow": false
+        },
+        {
+          "from": {
+            "name": "Mina Okafor",
+            "address": "mina@marrow-lane-florals.example"
+          },
+          "arrived": "2026-11-12T09:40:00Z",
+          "text": "Hello,\n\nWith the buttonholes the total is 2,650 PLN, and the deposit will be 700 PLN (a correction to my first letter). I also need your choice of arch style, round or square, by 30 November.\n\nMina",
+          "readNow": true
+        },
+        {
+          "from": {
+            "name": "Hannah and Daniel",
+            "address": "hannah.and.daniel@mail-test.example"
+          },
+          "arrived": "2026-11-13T19:20:00Z",
+          "text": "Hello Mina,\n\nWe will add the buttonholes and we choose the round arch. That is settled for us.\n\nHannah and Daniel",
+          "readNow": false
+        }
+      ],
+      "why": "The deposit was 600 PLN due 27 November in the first letter; the third letter corrected the amount to 700 PLN and the last letter moved the day to 2 December 2026, so only 700 PLN by 2 December stands. The arch style was asked for and then settled in the fourth letter, so choosing it is not proposed again.",
+      "expected": {
+        "concernsTheWedding": true,
+        "proposals": [
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "deposit"
+            ],
+            "dueDate": "2026-12-02",
+            "amount": {
+              "value": "700",
+              "currency": "PLN"
+            },
+            "paymentKind": "DEPOSIT"
+          }
+        ],
+        "mustNotPropose": [
+          "600",
+          "27 Nov",
+          "arch style",
+          "round or square"
+        ]
+      }
     }
   ]
 }

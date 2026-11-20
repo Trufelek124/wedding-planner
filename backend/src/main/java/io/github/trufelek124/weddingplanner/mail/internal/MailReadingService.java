@@ -92,7 +92,7 @@ class MailReadingService implements MailReading {
         try {
             Fetch fetched = source.letter(message.memberId(), message.messageId(), message.threadId());
             return switch (fetched) {
-                case Found found -> letter(message.weddingId(), found);
+                case Found found -> letter(message, found);
                 case Gone gone -> new Unavailable(Why.GONE);
                 case NoText none -> new Unavailable(Why.NO_TEXT);
                 case TooLarge large -> new Unavailable(Why.TOO_LARGE);
@@ -111,20 +111,27 @@ class MailReadingService implements MailReading {
         }
     }
 
-    private static Letter letter(UUID weddingId, Found found) {
+    private Letter letter(MessageHandle message, Found found) {
+        UUID weddingId = message.weddingId();
         MailSource.Letter letter = found.letter();
+        java.util.Set<String> waiting = messages.waitingAmong(message.memberId(), message.threadId(),
+                letter.earlier().stream().map(Earlier::messageId).filter(id -> !id.isEmpty()).toList());
         return new Letter(
                 person(letter.from()),
                 letter.subject(),
                 letter.arrived(),
                 text(letter.text()),
-                letter.earlier().stream().map(MailReadingService::earlier).toList(),
+                letter.earlier().stream().map(earlier -> earlier(message, weddingId, waiting, earlier)).toList(),
                 letterKey(weddingId, letter.identifier()),
                 letter.documents().stream().map(pdf -> new Document(pdf.name(), pdf.size(), pdf.reference())).toList());
     }
 
-    private static EarlierMessage earlier(Earlier earlier) {
-        return new EarlierMessage(person(earlier.from()), earlier.arrived(), text(earlier.text()));
+    private static EarlierMessage earlier(MessageHandle message, UUID weddingId, java.util.Set<String> waiting, Earlier earlier) {
+        Optional<MessageHandle> handle = waiting.contains(earlier.messageId())
+                ? Optional.of(new MessageHandle(weddingId, message.memberId(), earlier.messageId(), message.threadId()))
+                : Optional.empty();
+        return new EarlierMessage(person(earlier.from()), earlier.arrived(), text(earlier.text()), handle,
+                letterKey(weddingId, earlier.identifier()), earlier.documents());
     }
 
     private static Person person(MailSource.Person person) {

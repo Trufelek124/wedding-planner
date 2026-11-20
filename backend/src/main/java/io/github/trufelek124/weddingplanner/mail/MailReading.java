@@ -93,8 +93,17 @@ public interface MailReading {
     /** What one message's text is cut at, in characters. How much of it leaves the server is the reader's decision. */
     int MOST_CHARACTERS = 100_000;
 
-    /** A message of the thread that arrived before the one that was asked for. */
-    record EarlierMessage(Person from, Instant arrived, Text text) {
+    /**
+     * A message of the thread that arrived before the one that was asked for.
+     *
+     * @param waiting its handle when it is noted in this same mailbox and has no verdict yet (it waits to be read, and may be
+     *     read with the later message, D-012); empty for one that was read, for the owner's own reply and for one the sync never
+     *     noted. Worked out with one question for the whole letter
+     * @param key what that letter is known by across mailboxes, worked out as {@link Letter#key} is, from its own
+     *     {@code Message-ID}; empty when it has none
+     * @param documents whether it lists at least one PDF document (listing fetches nothing)
+     */
+    record EarlierMessage(Person from, Instant arrived, Text text, Optional<MessageHandle> waiting, String key, boolean documents) {
 
         @Override
         public String toString() {

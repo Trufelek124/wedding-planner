@@ -88,9 +88,12 @@ public interface MailExtraction {
             }
         }
 
-        /** How many proposals an answer to this request may hold. */
+        /**
+         * How many proposals an answer to this request may hold: eight when documents are sent or an earlier message is read
+         * now (whether or not it fits into the request), five otherwise.
+         */
         public int mostProposals() {
-            return documents.isEmpty() ? MOST_PROPOSALS : MOST_PROPOSALS_WITH_DOCUMENTS;
+            return documents.isEmpty() && earlier.stream().noneMatch(EarlierMessage::readNow) ? MOST_PROPOSALS : MOST_PROPOSALS_WITH_DOCUMENTS;
         }
 
         /** Somebody else's words: nothing of them is printed. */
@@ -121,8 +124,18 @@ public interface MailExtraction {
         }
     }
 
-    /** A message of the thread that arrived before the one asked about. */
-    record EarlierMessage(Sender from, Instant arrived, String text) {
+    /**
+     * A message of the thread that arrived before the one asked about.
+     *
+     * @param readNow this message was not read before and is read now, with the message (D-012): the request says so, and
+     *     the answer may then hold {@link #MOST_PROPOSALS_WITH_DOCUMENTS} proposals. False for background that was read before
+     */
+    record EarlierMessage(Sender from, Instant arrived, String text, boolean readNow) {
+
+        /** An earlier message that was read before: background only. */
+        public EarlierMessage(Sender from, Instant arrived, String text) {
+            this(from, arrived, text, false);
+        }
 
         public EarlierMessage {
             Objects.requireNonNull(from, "from");
@@ -195,15 +208,24 @@ public interface MailExtraction {
     }
 
     /**
-     * Zero to five checked proposals (eight with documents): a message that concerns the wedding but asks for nothing has none.
+     * Zero to five checked proposals (eight with documents or with earlier messages that are read now): a message that
+     * concerns the wedding but asks for nothing has none.
+     *
+     * @param earlierLeftOut how many of the oldest earlier messages did not fit into the request and were not sent (the thread
+     *     was cut); the caller needs it to know which earlier messages were read
      */
-    record Extracted(List<Proposed> proposals) {
+    record Extracted(List<Proposed> proposals, int earlierLeftOut) {
 
         public Extracted {
             proposals = List.copyOf(proposals);
-            if (proposals.size() > MOST_PROPOSALS_WITH_DOCUMENTS) {
+            if (proposals.size() > MOST_PROPOSALS_WITH_DOCUMENTS || earlierLeftOut < 0) {
                 throw new IllegalArgumentException("proposals");
             }
+        }
+
+        /** An answer to a request in which no earlier message was left out. */
+        public Extracted(List<Proposed> proposals) {
+            this(proposals, 0);
         }
 
         @Override

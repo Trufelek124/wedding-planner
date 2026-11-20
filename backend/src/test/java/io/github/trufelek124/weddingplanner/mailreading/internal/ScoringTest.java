@@ -45,6 +45,15 @@ class ScoringTest {
         return new SampleSet.Item(new SampleSet.Collection("pl", TODAY, WEDDING, List.of(sample)), sample);
     }
 
+    /** A sample that is not an instruction but a thread whose earlier messages are read now; {@code stale} is what a later message changed. */
+    private static SampleSet.Item thread(String id, List<String> stale, SampleSet.ExpectedProposal... proposals) {
+        SampleSet.Sample sample = new SampleSet.Sample(
+                id, "hard", false, new SampleSet.Person("A", "a@a.example"), "S", WHEN, "T",
+                List.of(new SampleSet.Earlier(new SampleSet.Person("B", "b@b.example"), WHEN.minusSeconds(60), "E", true)), List.of(), List.of(), "why",
+                new SampleSet.Expected(true, List.of(proposals), false, stale));
+        return new SampleSet.Item(new SampleSet.Collection("pl", TODAY, WEDDING, List.of(sample)), sample);
+    }
+
     private static Outcome<Triaged> said(boolean yes, int sure) {
         return new Outcome.Answered<>(new Triaged(yes, sure), TRIAGE_USED);
     }
@@ -141,6 +150,35 @@ class ScoringTest {
         Scoring.Tally tally = Scoring.of(rows(), 60);
 
         assertThat(tally.instructed).containsExactly(new Scoring.Instructed("e", false, false), new Scoring.Instructed("g", true, true));
+    }
+
+    @Test
+    void whatAThreadReadAsOneProposesThatStandsNoLongerIsCountedApartFromTheInstructions() {
+        SampleSet.ExpectedProposal deposit = wanted("PAYMENT", List.of("zaliczk"), LocalDate.parse("2026-12-02"), new SampleSet.ExpectedAmount("700", "PLN"), "DEPOSIT", null);
+        List<Scoring.Measured> rows = List.of(
+                // Proposes what stands last only.
+                new Scoring.Measured(thread("t1", List.of("600"), deposit), said(true, 90),
+                        proposals(proposed(Kind.PAYMENT, "Zaliczka 700 zł", LocalDate.parse("2026-12-02"), new Amount("700", "PLN"), PaymentKind.DEPOSIT, null))),
+                // Proposes the stale amount as well.
+                new Scoring.Measured(thread("t2", List.of("600"), deposit), said(true, 90),
+                        proposals(proposed(Kind.PAYMENT, "Zaliczka 700 zł", LocalDate.parse("2026-12-02"), new Amount("700", "PLN"), PaymentKind.DEPOSIT, null),
+                                proposed(Kind.PAYMENT, "Zaliczka 600 zł", LocalDate.parse("2026-11-27"), new Amount("600", "PLN"), PaymentKind.DEPOSIT, null))),
+                // Triage said a sure no: extraction did not run.
+                new Scoring.Measured(thread("t3", List.of("600"), deposit), said(false, 95), null),
+                // No answer from extraction.
+                new Scoring.Measured(thread("t4", List.of("600"), deposit), said(true, 90), new Outcome.Unanswered<>(Outcome.Why.TRY_LATER, Used.NOTHING)));
+
+        Scoring.Tally tally = Scoring.of(rows, 60);
+
+        assertThat(tally.stale).containsExactly(new Scoring.Instructed("t1", true, false), new Scoring.Instructed("t2", true, true),
+                new Scoring.Instructed("t3", false, false), new Scoring.Instructed("t4", true, false));
+        assertThat(tally.instructed).as("a thread is not an instruction").isEmpty();
+        Map<String, List<Scoring.Measured>> byLanguage = new LinkedHashMap<>();
+        byLanguage.put("pl", rows);
+        String report = MeasureReport.render(new MeasureReport.Run(WHEN, "claude-haiku-5-5", "claude-opus-5-5", true, false, RULES, byLanguage,
+                Map.of("pl", 4), new MeasureCosts()));
+        assertThat(report).contains("## Threads whose earlier messages are read now").contains("- t2: STALE PROPOSED").contains("- t1: not proposed")
+                .contains("- t3: not proposed (extraction did not run)").contains("Stale proposed: 1 of 4");
     }
 
     @Test

@@ -313,6 +313,25 @@ class MessageRepository {
                 .single();
     }
 
+    /**
+     * Of these messages of one thread, which are noted in this member's mailbox and have no verdict yet: one question for
+     * the whole letter. Only this mailbox is asked: another member's message of the same thread is not in the answer.
+     */
+    java.util.Set<String> waitingAmong(UUID memberId, String threadId, Collection<String> messageIds) {
+        if (messageIds.isEmpty()) {
+            return java.util.Set.of();
+        }
+        return new java.util.HashSet<>(jdbc.sql("""
+                SELECT m.message_id FROM mail_message m
+                WHERE m.member_id = :member AND m.thread_id = :thread AND m.verdict IS NULL AND m.message_id IN (:ids)
+                """)
+                .param("member", memberId)
+                .param("thread", threadId)
+                .param("ids", List.copyOf(messageIds))
+                .query(String.class)
+                .list());
+    }
+
     Counts counts(UUID weddingId) {
         return jdbc.sql("""
                 SELECT count(*) FILTER (WHERE m.verdict IS NULL) AS waiting,

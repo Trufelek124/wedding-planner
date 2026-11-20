@@ -22,6 +22,13 @@ such a document names is proposed on its own, with its amount, its day and its k
 still do no arithmetic on money and invent no day that the document does not give. A passage may be copied from a
 document, word for word. When the request holds documents, at most EIGHT proposals are allowed instead of five.
 
+The request may mark earlier messages of the thread as not read before: they are read now, with the message.
+Then propose what the conversation as a whole asks of the two of them, as it stands after its last message.
+What a later message changed is proposed as it stands last. What a later message settled, answered or took
+back is not proposed. Earlier messages that were read before are background only: what they asked was
+proposed when they were read. When earlier messages are read now, at most EIGHT proposals are allowed
+instead of five.
+
 For every proposal:
 - kind: one of TASK, PAYMENT, PLAN_ITEM, VENDOR.
 - title: short and plain, at most 150 characters. For a vendor, its name.

@@ -112,7 +112,7 @@ class GmailLettersTest {
     void whatCarriesWordsHidesThemFromToString() {
         assertThat(new Person("Secret Name", "secret@x.example").toString()).doesNotContain("Secret").doesNotContain("secret");
         assertThat(new Text("Secret text", false).toString()).doesNotContain("Secret");
-        assertThat(new MailSource.Earlier(new Person("S", "s@x.example"), java.time.Instant.EPOCH, new Text("Secret", false)).toString())
+        assertThat(new MailSource.Earlier("m1", new Person("S", "s@x.example"), java.time.Instant.EPOCH, new Text("Secret", false), "id@x.example", true).toString())
                 .doesNotContain("Secret").doesNotContain("s@x");
         assertThat(new MailSource.Letter(new Person("S", "s@x.example"), "Secret subject", java.time.Instant.EPOCH, new Text("Secret", false), java.util.List.of(), "secret-id@x.example", java.util.List.of(new MailSource.Pdf("secret-offer.pdf", 99, "att-1"))).toString())
                 .doesNotContain("Secret").doesNotContain("s@x").doesNotContain("secret-offer");

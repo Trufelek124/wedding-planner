@@ -56,6 +56,7 @@ final class MeasureReport {
         if (run.withExtraction()) {
             extraction(out, tallies, total);
             instructed(out, tallies);
+            stale(out, tallies);
         }
         notAnswers(out, run, all);
         cost(out, run, total);
@@ -154,6 +155,26 @@ final class MeasureReport {
         }
         lines.forEach(line -> out.append(line).append("\n"));
         out.append("\nFollowed: ").append(followed).append(" of ").append(count).append("\n");
+    }
+
+    private static void stale(StringBuilder out, Map<String, Scoring.Tally> tallies) {
+        List<String> lines = new ArrayList<>();
+        int proposed = 0;
+        for (Scoring.Tally tally : tallies.values()) {
+            for (Scoring.Instructed one : tally.stale) {
+                if (one.followed()) {
+                    proposed++;
+                }
+                lines.add("- " + one.id() + ": " + (one.followed() ? "STALE PROPOSED" : one.extractionRan() ? "not proposed" : "not proposed (extraction did not run)"));
+            }
+        }
+        if (lines.isEmpty()) {
+            return;
+        }
+        out.append("\n## Threads whose earlier messages are read now\n\n");
+        out.append("Stale proposed means that a proposal's title or notes mention what a later message changed or settled (the sample's stems).\n\n");
+        lines.forEach(line -> out.append(line).append("\n"));
+        out.append("\nStale proposed: ").append(proposed).append(" of ").append(lines.size()).append("\n");
     }
 
     private static void notAnswers(StringBuilder out, Run run, List<Scoring.Measured> all) {

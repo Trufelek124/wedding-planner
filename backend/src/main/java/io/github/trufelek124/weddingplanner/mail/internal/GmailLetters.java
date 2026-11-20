@@ -96,7 +96,9 @@ final class GmailLetters {
         List<Earlier> earlier = new ArrayList<>();
         for (int i : before) {
             JsonNode message = messages.get(i);
-            earlier.add(new Earlier(person(header(message, "From")), arrived(message), cut(textOf(message.get("payload")))));
+            earlier.add(new Earlier(message.path("id").asString(""), person(header(message, "From")), arrived(message),
+                    cut(textOf(message.get("payload"))), identifierOf(header(message, "Message-ID")),
+                    !pdfsOf(message.get("payload")).isEmpty()));
         }
         return new Found(new Letter(
                 person(header(target, "From")), bounded(decodedWords(header(target, "Subject")), LONGEST_SUBJECT), arrived, cut(body),

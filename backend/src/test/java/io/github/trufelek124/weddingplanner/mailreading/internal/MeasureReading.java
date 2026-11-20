@@ -448,7 +448,7 @@ public final class MeasureReading {
     private static MailExtraction.Input extractionInput(SampleSet.Item item, boolean documentsSent) {
         SampleSet.Sample sample = item.sample();
         List<MailExtraction.EarlierMessage> earlier = sample.earlier().stream()
-                .map(message -> new MailExtraction.EarlierMessage(sender(message.from()), message.arrived(), message.text()))
+                .map(message -> new MailExtraction.EarlierMessage(sender(message.from()), message.arrived(), message.text(), message.readNow()))
                 .toList();
         return new MailExtraction.Input(
                 sender(sample.from()), sample.subject(), sample.arrived(), sample.text(), earlier, item.collection().today(),

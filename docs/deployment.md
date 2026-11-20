@@ -226,6 +226,8 @@ What to expect, and what to do:
 - **Earlier mail**, once an owner asks for it on the page (D-009), can be spread over days when it is much: at
   most 2,000 messages a day, and at most 50 new suggestions from one mailbox in a day. D-007 estimates about
   3 US dollars for a thousand messages; the page shows what it really comes to.
+- **A conversation is read once** (D-012): the messages of one thread that wait together are sent as one, and
+  what is proposed is what the conversation asks as it stands after its last message.
 - **PDF documents** (D-011): the text of a message's PDF documents — an offer, a contract — is read with it when
   the first step was at least 80 in 100 sure that the message concerns the wedding. Mail that was read before
   the server could do this is looked at once more for its documents, a few messages a minute, by itself. A
@@ -243,8 +245,9 @@ Nothing of this has run against the real service yet: the first days are worth w
 
 ### Measuring it before switching it on
 
-The repository holds sixty-three invented messages — twenty-one each in Polish, Ukrainian and English, one of
-them in each language with a vendor's offer as a document — with what the two steps should answer, and a tool that runs the steps over them **with the real AI service** and says how often
+The repository holds sixty-six invented messages — twenty-two each in Polish, Ukrainian and English, among them
+in each language one with a vendor's offer as a document and one conversation that is read as a whole — with
+what the two steps should answer, and a tool that runs the steps over them **with the real AI service** and says how often
 each was right and what it cost. It is not part of the gate and no session runs it: a run costs money and is the
 owner's to order. On a machine with the repository and JDK 25:
 

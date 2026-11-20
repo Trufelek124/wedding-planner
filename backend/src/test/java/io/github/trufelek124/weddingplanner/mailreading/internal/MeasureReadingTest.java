@@ -55,6 +55,16 @@ class MeasureReadingTest {
                 + "\"alreadyProposed\":[\"Tytuł-Qx\"],\"why\":\"in the text\",\"expected\":{\"concernsTheWedding\":" + about + ",\"proposals\":" + expectedProposals + "}}";
     }
 
+    /** A thread: two earlier messages that are read now, a later message that changed the amount (600 to 700), and what must not be proposed. */
+    private static String threadSample(String id) {
+        return "{\"id\":\"" + id + "\",\"sort\":\"hard\",\"from\":{\"name\":\"Imię-Qx\",\"address\":\"qx@qx-sender.example\"},"
+                + "\"subject\":\"Temat-Qx\",\"arrived\":\"2026-11-17T09:00:00Z\",\"text\":\"Poprawka-Qx: zaliczka 700 zł do 4 grudnia 2026.\","
+                + "\"earlier\":[{\"from\":{\"name\":\"Imię-Qx\",\"address\":\"qx@qx-sender.example\"},\"arrived\":\"2026-11-10T09:00:00Z\",\"text\":\"Pierwszy-Qx zaliczka 600 zł\",\"readNow\":true},"
+                + "{\"from\":{\"name\":\"Imię-Qx\",\"address\":\"qx@qx-sender.example\"},\"arrived\":\"2026-11-11T09:00:00Z\",\"text\":\"Drugi-Qx\"}],"
+                + "\"why\":\"in the text\",\"expected\":{\"concernsTheWedding\":true,\"proposals\":[{\"kind\":\"PAYMENT\",\"titleMentions\":[\"zaliczk\"],\"dueDate\":\"2026-12-04\"}],"
+                + "\"mustNotPropose\":[\"600\"]}}";
+    }
+
     private static final String DEPOSIT_EXPECTED =
             "[{\"kind\":\"PAYMENT\",\"titleMentions\":[\"zaliczk\"],\"dueDate\":\"2026-12-04\",\"amount\":{\"value\":\"5000\",\"currency\":\"PLN\"},\"paymentKind\":\"DEPOSIT\"}]";
 
@@ -252,6 +262,21 @@ class MeasureReadingTest {
         // The report reaches the person who ran it, and does not hold the key.
         assertThat(output()).doesNotContain(KEY);
         assertThat(report).doesNotContain(KEY);
+    }
+
+    @Test
+    void anEarlierMessageThatIsReadNowIsSaidSoInTheRequestAndTheReportCountsWhatStandsNoLongerProposed() throws IOException {
+        service.answerNextCallsWith(
+                Reply.says(triage(true, 90), "claude-haiku-5-5", 100, 10),
+                Reply.says(Answers.proposals(Answers.proposal("PAYMENT", "Zaliczka 600 zł", "Pierwszy-Qx zaliczka 600 zł")), "claude-opus-5-5", 1_000, 200));
+
+        int code = MeasureReading.run(new String[] {"--spend-money=yes"}, around(Map.of("APP_AI_API_KEY", KEY), samples(threadSample("pl-t"))));
+
+        assertThat(code).isZero();
+        String request = service.calls().get(1).userTurn();
+        assertThat(request).contains("Read before: no - it is read now, with the message").contains("Read before: yes").contains("At most 8 proposals");
+        assertThat(report()).contains("## Threads whose earlier messages are read now").contains("- pl-t: STALE PROPOSED").contains("Stale proposed: 1 of 1");
+        assertThat(report()).doesNotContain("Qx").doesNotContain("Messages that try to instruct\n\n- ");
     }
 
     @Test

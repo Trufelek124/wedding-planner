@@ -20,6 +20,14 @@ final class WatchedMail implements MailReading {
     final List<Verdict> marked = new CopyOnWriteArrayList<>();
     volatile Function<MessageHandle, Content> readsAs = handle -> null;
     volatile int marksToFail;
+    /** When set, no message waits to be read (the second look, which takes other messages, can then be tried alone). */
+    volatile boolean nothingWaits;
+    /** When set, marking this one message throws (the server "stops" just before its mark); any other message is marked as usual. */
+    volatile MessageHandle markFailsFor;
+    /** For each mark that was made, whether the message was left with its documents still to be looked at. */
+    final List<Boolean> markedStillToLookAt = new CopyOnWriteArrayList<>();
+    /** The handle of each mark, in the order made. */
+    final List<MessageHandle> markedHandles = new CopyOnWriteArrayList<>();
     volatile RuntimeException linkFails;
     volatile boolean noLink;
     volatile UUID noLinkFor;
@@ -47,7 +55,7 @@ final class WatchedMail implements MailReading {
 
     @Override
     public List<MessageHandle> waiting(int most, Collection<UUID> leavingOut) {
-        return real.waiting(most, leavingOut);
+        return nothingWaits ? List.of() : real.waiting(most, leavingOut);
     }
 
     @Override
@@ -81,7 +89,12 @@ final class WatchedMail implements MailReading {
             marksToFail--;
             throw new IllegalStateException("The server stopped here; the text of this exception is Secret-Qx");
         }
+        if (message.equals(markFailsFor)) {
+            throw new IllegalStateException("The server stopped here; the text of this exception is Secret-Qx");
+        }
         marked.add(verdict);
+        markedStillToLookAt.add(documentsStillToLookAt);
+        markedHandles.add(message);
         return real.mark(message, verdict, letterKey, documentsStillToLookAt);
     }
 

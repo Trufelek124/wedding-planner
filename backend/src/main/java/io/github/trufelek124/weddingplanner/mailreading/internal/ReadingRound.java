@@ -234,6 +234,8 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
         int left;
         int looked;
         boolean heldSaid;
+        /** Messages this round marked as earlier messages of a thread: when the batch reaches one, it is skipped and costs no fetch. */
+        final Set<MessageHandle> markedWithAThread = new HashSet<>();
     }
 
     /**
@@ -255,7 +257,7 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
                 if (stopping || stateNow() != State.READING) {
                     break;
                 }
-                if (round.leftOut.contains(handle.memberId())) {
+                if (round.leftOut.contains(handle.memberId()) || round.markedWithAThread.contains(handle)) {
                     continue;
                 }
                 if (suggestionsToday(handle) >= rules.dailySuggestionsPerMailbox()) {
@@ -410,7 +412,9 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
                 case NONE -> documents = read.documents();
             }
         }
-        MailExtraction.Input input = extractionInput(letter, from, subject, facts.get(), alreadyProposed, documents);
+        // The earlier messages of the thread that wait are read with this one (D-012); a copy of a letter read before is not.
+        Together together = together(handle, letter);
+        MailExtraction.Input input = extractionInput(letter, from, subject, facts.get(), alreadyProposed, documents, together.readNow());
         Outcome<MailExtraction.Extracted> extracted = steps.extract(input);
         count(UsageRepository.Step.EXTRACTION, extracted.used());
         if (!documents.isEmpty() && extracted instanceof Outcome.Unanswered<MailExtraction.Extracted> failed
@@ -420,7 +424,7 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
             log.info("Extraction for a message of member {} could not be used with its documents ({}): asked again without them",
                     handle.memberId(), failed.why());
             served();
-            extracted = steps.extract(extractionInput(letter, from, subject, facts.get(), alreadyProposed, List.of()));
+            extracted = steps.extract(extractionInput(letter, from, subject, facts.get(), alreadyProposed, List.of(), together.readNow()));
             count(UsageRepository.Step.EXTRACTION, extracted.used());
         }
         if (extracted instanceof Outcome.Unanswered<MailExtraction.Extracted> failed) {
@@ -430,22 +434,75 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
 
         ProposalMaker.Origin origin =
                 new ProposalMaker.Origin(handle.weddingId(), handle.memberId(), from.name(), from.address(), subject, letter.arrived(), link.get());
-        List<MailExtraction.Proposed> proposals = ((Outcome.Answered<MailExtraction.Extracted>) extracted).answer().proposals();
+        MailExtraction.Extracted answer = ((Outcome.Answered<MailExtraction.Extracted>) extracted).answer();
+        List<MailExtraction.Proposed> proposals = answer.proposals();
         int handedIn = handIn(handle, origin, proposals, ownKeys, facts.get());
+        // The earlier messages come first, the message itself last: one that stops in between is done again and proposes
+        // nothing twice (its keys), and the earlier ones that were marked are simply not there to be read again.
+        int readWith = markEarlier(letter, together, answer.earlierLeftOut(), round);
         // Marking is the last thing: a message that stops before it is done again and proposes nothing twice.
         mark(handle, new AboutTheWedding(handedIn), letter.key(), documentsHeld);
-        log.info("Read a message of member {}: about the wedding, {} proposals of {} handed in (triage, extraction)", handle.memberId(), handedIn,
-                proposals.size());
+        log.info("Read a message of member {}: about the wedding, {} proposals of {} handed in (triage, extraction); {} earlier messages read with it, {} of them copies",
+                handle.memberId(), handedIn, proposals.size(), readWith - together.copies().size(), together.copies().size());
         return Result.MARKED;
     }
 
+    /** Which earlier messages of a letter are read now with it, by their place in {@link Letter#earlier}, and which are copies. */
+    private record Together(Set<Integer> readNow, Set<Integer> copies) {}
+
+    private Together together(MessageHandle handle, Letter letter) {
+        Set<Integer> readNow = new HashSet<>();
+        Set<Integer> copies = new HashSet<>();
+        for (int i = 0; i < letter.earlier().size(); i++) {
+            MailReading.EarlierMessage earlier = letter.earlier().get(i);
+            if (earlier.waiting().isEmpty()) {
+                continue;
+            }
+            if (!earlier.key().isEmpty() && mail.copyWasRead(earlier.waiting().get(), earlier.key())) {
+                copies.add(i);
+            } else {
+                readNow.add(i);
+            }
+        }
+        return new Together(readNow, copies);
+    }
+
+    /**
+     * After the answer was handed in and before the message itself is marked: the earlier messages that were read now and were
+     * sent (not among the {@code leftOut} oldest) are about the wedding with no proposals of their own, with their documents
+     * still to be looked at where they list a PDF and documents are on; every copy is a copy, sent or not. One that was not
+     * sent stays as it is.
+     *
+     * @return how many messages were given their verdict
+     */
+    private int markEarlier(Letter letter, Together together, int leftOut, Round round) {
+        int marked = 0;
+        for (int i = 0; i < letter.earlier().size(); i++) {
+            MailReading.EarlierMessage earlier = letter.earlier().get(i);
+            if (together.readNow().contains(i) && i >= leftOut) {
+                mail.mark(earlier.waiting().get(), new AboutTheWedding(0), earlier.key(), rules.documents() && earlier.documents());
+            } else if (together.copies().contains(i)) {
+                mail.mark(earlier.waiting().get(), new CopyOfOneRead(), earlier.key());
+            } else {
+                continue;
+            }
+            round.markedWithAThread.add(earlier.waiting().get());
+            // Counted as it is marked: a message that got its verdict is read, whatever becomes of the one it was read with.
+            round.read++;
+            marked++;
+        }
+        return marked;
+    }
+
     private MailExtraction.Input extractionInput(Letter letter, Sender from, String subject, WeddingFacts facts, List<String> alreadyProposed,
-            List<MailExtraction.Document> documents) {
+            List<MailExtraction.Document> documents, Set<Integer> readNow) {
         LocalDate today = LocalDate.now(clock.withZone(facts.timeZone()));
-        List<MailExtraction.EarlierMessage> earlier = letter.earlier().stream()
-                .map(message -> new MailExtraction.EarlierMessage(
-                        new Sender(orEmpty(message.from().name()), orEmpty(message.from().address())), message.arrived(), message.text().text()))
-                .toList();
+        List<MailExtraction.EarlierMessage> earlier = new ArrayList<>();
+        for (int i = 0; i < letter.earlier().size(); i++) {
+            MailReading.EarlierMessage message = letter.earlier().get(i);
+            earlier.add(new MailExtraction.EarlierMessage(new Sender(orEmpty(message.from().name()), orEmpty(message.from().address())),
+                    message.arrived(), message.text().text(), readNow.contains(i)));
+        }
         return new MailExtraction.Input(
                 from, subject, letter.arrived(), letter.text().text(), earlier, today, facts.weddingDate(), alreadyProposed, documents);
     }
@@ -715,7 +772,7 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
         // Here what this message itself proposed is told too: it is what must not come twice.
         List<String> alreadyProposed = alreadyProposed(handle, keys.thread() + "/", null, facts.get().currency());
         Outcome<MailExtraction.Extracted> extracted =
-                steps.extract(extractionInput(letter, from, subject, facts.get(), alreadyProposed, documents));
+                steps.extract(extractionInput(letter, from, subject, facts.get(), alreadyProposed, documents, Set.of()));
         count(UsageRepository.Step.EXTRACTION, extracted.used());
         if (extracted instanceof Outcome.Unanswered<MailExtraction.Extracted> failed) {
             return stoppedAgain(handle, failed.why(), "extraction", letter.key());

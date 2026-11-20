@@ -65,6 +65,10 @@ final class RequestText {
             out.append("The thread was cut: the ").append(fitted.leftOut())
                     .append(" oldest earlier message(s) were left out because they did not fit.\n");
         }
+        if (fitted.kept().stream().anyMatch(MailExtraction.EarlierMessage::readNow)) {
+            out.append("Earlier messages that are marked as not read before are read now, with the message: the conversation is read as a whole, ")
+                    .append("as it stands after its last message.\n");
+        }
         out.append("At most ").append(message.mostProposals()).append(" proposals in all, for this request.\n");
         out.append('\n');
         begin(out, marker, ALREADY_PROPOSED);
@@ -78,6 +82,7 @@ final class RequestText {
             int number = 0;
             for (MailExtraction.EarlierMessage earlier : fitted.kept()) {
                 out.append("Earlier message ").append(++number).append('\n');
+                out.append(earlier.readNow() ? "Read before: no - it is read now, with the message" : "Read before: yes").append('\n');
                 out.append("From: ").append(person(earlier.from().name(), earlier.from().address())).append('\n');
                 out.append("Arrived: ").append(DateTimeFormatter.ISO_INSTANT.format(earlier.arrived())).append('\n');
                 out.append("Text:\n").append(earlier.text()).append("\n\n");

@@ -92,8 +92,13 @@ interface MailSource {
     /** What one message's text is cut at, in characters. */
     int MOST_CHARACTERS = 100_000;
 
-    /** A message of the thread that arrived before the one asked for. The text may be empty (an attachment alone). */
-    record Earlier(Person from, Instant arrived, Text text) {
+    /**
+     * A message of the thread that arrived before the one asked for. The text may be empty (an attachment alone).
+     * {@code messageId} is Gmail's identifier of it (to ask which of them wait); {@code identifier} what its sender gave it
+     * ({@code Message-ID}, empty when none; for working a key out, never kept or logged); {@code documents} whether it lists
+     * at least one PDF document (nothing is fetched to know it).
+     */
+    record Earlier(String messageId, Person from, Instant arrived, Text text, String identifier, boolean documents) {
 
         @Override
         public String toString() {

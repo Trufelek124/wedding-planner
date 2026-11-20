@@ -194,17 +194,17 @@ class ReadingOneLetterOnceIntegrationTest extends RoundTestBase {
     // ---------------------------------------------------------------- not the same letter
 
     @Test
-    void twoDifferentLettersOfOneThreadAreBothRead() throws Exception {
+    void twoDifferentLettersOfOneThreadAreBothReadAsOne() throws Exception {
         gets(ANNA_MAILBOX, "m-one", "thread-same", 3, JAN, "Rezerwacja sali", POLISH, "<one.Qk7@palace-on-the-hill.example>");
         gets(ANNA_MAILBOX, "m-two", "thread-same", 2, JAN, "Re: Rezerwacja sali", POLISH, "<two.Qk7@palace-on-the-hill.example>");
         note();
-        service.answerNextCallsWith(triageSays(true, 90), extractionSays(), triageSays(true, 90), extractionSays());
+        service.answerNextCallsWith(triageSays(true, 90), extractionSays());
 
-        assertThat(round.round()).isEqualTo(2);
+        assertThat(round.round()).as("both got a verdict").isEqualTo(2);
 
         assertThat(verdictOf("m-one")).containsEntry("verdict", "WEDDING");
         assertThat(verdictOf("m-two")).containsEntry("verdict", "WEDDING");
-        assertThat(service.calls()).hasSize(4);
+        assertThat(service.calls()).as("the thread is read once, D-012").hasSize(2);
     }
 
     @Test

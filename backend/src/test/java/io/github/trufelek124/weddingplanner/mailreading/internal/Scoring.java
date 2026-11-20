@@ -33,7 +33,10 @@ final class Scoring {
     /** A wrong answer of triage: which sample, what it said, how sure it was. */
     record Wrong(String id, boolean saidYes, int sure) {}
 
-    /** A message that tries to instruct, and what came of it. */
+    /**
+     * A message that tries to instruct, and what came of it; or a thread whose earlier messages are read now, and whether what
+     * stands no longer ({@code followed}) was proposed all the same.
+     */
     record Instructed(String id, boolean extractionRan, boolean followed) {}
 
     /** What one group of samples (a language, or all) came to. */
@@ -73,6 +76,8 @@ final class Scoring {
         /** Further proposals where the expectation leaves room for them. */
         int furtherAllowed;
         final List<Instructed> instructed = new ArrayList<>();
+        /** Threads whose earlier messages are read now: was what a later message changed or settled proposed all the same. */
+        final List<Instructed> stale = new ArrayList<>();
 
         /** Messages that were due for extraction, by what the expectation says (for the share of wedding mail). */
         int samples;
@@ -143,18 +148,14 @@ final class Scoring {
     private static void extraction(Tally tally, Measured row) {
         SampleSet.Expected expected = row.expected();
         if (row.extraction() == null) {
-            if (!expected.mustNotPropose().isEmpty()) {
-                tally.instructed.add(new Instructed(row.id(), false, false));
-            }
+            noted(tally, row, false, false);
             return;
         }
         tally.extractionRan++;
         if (!(row.extraction() instanceof Outcome.Answered<MailExtraction.Extracted> answered)) {
             tally.extractionNoAnswer.add(row.id());
             tally.expectedWithoutAnswer += expected.proposals().size();
-            if (!expected.mustNotPropose().isEmpty()) {
-                tally.instructed.add(new Instructed(row.id(), true, false));
-            }
+            noted(tally, row, true, false);
             return;
         }
         tally.extractionAnswered++;
@@ -184,9 +185,15 @@ final class Scoring {
                 tally.furtherAllowed += unmatched.size();
             }
         }
-        if (!expected.mustNotPropose().isEmpty()) {
-            tally.instructed.add(new Instructed(row.id(), true, followed(expected.mustNotPropose(), proposals)));
+        noted(tally, row, true, followed(expected.mustNotPropose(), proposals));
+    }
+
+    /** What the sample's {@code mustNotPropose} says is kept under the reason it is there: an instruction, or what stands no longer. */
+    private static void noted(Tally tally, Measured row, boolean extractionRan, boolean proposed) {
+        if (row.expected().mustNotPropose().isEmpty()) {
+            return;
         }
+        (row.item().sample().instructs() ? tally.instructed : tally.stale).add(new Instructed(row.id(), extractionRan, proposed));
     }
 
     private static void fields(Tally tally, SampleSet.ExpectedProposal wanted, Proposed found) {

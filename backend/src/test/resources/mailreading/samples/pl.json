@@ -621,6 +621,79 @@
         ],
         "mustNotPropose": []
       }
+    },
+    {
+      "id": "pl-22",
+      "sort": "hard",
+      "from": {
+        "name": "Ewa Zielińska",
+        "address": "ewa@bukowy-zaulek.example"
+      },
+      "subject": "Re: Kwiaty na 12 czerwca",
+      "arrived": "2026-11-17T08:30:00Z",
+      "text": "Dzień dobry Marto i Kamilu,\n\nmała zmiana: w tym tygodniu mnie nie będzie, więc zaliczkę 700 zł proszę wpłacić do środy 2 grudnia 2026, a nie do 27 listopada. Dziękuję za wybór okrągłego łuku, wpisuję go do zamówienia.\n\nPozdrawiam\nEwa",
+      "earlier": [
+        {
+          "from": {
+            "name": "Ewa Zielińska",
+            "address": "ewa@bukowy-zaulek.example"
+          },
+          "arrived": "2026-11-09T10:15:00Z",
+          "text": "Dzień dobry Marto i Kamilu,\n\ndziękuję za wizytę w pracowni. Na 12 czerwca 2027 proponuję bukiet panny młodej, 8 kompozycji na stoły i łuk ślubny za 2 400 zł. Żeby zarezerwować termin, potrzebuję zaliczki 600 zł do piątku 27 listopada 2026.\n\nPozdrawiam\nEwa Zielińska\nFloraria Bukowy Zaułek",
+          "readNow": true
+        },
+        {
+          "from": {
+            "name": "Marta i Kamil",
+            "address": "marta.i.kamil@poczta-test.example"
+          },
+          "arrived": "2026-11-10T18:05:00Z",
+          "text": "Dzień dobry Pani Ewo,\n\ndziękujemy za ofertę, bardzo nam się podoba. Chcielibyśmy jeszcze dodać 20 butonierek dla gości. Czy to zmieni cenę?\n\nMarta i Kamil",
+          "readNow": false
+        },
+        {
+          "from": {
+            "name": "Ewa Zielińska",
+            "address": "ewa@bukowy-zaulek.example"
+          },
+          "arrived": "2026-11-12T09:40:00Z",
+          "text": "Dzień dobry,\n\nz butonierkami całość to 2 650 zł, a zaliczka wyniesie 700 zł (to poprawka do mojego pierwszego listu). Proszę jeszcze o wybór kształtu łuku, okrągły czy prostokątny, do 30 listopada.\n\nEwa",
+          "readNow": true
+        },
+        {
+          "from": {
+            "name": "Marta i Kamil",
+            "address": "marta.i.kamil@poczta-test.example"
+          },
+          "arrived": "2026-11-13T19:20:00Z",
+          "text": "Pani Ewo,\n\nbutonierki dodajemy, a łuk wybieramy okrągły. Ta sprawa jest dla nas zamknięta.\n\nMarta i Kamil",
+          "readNow": false
+        }
+      ],
+      "why": "Zaliczka miała być 600 zł do 27 listopada w pierwszym liście; trzeci list poprawił kwotę na 700 zł, a ostatni przesunął dzień na 2 grudnia 2026, więc obowiązuje tylko 700 zł do 2 grudnia. Kształt łuku został wybrany w czwartym liście, więc nie jest proponowany.",
+      "expected": {
+        "concernsTheWedding": true,
+        "proposals": [
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "zaliczk"
+            ],
+            "dueDate": "2026-12-02",
+            "amount": {
+              "value": "700",
+              "currency": "PLN"
+            },
+            "paymentKind": "DEPOSIT"
+          }
+        ],
+        "mustNotPropose": [
+          "600",
+          "27 listopada",
+          "kształt",
+              "okrągły czy"
+        ]
+      }
     }
   ]
 }

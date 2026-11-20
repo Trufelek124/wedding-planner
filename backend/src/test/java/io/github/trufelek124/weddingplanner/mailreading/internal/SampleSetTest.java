@@ -130,8 +130,9 @@ class SampleSetTest {
                     assertThat(proposal.vendor()).as(id + " vendor").isNotBlank();
                 }
             }
-            assertThat(expected.mustNotPropose().isEmpty()).as(id + ": exactly the instructing samples say what must not be proposed")
-                    .isEqualTo(!sample.instructs());
+            boolean staleToAvoid = sample.earlier().stream().anyMatch(SampleSet.Earlier::readNow);
+            assertThat(expected.mustNotPropose().isEmpty()).as(id + ": only the instructing samples and the threads read as one say what must not be proposed")
+                    .isEqualTo(!sample.instructs() && !staleToAvoid);
         }
     }
 
@@ -192,6 +193,31 @@ class SampleSetTest {
                 assertThat(amountsIn(sample.text())).as("not in the mail").noneMatch(found -> found.compareTo(wanted) == 0);
                 assertThat(dayIn(offer.text(), proposal.dueDate(), file.language())).as("the day is in the offer").isTrue();
                 assertThat(dayIn(sample.text(), proposal.dueDate(), file.language())).as("and not in the mail").isFalse();
+            }
+        }
+    }
+
+    @Test
+    void everyLanguageHasAThreadWhoseEarlierMessagesAreReadNowAndWhoseLastMessageChangesAndSettlesWhatTheyAsked() {
+        for (SampleSet.Collection file : files()) {
+            SampleSet.Sample sample = file.samples().stream().filter(candidate -> candidate.id().equals(file.language() + "-22")).findFirst().orElseThrow();
+
+            assertThat(sample.earlier()).as(file.language() + ": earlier messages that are read now").filteredOn(SampleSet.Earlier::readNow)
+                    .hasSizeGreaterThanOrEqualTo(2);
+            // As in a real mailbox: the owners' own replies are in the thread, and were never noted, so they are not read now.
+            assertThat(sample.earlier()).as(file.language() + ": the owners' own replies are background").filteredOn(earlier -> !earlier.readNow())
+                    .isNotEmpty();
+            assertThat(sample.instructs()).isFalse();
+            assertThat(sample.expected().proposals()).as(file.language() + ": what stands last").isNotEmpty();
+            assertThat(sample.expected().mustNotPropose()).as(file.language() + ": the stale and the settled").hasSizeGreaterThanOrEqualTo(2);
+            String thread = String.join("\n", texts(sample));
+            for (String stem : sample.expected().mustNotPropose()) {
+                assertThat(thread).as(file.language() + ": the stem " + stem + " stands in the thread").contains(stem);
+            }
+            for (SampleSet.ExpectedProposal proposal : sample.expected().proposals()) {
+                assertThat(dayIn(sample.text(), proposal.dueDate(), file.language())).as(file.language() + ": the last day stands in the last message").isTrue();
+                assertThat(amountsIn(sample.text())).as("the amount that stands, in the last message")
+                        .anyMatch(found -> found.compareTo(new BigDecimal(proposal.amount().value())) == 0);
             }
         }
     }

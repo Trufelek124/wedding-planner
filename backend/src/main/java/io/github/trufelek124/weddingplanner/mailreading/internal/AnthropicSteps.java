@@ -141,7 +141,7 @@ final class AnthropicSteps implements ReadingSteps {
                 used.model(),
                 used.inputTokens(),
                 used.outputTokens());
-        return new Outcome.Answered<>(checked.get(), used);
+        return new Outcome.Answered<>(new MailExtraction.Extracted(checked.get().proposals(), fitted.leftOut()), used);
     }
 
     @Override

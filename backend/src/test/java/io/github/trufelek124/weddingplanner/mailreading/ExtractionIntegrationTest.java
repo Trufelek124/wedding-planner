@@ -348,4 +348,106 @@ class ExtractionIntegrationTest extends ReadingTestBase {
         assertThat(found.category()).isEqualTo("Venue");
         assertThat(found.title() + found.notes() + found.category()).doesNotContainPattern("[\\p{Cc}\\p{Cf}&&[^\\n]]");
     }
+
+    // ---------------------------------------------------------------- earlier messages that are read now (D-012)
+
+    private static EarlierMessage readNow(String text, String arrived) {
+        return new EarlierMessage(jan(), Instant.parse(arrived), text, true);
+    }
+
+    @Test
+    void everyEarlierMessageSaysOnALineOfItsOwnWhetherItWasReadBeforeOrIsReadNowAndThePlannerSaysSoOnceInItsOwnFacts() {
+        List<EarlierMessage> earlier = List.of(
+                new EarlierMessage(jan(), Instant.parse("2026-11-09T08:00:00Z"), "BACKGROUND-ONE we met."),
+                readNow("NOW-TWO the deposit is 600 PLN.", "2026-11-10T08:00:00Z"),
+                readNow("NOW-THREE the deposit is 700 PLN.", "2026-11-11T08:00:00Z"));
+
+        extraction.extract(extractionInput(LETTER, earlier, WEDDING, List.of()));
+
+        String turn = service.onlyCall().userTurn();
+        assertThat(turn).contains("Earlier message 1\nRead before: yes\nFrom: ").contains("Earlier message 2\nRead before: no - it is read now, with the message\nFrom: ")
+                .contains("Earlier message 3\nRead before: no - it is read now, with the message\nFrom: ");
+        String fact = "Earlier messages that are marked as not read before are read now, with the message: the conversation is read as a whole, as it stands after its last message.";
+        assertThat(turn).containsOnlyOnce(fact).contains("At most 8 proposals in all, for this request.");
+        assertThat(turn.indexOf(fact)).as("among the planner's facts, before any marked part").isLessThan(turn.indexOf("----- BOUNDARY-"));
+    }
+
+    @Test
+    void withNoEarlierMessageReadNowTheRequestHasNoSuchFactAndAllowsFive() {
+        extraction.extract(extractionInput(LETTER, List.of(new EarlierMessage(jan(), Instant.parse("2026-11-09T08:00:00Z"), "BACKGROUND-ONE")), WEDDING, List.of()));
+
+        String turn = service.onlyCall().userTurn();
+        assertThat(turn).contains("Read before: yes").doesNotContain("it is read now").doesNotContain("read as a whole").contains("At most 5 proposals in all");
+    }
+
+    @Test
+    void theFactIsLeftOutWhenTheOnesReadNowDidNotFitAndTheAnswerSaysHowManyWereLeftOut() {
+        String message = "M".repeat(10_000);
+        List<EarlierMessage> earlier = new ArrayList<>();
+        earlier.add(readNow("OLDEST " + "o".repeat(40_000), "2026-10-01T08:00:00Z"));
+        earlier.add(readNow("MIDDLE " + "m".repeat(40_000), "2026-10-02T08:00:00Z"));
+        earlier.add(new EarlierMessage(jan(), Instant.parse("2026-10-03T08:00:00Z"), "NEWEST " + "n".repeat(15_000)));
+        service.answerNextCallsWith(Reply.says(proposals()));
+
+        Outcome<Extracted> outcome = extraction.extract(extractionInput(message, earlier, WEDDING, List.of()));
+
+        String turn = service.onlyCall().userTurn();
+        assertThat(turn).contains("NEWEST").doesNotContain("OLDEST").doesNotContain("MIDDLE").doesNotContain("it is read now");
+        assertThat(turn).as("nothing that is read now was sent: no such fact").doesNotContain("read as a whole");
+        assertThat(((Answered<Extracted>) outcome).answer().earlierLeftOut()).isEqualTo(2);
+    }
+
+    @Test
+    void earlierLeftOutIsZeroWhenEverythingFitsAndCountsTheOldestWhenNot() {
+        service.answerNextCallsWith(Reply.says(proposals()));
+        Outcome<Extracted> whole = extraction.extract(extractionInput(LETTER, List.of(readNow("ONE", "2026-11-09T08:00:00Z")), WEDDING, List.of()));
+        assertThat(((Answered<Extracted>) whole).answer().earlierLeftOut()).isZero();
+
+        service.reset();
+        service.answerNextCallsWith(Reply.says(proposals()));
+        List<EarlierMessage> earlier = List.of(readNow("A" + "a".repeat(30_000), "2026-10-01T08:00:00Z"), readNow("B" + "b".repeat(30_000), "2026-10-02T08:00:00Z"));
+        Outcome<Extracted> cut = extraction.extract(extractionInput("M".repeat(10_000), earlier, WEDDING, List.of()));
+        assertThat(((Answered<Extracted>) cut).answer().earlierLeftOut()).isEqualTo(1);
+    }
+
+    @Test
+    void theMostProposalsIsEightWithDocumentsOrWithAnEarlierMessageReadNowAndFiveOtherwise() {
+        List<EarlierMessage> background = List.of(new EarlierMessage(jan(), Instant.parse("2026-11-09T08:00:00Z"), "BACKGROUND"));
+        List<EarlierMessage> now = List.of(readNow("NOW", "2026-11-09T08:00:00Z"));
+        MailExtraction.Document document = new MailExtraction.Document("offer.pdf", "Words", false);
+
+        assertThat(extractionInput(LETTER, background, WEDDING, List.of()).mostProposals()).isEqualTo(5);
+        assertThat(extractionInput(LETTER, now, WEDDING, List.of()).mostProposals()).isEqualTo(8);
+        assertThat(new MailExtraction.Input(jan(), "S", ARRIVED, LETTER, background, TODAY, WEDDING, List.of(), List.of(document)).mostProposals()).isEqualTo(8);
+    }
+
+    @Test
+    void eightProposalsAreAnAnswerForAThreadReadNowAndNineAreTooMany() {
+        String one = proposal("TASK", "Send the final guest list", GUESTS);
+        List<EarlierMessage> now = List.of(readNow("NOW", "2026-11-09T08:00:00Z"));
+        service.answerNextCallsWith(Reply.says(proposals(one, one, one, one, one, one, one, one)), Reply.says(proposals(one, one, one, one, one, one, one, one, one)),
+                Reply.says(proposals(one, one, one, one, one, one)));
+
+        Outcome<Extracted> eight = extraction.extract(extractionInput(LETTER, now, WEDDING, List.of()));
+        Outcome<Extracted> nine = extraction.extract(extractionInput(LETTER, now, WEDDING, List.of()));
+        Outcome<Extracted> sixWithoutReadNow = extraction.extract(extractionInput(LETTER, List.of(), WEDDING, List.of()));
+
+        assertThat(((Answered<Extracted>) eight).answer().proposals()).hasSize(8);
+        assertThat(((Unanswered<Extracted>) nine).why()).isEqualTo(Outcome.Why.TOO_MANY_PROPOSALS);
+        assertThat(((Unanswered<Extracted>) sixWithoutReadNow).why()).isEqualTo(Outcome.Why.TOO_MANY_PROPOSALS);
+    }
+
+    @Test
+    void theInstructionsHaveTheParagraphOnEarlierMessagesReadNowAndKeepTheirWidth() throws IOException {
+        String instructions = new String(getClass().getResourceAsStream("/mailreading/extraction-instructions.txt").readAllBytes(), StandardCharsets.UTF_8);
+
+        assertThat(instructions).contains("The request may mark earlier messages of the thread as not read before: they are read now, with the message.\n"
+                + "Then propose what the conversation as a whole asks of the two of them, as it stands after its last message.\n"
+                + "What a later message changed is proposed as it stands last. What a later message settled, answered or took\n"
+                + "back is not proposed. Earlier messages that were read before are background only: what they asked was\n"
+                + "proposed when they were read. When earlier messages are read now, at most EIGHT proposals are allowed\n"
+                + "instead of five.\n");
+        assertThat(instructions.lines().mapToInt(String::length).max().orElseThrow()).isLessThanOrEqualTo(120);
+        assertThat(instructions.indexOf("When the request holds documents")).isLessThan(instructions.indexOf("The request may mark earlier messages"));
+    }
 }

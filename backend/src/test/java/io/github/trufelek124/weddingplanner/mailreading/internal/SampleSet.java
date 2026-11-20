@@ -35,7 +35,11 @@ record SampleSet(List<Collection> collections) {
 
     record Person(String name, String address) {}
 
-    record Earlier(Person from, Instant arrived, String text) {}
+    /**
+     * @param readNow this earlier message was not read before and is read now, with the message (D-012): the request says so and
+     *     what stands last is what the conversation asks. False (or left out) for background that was read before
+     */
+    record Earlier(Person from, Instant arrived, String text, boolean readNow) {}
 
     /** A PDF document that came with the message, as the server would have taken its text out: invented. */
     record SampleDocument(String name, String text) {}
@@ -82,7 +86,8 @@ record SampleSet(List<Collection> collections) {
      * @param proposals what should be proposed
      * @param nothingElse where any further proposal would be a mistake; a message that concerns nothing, or
      *     asks for nothing, expects no proposal at all and is read as if it said so
-     * @param mustNotPropose word stems that must occur in no proposal's title or notes
+     * @param mustNotPropose word stems that must occur in no proposal's title or notes: what the message instructs the reader to
+     *     do, or, in a thread whose earlier messages are read now, what a later message changed or settled (the stale)
      */
     record Expected(boolean concernsTheWedding, List<ExpectedProposal> proposals, boolean nothingElse, List<String> mustNotPropose) {
 
