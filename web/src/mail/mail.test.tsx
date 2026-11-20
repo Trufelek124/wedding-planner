@@ -204,7 +204,10 @@ describe('what connecting means, with the reading on', () => {
     const list = await screen.findByRole('list', { name: 'What connecting means' })
     expect(list).toHaveTextContent('The sender, the subject and the beginning of every message are sent to an AI service')
     expect(list).toHaveTextContent('A message that does is sent in full')
-    expect(list).toHaveTextContent('Attachments are never sent')
+    expect(list).toHaveTextContent(
+      'When the planner is sure that a message concerns the wedding, the text of its PDF documents is sent with it. Other attachments are never sent.',
+    )
+    expect(list).not.toHaveTextContent('Attachments are never sent')
     expect(list).not.toHaveTextContent('Nothing is sent to an AI service')
     expect(list).not.toHaveTextContent('will be sent')
   })
@@ -217,7 +220,10 @@ describe('what connecting means, with the reading on', () => {
     expect(list).toHaveTextContent('Nothing is sent to an AI service on this server yet.')
     expect(list).toHaveTextContent('will be sent to it')
     expect(list).toHaveTextContent('a message that does will be sent in full')
-    expect(list).toHaveTextContent('Attachments are never sent')
+    expect(list).toHaveTextContent(
+      'When the planner is sure that a message concerns the wedding, the text of its PDF documents will be sent with it. Other attachments are never sent.',
+    )
+    expect(list).not.toHaveTextContent('Attachments are never sent')
   })
 })
 

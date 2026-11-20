@@ -14,7 +14,7 @@ guests, vendors or mail. Configuration that names the owner's systems lives in e
 | `web/` | Vite 8, React 19, TypeScript 5.9 (not newer: the lint tooling does not support TypeScript 7 yet). The backend serves the built files from the directory named by `APP_WEB_DIR` and answers the web app's pages with `index.html` |
 | `android/` | Kotlin 2.4 and Jetpack Compose on the Android Gradle plugin 9.5 (its built-in Kotlin: no `kotlin-android` plugin). Application id `io.github.trufelek124.weddingplanner`, minSdk 28. Screens are tested on the JVM with Robolectric, which renders on Android 36 until it supports 37 |
 | `Dockerfile`, `deploy/` | The image (backend with the web app inside) and a compose file to try it with PostgreSQL 18. `docs/deployment.md` says what the container needs |
-| `docs/specs/` | Specs, `S<nn>-<slug>.md`. A change the owner can notice that no spec covers gets a spec first. S02 is the suggestions, S03 the Gmail connection and sync (with D-006) S04 reading the mail with the two AI steps (with D-007) and S05 what is added by itself and undone (with D-008): read them before touching the e-mail import |
+| `docs/specs/` | Specs, `S<nn>-<slug>.md`. A change the owner can notice that no spec covers gets a spec first. S02 is the suggestions, S03 the Gmail connection and sync (with D-006) S04 reading the mail with the two AI steps (with D-007, and D-011 for its PDF documents) and S05 what is added by itself and undone (with D-008): read them before touching the e-mail import |
 | `docs/decisions.md` | Numbered decisions, one `## D-nnn — title` section each. Read the ones that touch your task |
 | `docs/state.md` | One screen on where the project stands — arrives with WP-TS-2 |
 | `docs/backlog/` | Backlog batches that were imported into the tracker |
@@ -317,8 +317,10 @@ uses another only through the types in that module's own package, and never in a
     read yet (newest first, without keeping a message's date: the order of noting is kept), a message's content
     fetched from Gmail at that moment — sender, subject, date, text, and the earlier messages of its thread —
     keys that name a message and its thread without saying anything, and marking a message with its verdict,
-    which is what makes it "read" for good. A message's content is never kept or logged; attachments are never
-    fetched; a text comes from the plain part, or from the HTML part with no markup, script or style left.
+    which is what makes it "read" for good. A message's content is never kept or logged; a text comes from the
+    plain part, or from the HTML part with no markup, script or style left. Of a message's attachments only its
+    PDF documents are listed, and one is fetched only when the reader asks for it (`document`): at most 10 MiB,
+    only what begins like a PDF, never kept, never read by `mail`, nothing of it logged — not its name either.
     It also makes the link that opens a message in Gmail (`linkTo`), which names the mailbox so that it opens in
     the right Google account: that address is its owner's, and `suggestions` answers the other owner the link
     without it.
@@ -352,13 +354,25 @@ uses another only through the types in that module's own package, and never in a
     that was read" before anything else is asked: no step, no link, no proposal. Extraction is told what was
     already proposed — from the thread first, then lately from any mail of the wedding, one line each with kind,
     title, day and amount — so that a forwarded copy proposes nothing again.
+  - **The PDF documents of a message are read with it** (D-011), only when triage said "yes" and was at least
+    `MAIL_READING_DOCUMENTS_SURE` (80) sure; `MAIL_READING_DOCUMENTS_ENABLED=false` fetches none. The server takes
+    the text out itself (`PdfText`, PDFBox): text only, nothing in a file is run, followed or fetched, no font of
+    the machine is looked up, the library's own loggers are off, and the limits are the code's — three documents,
+    fifty pages and ten seconds each, 40,000 characters in all, one document in work at a time. A document's text
+    is somebody else's words: between the request's markers like the mail's, and a passage from it is checked
+    against it. With documents an answer may hold eight proposals; what a document names is still only a
+    suggestion that waits. `mail_message.documents` says whether a message's documents are still to be looked
+    at, in work, or done with: **a file that stops the server is not opened a second time**, while a busy service
+    or a mailbox that cannot be asked leaves them to be read again. A message that was about the wedding and was
+    read before its documents were looked at gets a second look (a few each round, keys
+    `<thread key>/<message key>/d<n>`), and a letter in both mailboxes has its documents looked at once.
   - `reading_usage` counts calls and tokens per day, step and model, and nothing of a message. **Nothing of a
-    message, an answer or the key is kept or logged**; of an exception only its kind.
+    message, a document, an answer or the key is kept or logged**; of an exception only its kind.
   - What the e-mail page says of the reading, `mail` asks through an interface of its own that this module
     implements (`mail.ReadingReport`, as `vendors` does with `VendorUse`): `mail` cannot use `mailreading`.
-  - How good the two steps are is measured, not tested: sixty invented messages in Polish, Ukrainian and English
-    (`backend/src/test/resources/mailreading/samples/`) and `./gradlew measureReading`, which runs the steps over
-    them **against the real service** and costs money. Nothing depends on that task, it needs the key and
+  - How good the two steps are is measured, not tested: sixty-three invented messages in Polish, Ukrainian and
+    English (`backend/src/test/resources/mailreading/samples/`) and `./gradlew measureReading`, which runs the
+    steps over them **against the real service** and costs money. Nothing depends on that task, it needs the key and
     `-PspendMoney=yes`, and it is the owner's to run — a session runs at most `-PdryRun=yes`. A change to the
     instructions or to what a step answers is a reason to tell the owner to measure again.
   - It is off without `APP_AI_API_KEY`: no client of the service is made. Tests use `StandInAnthropic` and the

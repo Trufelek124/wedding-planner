@@ -40,7 +40,7 @@ class ScoringTest {
 
     private static SampleSet.Item item(String id, boolean about, boolean nothingElse, List<String> mustNot, SampleSet.ExpectedProposal... proposals) {
         SampleSet.Sample sample = new SampleSet.Sample(
-                id, about ? "proposal" : "unrelated", !mustNot.isEmpty(), new SampleSet.Person("A", "a@a.example"), "S", WHEN, "T", List.of(), List.of(), "why",
+                id, about ? "proposal" : "unrelated", !mustNot.isEmpty(), new SampleSet.Person("A", "a@a.example"), "S", WHEN, "T", List.of(), List.of(), List.of(), "why",
                 new SampleSet.Expected(about, List.of(proposals), nothingElse, mustNot));
         return new SampleSet.Item(new SampleSet.Collection("pl", TODAY, WEDDING, List.of(sample)), sample);
     }

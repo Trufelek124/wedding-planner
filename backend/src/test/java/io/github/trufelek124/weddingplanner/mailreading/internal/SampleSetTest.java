@@ -23,6 +23,11 @@ import org.junit.jupiter.api.Test;
  */
 class SampleSetTest {
 
+    /** What one document may hold of words in the server's request; a sample's document must be within it. */
+    private static final class MailExtractionLimits {
+        static final int DOCUMENT = io.github.trufelek124.weddingplanner.mailreading.MailExtraction.MOST_DOCUMENT_CHARACTERS;
+    }
+
     private static final LocalDate TODAY = LocalDate.parse("2026-11-19");
     private static final LocalDate WEDDING = LocalDate.parse("2027-06-12");
     private static final Set<String> SORTS = Set.of("proposal", "nothing", "unrelated", "hard");
@@ -108,7 +113,7 @@ class SampleSetTest {
             if (sample.sort().equals("proposal")) {
                 assertThat(expected.proposals()).as(id).isNotEmpty();
             }
-            assertThat(expected.proposals().size()).as(id).isLessThanOrEqualTo(5);
+            assertThat(expected.proposals().size()).as(id).isLessThanOrEqualTo(sample.documents().isEmpty() ? 5 : 8);
             for (SampleSet.ExpectedProposal proposal : expected.proposals()) {
                 assertThat(KINDS).as(id).contains(proposal.kind());
                 assertThat(proposal.titleMentions()).as(id + " title stems").isNotEmpty().allSatisfy(stem -> assertThat(stem).isNotBlank());
@@ -158,6 +163,37 @@ class SampleSetTest {
         assertThat(SET.items().stream().anyMatch(item -> !item.sample().alreadyProposed().isEmpty())).as("something already proposed").isTrue();
         assertThat(SET.items().stream().anyMatch(item -> item.sample().text().codePointCount(0, item.sample().text().length()) > 1_600))
                 .as("a message whose point comes after the first 1,500 characters").isTrue();
+    }
+
+    @Test
+    void everyLanguageHasTheOwnersCaseAShortMailAboutTheDepositAndAnOfferWithThreePaymentsAsADocument() {
+        for (SampleSet.Collection file : files()) {
+            List<SampleSet.Sample> withDocuments = file.samples().stream().filter(sample -> !sample.documents().isEmpty()).toList();
+
+            assertThat(withDocuments).as(file.language() + ": one sample with documents").hasSize(1);
+            SampleSet.Sample sample = withDocuments.get(0);
+            assertThat(sample.documents()).hasSize(1);
+            SampleSet.SampleDocument offer = sample.documents().get(0);
+            assertThat(offer.name()).endsWith(".pdf");
+            assertThat(offer.text().codePointCount(0, offer.text().length())).isBetween(200, MailExtractionLimits.DOCUMENT);
+            assertThat(sample.text().codePointCount(0, sample.text().length())).as("a short mail").isLessThan(700);
+            assertThat(sample.expected().proposals()).as(file.language() + ": the three payments").hasSize(3)
+                    .allSatisfy(proposal -> {
+                        assertThat(proposal.kind()).isEqualTo("PAYMENT");
+                        assertThat(proposal.amount()).isNotNull();
+                        assertThat(proposal.dueDate()).isNotNull();
+                        assertThat(proposal.paymentKind()).isNotNull();
+                    });
+            assertThat(sample.expected().proposals()).extracting(SampleSet.ExpectedProposal::paymentKind).containsExactly("DEPOSIT", "INSTALMENT", "FINAL");
+            // The amounts and the days are in the offer and not in the mail: that is the point of the sample.
+            for (SampleSet.ExpectedProposal proposal : sample.expected().proposals()) {
+                BigDecimal wanted = new BigDecimal(proposal.amount().value());
+                assertThat(amountsIn(offer.text())).as("in the offer").anyMatch(found -> found.compareTo(wanted) == 0);
+                assertThat(amountsIn(sample.text())).as("not in the mail").noneMatch(found -> found.compareTo(wanted) == 0);
+                assertThat(dayIn(offer.text(), proposal.dueDate(), file.language())).as("the day is in the offer").isTrue();
+                assertThat(dayIn(sample.text(), proposal.dueDate(), file.language())).as("and not in the mail").isFalse();
+            }
+        }
     }
 
     @Test
@@ -259,6 +295,7 @@ class SampleSetTest {
         List<String> all = new ArrayList<>();
         all.add(sample.text());
         sample.earlier().forEach(earlier -> all.add(earlier.text()));
+        sample.documents().forEach(document -> all.add(document.text()));
         return all;
     }
 

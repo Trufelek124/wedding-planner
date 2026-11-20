@@ -48,6 +48,10 @@ final class RequestText {
         fitted.kept().forEach(earlier -> texts.add(earlier.text()));
         List<String> others = new ArrayList<>(List.of(message.subject(), message.from().name(), message.from().address()));
         others.addAll(message.alreadyProposed());
+        message.documents().forEach(document -> {
+            others.add(document.name());
+            others.add(document.text());
+        });
         texts.addAll(others);
         String marker = markerNotIn(texts.toArray(String[]::new));
         StringBuilder out = new StringBuilder();
@@ -61,6 +65,7 @@ final class RequestText {
             out.append("The thread was cut: the ").append(fitted.leftOut())
                     .append(" oldest earlier message(s) were left out because they did not fit.\n");
         }
+        out.append("At most ").append(message.mostProposals()).append(" proposals in all, for this request.\n");
         out.append('\n');
         begin(out, marker, ALREADY_PROPOSED);
         for (String title : message.alreadyProposed()) {
@@ -84,6 +89,18 @@ final class RequestText {
         header(out, message.from().name(), message.from().address(), message.subject(), message.arrived());
         out.append("Text:\n").append(message.text()).append('\n');
         end(out, marker, "message");
+        int number = 0;
+        for (MailExtraction.Document document : message.documents()) {
+            String what = "document " + ++number + " of " + message.documents().size() + " that came with the message";
+            out.append('\n');
+            begin(out, marker, what);
+            out.append("File name: ").append(oneLine(document.name())).append('\n');
+            if (document.cut()) {
+                out.append("This document goes on beyond the text shown: it was cut.\n");
+            }
+            out.append("Text:\n").append(document.text()).append('\n');
+            end(out, marker, what);
+        }
         return out.toString();
     }
 
@@ -104,6 +121,23 @@ final class RequestText {
             first = i;
         }
         return new Fitted(List.copyOf(earlier.subList(first, earlier.size())), first);
+    }
+
+    /**
+     * A document's words as far as the room goes: its name as one line, and as many of its words as fit in {@code room}
+     * characters (the document is then said to be cut). Empty where there is no room or nothing is left.
+     */
+    static java.util.Optional<MailExtraction.Document> fitted(String name, String words, boolean cut, int room) {
+        if (room <= 0) {
+            return java.util.Optional.empty();
+        }
+        String kept = words;
+        boolean cutNow = cut;
+        if (characters(words) > room) {
+            kept = firstCharacters(words, room).strip();
+            cutNow = true;
+        }
+        return kept.isBlank() ? java.util.Optional.empty() : java.util.Optional.of(new MailExtraction.Document(oneLine(name), kept, cutNow));
     }
 
     static int characters(String text) {

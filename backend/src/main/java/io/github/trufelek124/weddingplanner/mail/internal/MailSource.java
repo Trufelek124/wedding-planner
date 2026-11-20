@@ -102,12 +102,28 @@ interface MailSource {
     }
 
     /**
+     * A PDF document that came with a message, as the letter lists it: what it is called and how large Gmail says it is
+     * (0 when it does not say), and what is needed to fetch it later ({@code reference}: Gmail's identifier of the
+     * attachment, which only {@link #document} understands). Nothing of what is inside. The name is somebody's own word: it is
+     * never logged or printed.
+     */
+    record Pdf(String name, long size, String reference) {
+
+        @Override
+        public String toString() {
+            return "Pdf[]";
+        }
+    }
+
+    /**
      * A message with the thread it belongs to. {@code subject} may be empty. {@code earlier} are the messages of the
      * thread that arrived before this one, the oldest first; the owner's own replies are among them, drafts, spam and the bin are not.
      * {@code identifier} is what the sender gave the letter ({@code Message-ID}), without the spaces and the angle brackets
      * around it; empty when the message has none. It is only for working a key out: never kept, logged or printed.
+     * {@code documents} are the PDF documents that came with the message itself (not with the earlier ones), in the order of
+     * the mail; listing them fetches nothing.
      */
-    record Letter(Person from, String subject, Instant arrived, Text text, List<Earlier> earlier, String identifier) {
+    record Letter(Person from, String subject, Instant arrived, Text text, List<Earlier> earlier, String identifier, List<Pdf> documents) {
 
         @Override
         public String toString() {
@@ -140,6 +156,36 @@ interface MailSource {
      * are never fetched or read.
      */
     Fetch letter(UUID owner, String messageId, String threadId) throws SourceFailure;
+
+    /** What one document is cut at, in bytes: a larger one is never taken. */
+    int MOST_DOCUMENT_BYTES = 10 * 1024 * 1024;
+
+    /** What asking for a document came to, when the mailbox itself was in order. */
+    sealed interface Download permits Downloaded, DocumentGone, DocumentTooLarge, NotAPdf {}
+
+    /** The document's bytes, which begin like a PDF. Nothing of them is printed. */
+    record Downloaded(byte[] bytes) implements Download {
+
+        @Override
+        public String toString() {
+            return "Downloaded[]";
+        }
+    }
+
+    /** Gmail no longer has the message or the attachment. */
+    record DocumentGone() implements Download {}
+
+    /** The document is larger than {@link #MOST_DOCUMENT_BYTES}. */
+    record DocumentTooLarge() implements Download {}
+
+    /** What came back does not begin like a PDF. */
+    record NotAPdf() implements Download {}
+
+    /**
+     * One document of a message: Gmail's {@code users.messages.attachments.get}, and nothing else is asked. Only ever called
+     * for what a {@link Letter} listed, and only when the reader asks for it.
+     */
+    Download document(UUID owner, String messageId, String reference) throws SourceFailure;
 
     /**
      * Where the mailbox stands now. Asked <em>before</em> a first look, so that what arrives while the look is under

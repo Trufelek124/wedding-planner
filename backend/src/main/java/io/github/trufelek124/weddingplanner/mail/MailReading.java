@@ -13,7 +13,8 @@ import java.util.UUID;
  *
  * <p>A message is somebody else's words. Every record here that holds them hides them from {@code toString()}, and
  * nothing of a message is kept or logged by the mail module: a message is fetched again each time it is asked for.
- * Attachments are never fetched or read.
+ * An attachment is fetched only when the reader asks for it ({@link #document}), and only a PDF document that the letter
+ * listed; the mail module never reads one and never keeps one.
  */
 public interface MailReading {
 
@@ -111,17 +112,132 @@ public interface MailReading {
      * @param arrived when it arrived, as Gmail says
      * @param earlier the messages of the thread that arrived before it, <b>oldest first</b>: the owner's own replies
      *     are among them; drafts, spam and the bin are not. A message that came later is not here
+     * @param documents the PDF documents that came with the message itself, in the order of the mail: nothing else is listed,
+     *     and listing fetches nothing. See {@link #document}
      * @param key what the letter is known by across mailboxes: a one-way hash of the wedding and the identifier its sender
      *     gave it ({@code Message-ID}, without the spaces and angle brackets around it; a different case is another
      *     identifier), written like the other keys ({@code l1-...}); empty when the message has no such header or it is
      *     blank. It says nothing a person could read, and is at most 100 characters. The identifier itself is never kept or logged
      */
-    record Letter(Person from, String subject, Instant arrived, Text text, List<EarlierMessage> earlier, String key) implements Content {
+    record Letter(Person from, String subject, Instant arrived, Text text, List<EarlierMessage> earlier, String key,
+            List<Document> documents) implements Content {
+
+        public Letter {
+            documents = List.copyOf(documents);
+        }
 
         @Override
         public String toString() {
             return "Letter[]";
         }
+    }
+
+    /**
+     * A PDF document that came with a message: what it is called and how large Gmail says it is, in bytes (0 when it does not
+     * say), and what the mail module needs to fetch it ({@code reference}: not for the reader to understand, only to hand
+     * back). The name is somebody's own word.
+     */
+    record Document(String name, long size, String reference) {
+
+        @Override
+        public String toString() {
+            return "Document[]";
+        }
+    }
+
+    /** What one document may be at most, in bytes: a larger one is not fetched, and an answer beyond it is not taken. */
+    int MOST_DOCUMENT_BYTES = 10 * 1024 * 1024;
+
+    /** The answer to {@link #document}: the bytes of a PDF, or why not. */
+    sealed interface Fetched permits Pdf, NotFetched {}
+
+    /** The bytes of a document that begin like a PDF (they start with {@code %PDF-}). Nothing of them is printed. */
+    record Pdf(byte[] bytes) implements Fetched {
+
+        @Override
+        public String toString() {
+            return "Pdf[]";
+        }
+    }
+
+    record NotFetched(DocumentWhy why) implements Fetched {}
+
+    /** Why a document cannot be had. */
+    enum DocumentWhy {
+        /** Larger than {@link #MOST_DOCUMENT_BYTES}, by what Gmail said before it was fetched or by the answer. */
+        TOO_LARGE,
+        /** What came back does not begin like a PDF. */
+        NOT_A_DOCUMENT,
+        /** Gmail no longer has the message or the attachment. */
+        GONE,
+        /** The owner's mailbox is not connected (any more), or the import is off. */
+        NOT_CONNECTED,
+        /** The permission is gone: the owner has to connect again. */
+        NEEDS_RECONNECTING,
+        /** Google refused or failed for now. */
+        REFUSED_FOR_NOW,
+        /** Cut off, too slow, not understood. */
+        INTERRUPTED
+    }
+
+    /**
+     * One of a letter's documents: Gmail's {@code users.messages.attachments.get}, nothing else is asked, and nothing of the
+     * document is kept or logged. A document that Gmail says is larger than {@link #MOST_DOCUMENT_BYTES} is not fetched at all.
+     * Whether the reader may read a message's documents is its own decision; to be allowed only once, it says so first
+     * ({@link #beginDocuments}).
+     */
+    Fetched document(MessageHandle message, Document document);
+
+    /**
+     * The reader says that it is about to fetch this message's documents and take their text out. It is written at once, in a
+     * transaction of its own, before anything is fetched, and it is what makes "one try per message" true also after a restart:
+     * the mark says "being fetched and read now, or the server stopped while it was", and a message so marked is never begun
+     * again (unless {@link #endDocuments} took the mark back). The try is for a file that stops the server; what comes after
+     * the text is out (the AI service, the planner) is not part of it.
+     *
+     * @return true for the first call for a message, false for every call after it (and for a message that is not there)
+     */
+    boolean beginDocuments(MessageHandle message);
+
+    /**
+     * The reader says that fetching this message's documents and taking their text out is over and the server still runs: the
+     * mark of {@link #beginDocuments} is taken back, in a transaction of its own, and the message's documents are still to be
+     * looked at (or, once it is marked, done with). Not to be called where the work was cut short by an exception.
+     *
+     * @return true when this call did it; false when the documents were not begun (or are done with)
+     */
+    boolean endDocuments(MessageHandle message);
+
+    /**
+     * Whether another noted message of the same wedding, in either mailbox, has this letter's key, the verdict "about the
+     * wedding" and its documents done with: a copy of the letter whose documents were looked at already. A message marked
+     * "a copy" does not count, nor does the message itself. False for an empty key.
+     */
+    boolean documentsOfACopyWereLookedAt(MessageHandle message, String letterKey);
+
+    /**
+     * The messages about the wedding that were read before their documents could be (or whose documents were never looked
+     * at), at most {@code most}, the newest first, of the mailboxes that are connected, without the mailboxes of these members.
+     * A message whose documents were begun, or are done with, is not among them.
+     *
+     * @throws IllegalArgumentException when {@code most} is not positive
+     */
+    List<MessageHandle> waitingForDocuments(int most, Collection<UUID> leavingOut);
+
+    /**
+     * The documents of a message about the wedding are done with, whatever came of them; the proposals they brought
+     * ({@code moreProposals}, 0 or more) are added to the number kept with the message, and the letter's key
+     * ({@link Letter#key}) is kept with it where it has none yet (an empty key keeps none). It is no longer among
+     * {@link #waitingForDocuments}.
+     *
+     * @return whether this call did it; false for a message that is not there, is not about the wedding or was done with
+     * @throws IllegalArgumentException when {@code moreProposals} is negative or the key is not empty and not one of this module's keys
+     */
+    boolean documentsDone(MessageHandle message, int moreProposals, String letterKey);
+
+    /** As {@link #documentsDone(MessageHandle, int, String)}, where no letter was had: no key. */
+    default boolean documentsDone(MessageHandle message, int moreProposals) {
+        return documentsDone(message, moreProposals, "");
     }
 
     /** Why a message cannot be had. Not a failure of the reader: it decides what each comes to. */
@@ -227,7 +343,16 @@ public interface MailReading {
      * @throws IllegalArgumentException when the key is not empty and not one of this module's keys, or when {@link CopyOfOneRead}
      *     is given with no key
      */
-    boolean mark(MessageHandle message, Verdict verdict, String letterKey);
+    default boolean mark(MessageHandle message, Verdict verdict, String letterKey) {
+        return mark(message, verdict, letterKey, false);
+    }
+
+    /**
+     * As {@link #mark(MessageHandle, Verdict, String)}; with {@code documentsStillToLookAt} a message that is about the wedding
+     * is marked with its documents still to be looked at ({@link #waitingForDocuments}) instead of done with: the reader could
+     * not read them now and will. It has no effect for any other verdict.
+     */
+    boolean mark(MessageHandle message, Verdict verdict, String letterKey, boolean documentsStillToLookAt);
 
     /**
      * How many messages of this wedding's mailboxes are in each state. Counts every noted message, whether or not its

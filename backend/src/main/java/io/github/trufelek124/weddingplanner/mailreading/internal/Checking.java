@@ -46,11 +46,17 @@ final class Checking {
     }
 
     /**
-     * @param sent every text that was sent: the message's and the thread's that were kept. A passage is looked for in these only.
+     * @param sent every text that was sent: the message's, the thread's that were kept and the documents'. A passage is looked
+     *     for in these only.
      * @return the checked proposals, or empty when the answer cannot be used at all (no list, a missing proposal, more than five)
      */
     static Optional<MailExtraction.Extracted> extracted(RawExtraction raw, List<String> sent) {
-        if (raw == null || raw.proposals() == null || raw.proposals().size() > MailExtraction.MOST_PROPOSALS) {
+        return extracted(raw, sent, MailExtraction.MOST_PROPOSALS);
+    }
+
+    /** As {@link #extracted(RawExtraction, List)}; {@code most} is five, or eight where a document was sent. */
+    static Optional<MailExtraction.Extracted> extracted(RawExtraction raw, List<String> sent, int most) {
+        if (raw == null || raw.proposals() == null || raw.proposals().size() > most) {
             return Optional.empty();
         }
         List<String> haystacks = sent.stream().map(Checking::squeezed).toList();

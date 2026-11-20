@@ -85,6 +85,12 @@ final class Scoring {
                 && (answered.answer().concernsTheWedding() || answered.answer().sure() < triageSure);
     }
 
+    /** Whether the documents of the message go with it to extraction, as the server does it: a yes, and at least as sure as the share says. */
+    static boolean documentsRead(Outcome<MailTriage.Triaged> triage, Rules rules) {
+        return rules.documents() && triage instanceof Outcome.Answered<MailTriage.Triaged> answered
+                && answered.answer().concernsTheWedding() && answered.answer().sure() >= rules.documentsSure();
+    }
+
     static Tally of(List<Measured> rows, int triageSure) {
         Tally tally = new Tally();
         for (Measured row : rows) {

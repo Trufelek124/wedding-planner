@@ -173,7 +173,7 @@ class MailVerdictsIntegrationTest extends MailLettersTestBase {
                 "unread_reason = 'GONE'",
                 "proposals = 2",
                 "read_at = now()")) {
-            assertThatThrownBy(() -> jdbc.update("UPDATE mail_message SET " + update + " WHERE message_id = 'a1'"))
+            assertThatThrownBy(() -> jdbc.update("UPDATE mail_message SET documents = 'DONE', " + update + " WHERE message_id = 'a1'"))
                     .as(update).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         }
     }

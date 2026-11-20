@@ -69,6 +69,9 @@ abstract class RoundTestBase extends MailTestBase {
     @Autowired
     ReadingRound round;
 
+    @Autowired
+    PdfText pdfText;
+
     final StandInAnthropic service = StandInAnthropic.get();
 
     @DynamicPropertySource
@@ -97,7 +100,7 @@ abstract class RoundTestBase extends MailTestBase {
 
     /** The settings as they begin, with the round not running by itself. */
     static Rules rules() {
-        return new Rules(true, Duration.ofMinutes(1), false, 20, 60, new BigDecimal("20"), 2000, 50, price("0.10", "0.50"), price("4", "20"));
+        return new Rules(true, Duration.ofMinutes(1), false, 20, 60, true, 80, new BigDecimal("20"), 2000, 50, price("0.10", "0.50"), price("4", "20"));
     }
 
     ReadingRound roundOf(Rules rules) {
@@ -105,7 +108,7 @@ abstract class RoundTestBase extends MailTestBase {
     }
 
     ReadingRound roundOf(Rules rules, MailReading withMail) {
-        return new ReadingRound(steps, rules, withMail, suggestions, weddings, maker, usage, clock);
+        return new ReadingRound(steps, rules, withMail, suggestions, weddings, maker, usage, pdfText, clock);
     }
 
     // ---------------------------------------------------------------- mail
@@ -149,6 +152,55 @@ abstract class RoundTestBase extends MailTestBase {
     /** A message with the identifier its sender gave it ({@code Message-ID}, written as given; none when null), in this mailbox. */
     void gets(String mailbox, String id, String thread, long daysAgo, String from, String subject, String text, String messageIdHeader) {
         google.mailbox(mailbox).writeWithMessageId(id, thread, daysAgo(daysAgo), from, subject, Mime.plain(text), messageIdHeader, "INBOX");
+    }
+
+    /** A file that came with a message: its name, what its type claims, its bytes and the size Gmail says it has. */
+    record Attached(String name, String type, byte[] bytes, long listedSize) {
+
+        static Attached pdf(String name, byte[] bytes) {
+            return new Attached(name, "application/pdf", bytes, bytes.length);
+        }
+
+        /** As {@link #pdf}, with a size that Gmail says (a test of a large file need not make one). */
+        static Attached pdf(String name, byte[] bytes, long listedSize) {
+            return new Attached(name, "application/pdf", bytes, listedSize);
+        }
+
+        static Attached other(String name, String type, byte[] bytes) {
+            return new Attached(name, type, bytes, bytes.length);
+        }
+    }
+
+    /** What Gmail is asked below a message's address: only the fetching of attachments is. */
+    static final String ATTACHMENTS = "/gmail/v1/users/me/messages/";
+
+    int attachmentsFetched() {
+        return google.count(ATTACHMENTS);
+    }
+
+    /** A message in Anna's mailbox, from Jan, with these files; each can be fetched by Gmail's attachment call. */
+    void annaGetsWithFiles(String id, String subject, String text, Attached... files) {
+        List<Mime> parts = new java.util.ArrayList<>();
+        parts.add(Mime.plain(text));
+        int n = 0;
+        for (Attached file : files) {
+            String attachment = "att-" + id + "-" + ++n;
+            parts.add(Mime.file(file.name(), file.type(), attachment, file.listedSize()));
+            google.mailbox(ANNA_MAILBOX).attach(attachment, file.bytes());
+        }
+        google.mailbox(ANNA_MAILBOX).write(id, "thread-" + id, daysAgo(2), JAN, subject, Mime.multipart("mixed", parts.toArray(Mime[]::new)), "INBOX");
+    }
+
+    /** Every request the stand-in had for extraction, as the model was shown it, in order. */
+    List<String> extractionTurns() {
+        return service.calls().stream().filter(call -> "claude-opus-5-5".equals(call.json().get("model"))).map(StandInAnthropic.Call::userTurn).toList();
+    }
+
+    /** The settings as they begin, with documents on or off and with this share. */
+    static Rules rulesForDocuments(boolean documents, int sure) {
+        Rules r = rules();
+        return new Rules(r.on(), r.interval(), r.automatic(), r.batch(), r.triageSure(), documents, sure, r.monthlyLimitUsd(), r.dailyMessages(),
+                r.dailySuggestionsPerMailbox(), r.triagePrice(), r.extractionPrice());
     }
 
     void piotrGets(String id, String subject, String text) {

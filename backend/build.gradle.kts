@@ -38,6 +38,8 @@ dependencies {
     implementation("org.jsoup:jsoup:1.24.1")
     // The AI service for reading the mail (S04, D-007): its own Java SDK. Made only when a key is given.
     implementation("com.anthropic:anthropic-java:3.3.0")
+    // The text of the PDF documents that come with a wedding mail (S04, D-011). It reads a file and runs nothing in it.
+    implementation("org.apache.pdfbox:pdfbox:3.0.8")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 

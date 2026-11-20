@@ -7,9 +7,13 @@ import io.github.trufelek124.weddingplanner.mail.MailReading.AboutTheWedding;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Content;
 import io.github.trufelek124.weddingplanner.mail.MailReading.CopyOfOneRead;
 import io.github.trufelek124.weddingplanner.mail.MailReading.CouldNotBeRead;
+import io.github.trufelek124.weddingplanner.mail.MailReading.DocumentWhy;
+import io.github.trufelek124.weddingplanner.mail.MailReading.Fetched;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Letter;
 import io.github.trufelek124.weddingplanner.mail.MailReading.MessageHandle;
 import io.github.trufelek124.weddingplanner.mail.MailReading.NotAboutTheWedding;
+import io.github.trufelek124.weddingplanner.mail.MailReading.NotFetched;
+import io.github.trufelek124.weddingplanner.mail.MailReading.Pdf;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Reason;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Unavailable;
 import io.github.trufelek124.weddingplanner.mail.MailReading.Verdict;
@@ -80,6 +84,8 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
     /** How many proposals lately made from other mail of the wedding it is told of, and how far back "lately" goes. */
     static final int LATELY_TOLD = 30;
     static final Duration LATELY = Duration.ofDays(30);
+    /** How many messages one round looks at again for their documents (S04 section 3), after the messages that wait. */
+    static final int DOCUMENT_LOOKS_PER_ROUND = 3;
 
     private final ReadingSteps steps;
     private final Rules rules;
@@ -88,6 +94,7 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
     private final Weddings weddings;
     private final ProposalMaker maker;
     private final UsageRepository usage;
+    private final PdfText pdfText;
     private final Clock clock;
 
     private final AtomicBoolean running = new AtomicBoolean();
@@ -108,6 +115,7 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
             Weddings weddings,
             ProposalMaker maker,
             UsageRepository usage,
+            PdfText pdfText,
             Clock clock) {
         this.steps = steps;
         this.rules = rules;
@@ -116,6 +124,7 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
         this.weddings = weddings;
         this.maker = maker;
         this.usage = usage;
+        this.pdfText = pdfText;
         this.clock = clock;
     }
 
@@ -223,6 +232,8 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
         final Set<UUID> leftOut = new HashSet<>();
         int read;
         int left;
+        int looked;
+        boolean heldSaid;
     }
 
     /**
@@ -239,6 +250,7 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
                 return 0;
             }
             Round round = new Round();
+            boolean ended = false;
             for (MessageHandle handle : nextBatch(round)) {
                 if (stopping || stateNow() != State.READING) {
                     break;
@@ -258,11 +270,16 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
                     round.left++;
                 }
                 if (result == Result.ENDS_THE_ROUND) {
+                    ended = true;
                     break;
                 }
             }
-            if (round.read > 0 || round.left > 0) {
-                log.info("A round of reading is over: {} read, {} left as they were", round.read, round.left);
+            if (!ended && !stopping && rules.documents()) {
+                lookAgainAtSome(round);
+            }
+            if (round.read > 0 || round.left > 0 || round.looked > 0) {
+                log.info("A round of reading is over: {} read, {} left as they were, {} looked at again for their documents", round.read,
+                        round.left, round.looked);
             }
             return round.read;
         } catch (RuntimeException unexpected) {
@@ -370,14 +387,42 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
         MailReading.Keys keys = mail.keysOf(handle);
         String ownKeys = keys.thread() + "/" + keys.message() + "/";
         List<String> alreadyProposed = alreadyProposed(handle, keys.thread() + "/", ownKeys, facts.get().currency());
-        LocalDate today = LocalDate.now(clock.withZone(facts.get().timeZone()));
-        List<MailExtraction.EarlierMessage> earlier = letter.earlier().stream()
-                .map(message -> new MailExtraction.EarlierMessage(
-                        new Sender(orEmpty(message.from().name()), orEmpty(message.from().address())), message.arrived(), message.text().text()))
-                .toList();
-        Outcome<MailExtraction.Extracted> extracted = steps.extract(new MailExtraction.Input(
-                from, subject, letter.arrived(), letter.text().text(), earlier, today, facts.get().weddingDate(), alreadyProposed));
+        // The documents are read for a message that triage was quite sure of, and only the first time (D-011).
+        List<MailExtraction.Document> documents = List.of();
+        boolean documentsHeld = false;
+        if (rules.documents() && verdict.concernsTheWedding() && verdict.sure() >= rules.documentsSure()) {
+            DocumentsRead read = documentsOf(handle, letter.documents());
+            switch (read.hindrance()) {
+                case MAILBOX -> {
+                    // The mailbox cannot be asked for now: the message is left as it is, and all of it is tried again.
+                    leaveMailboxOut(handle, round);
+                    return Result.LEFT;
+                }
+                case SLOW -> {
+                    putOff(handle);
+                    return Result.LEFT;
+                }
+                case HELD -> {
+                    // The message is read without them, and marked with its documents still to be looked at.
+                    documentsHeld = true;
+                    saidHeld(round);
+                }
+                case NONE -> documents = read.documents();
+            }
+        }
+        MailExtraction.Input input = extractionInput(letter, from, subject, facts.get(), alreadyProposed, documents);
+        Outcome<MailExtraction.Extracted> extracted = steps.extract(input);
         count(UsageRepository.Step.EXTRACTION, extracted.used());
+        if (!documents.isEmpty() && extracted instanceof Outcome.Unanswered<MailExtraction.Extracted> failed
+                && (failed.why() == Outcome.Why.CANNOT_BE_USED || failed.why() == Outcome.Why.TOO_MANY_PROPOSALS)) {
+            // The request with documents could not be used (an answer that is not one, or a request the service found too
+            // large): the mail's own proposals are not lost for that, so it is asked again without them. Counted like any call.
+            log.info("Extraction for a message of member {} could not be used with its documents ({}): asked again without them",
+                    handle.memberId(), failed.why());
+            served();
+            extracted = steps.extract(extractionInput(letter, from, subject, facts.get(), alreadyProposed, List.of()));
+            count(UsageRepository.Step.EXTRACTION, extracted.used());
+        }
         if (extracted instanceof Outcome.Unanswered<MailExtraction.Extracted> failed) {
             return stopped(handle, failed.why(), "extraction", letter.key(), round);
         }
@@ -386,10 +431,32 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
         ProposalMaker.Origin origin =
                 new ProposalMaker.Origin(handle.weddingId(), handle.memberId(), from.name(), from.address(), subject, letter.arrived(), link.get());
         List<MailExtraction.Proposed> proposals = ((Outcome.Answered<MailExtraction.Extracted>) extracted).answer().proposals();
+        int handedIn = handIn(handle, origin, proposals, ownKeys, facts.get());
+        // Marking is the last thing: a message that stops before it is done again and proposes nothing twice.
+        mark(handle, new AboutTheWedding(handedIn), letter.key(), documentsHeld);
+        log.info("Read a message of member {}: about the wedding, {} proposals of {} handed in (triage, extraction)", handle.memberId(), handedIn,
+                proposals.size());
+        return Result.MARKED;
+    }
+
+    private MailExtraction.Input extractionInput(Letter letter, Sender from, String subject, WeddingFacts facts, List<String> alreadyProposed,
+            List<MailExtraction.Document> documents) {
+        LocalDate today = LocalDate.now(clock.withZone(facts.timeZone()));
+        List<MailExtraction.EarlierMessage> earlier = letter.earlier().stream()
+                .map(message -> new MailExtraction.EarlierMessage(
+                        new Sender(orEmpty(message.from().name()), orEmpty(message.from().address())), message.arrived(), message.text().text()))
+                .toList();
+        return new MailExtraction.Input(
+                from, subject, letter.arrived(), letter.text().text(), earlier, today, facts.weddingDate(), alreadyProposed, documents);
+    }
+
+    /** Hands in what a message proposed, under keys {@code keyPrefix + n}; what the planner refuses is left out. Returns how many were handed in. */
+    private int handIn(MessageHandle handle, ProposalMaker.Origin origin, List<MailExtraction.Proposed> proposals, String keyPrefix,
+            WeddingFacts facts) {
         int handedIn = 0;
         for (int n = 1; n <= proposals.size(); n++) {
             Optional<io.github.trufelek124.weddingplanner.suggestions.Proposal> made =
-                    maker.make(origin, proposals.get(n - 1), ownKeys + n, facts.get());
+                    maker.make(origin, proposals.get(n - 1), keyPrefix + n, facts);
             if (made.isEmpty()) {
                 continue;
             }
@@ -402,30 +469,317 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
                         refused.fields().stream().map(FieldProblem::field).toList());
             }
         }
-        // Marking is the last thing: a message that stops before it is done again and proposes nothing twice.
-        mark(handle, new AboutTheWedding(handedIn), letter.key());
-        log.info("Read a message of member {}: about the wedding, {} proposals of {} handed in (triage, extraction)", handle.memberId(), handedIn,
+        return handedIn;
+    }
+
+    // ---------------------------------------------------------------- the documents of a message (S04 sections 3 and 5)
+
+    /** The documents of a message that may be read: none larger than {@link MailReading#MOST_DOCUMENT_BYTES}, the first three. */
+    private static List<MailReading.Document> usable(List<MailReading.Document> listed) {
+        return listed.stream()
+                .filter(document -> document.size() <= MailReading.MOST_DOCUMENT_BYTES)
+                .limit(MailExtraction.MOST_DOCUMENTS)
+                .toList();
+    }
+
+    /** What stood in the way of reading a message's documents. */
+    private enum Hindrance {
+        NONE,
+        /** The reader still works on a document that was given up on: nothing was begun or fetched. */
+        HELD,
+        /** The mailbox cannot be asked for now (not connected, to be connected again, refused for now). */
+        MAILBOX,
+        /** A document was cut off or too slow: the message is put off. */
+        SLOW
+    }
+
+    /** What was read, and what stood in the way. */
+    private record DocumentsRead(List<MailExtraction.Document> documents, Hindrance hindrance) {
+
+        static DocumentsRead of(List<MailExtraction.Document> documents) {
+            return new DocumentsRead(documents, Hindrance.NONE);
+        }
+
+        static DocumentsRead stoppedBy(Hindrance hindrance) {
+            return new DocumentsRead(List.of(), hindrance);
+        }
+    }
+
+    /** A document that was cut off or too slow this many times in a row for its message is left out, not waited for for ever. */
+    static final int PUT_OFFS_BEFORE_LEAVING_OUT = 2;
+
+    /**
+     * The text of this message's documents, when this is the first try for the message: it is written down that it is about
+     * to be tried (at once, before anything is fetched), and then each of the first three documents is fetched, put through
+     * {@link PdfText} and kept as far as the room for documents goes ({@link MailExtraction#MOST_DOCUMENT_CHARACTERS}, in
+     * all). One that cannot be fetched or read is left out. When it comes through, the mark is taken back
+     * ({@link MailReading#endDocuments}): the try is for a file that stops the server, and an exception on the way leaves it.
+     * Where the reader is held, nothing is begun. Where the mailbox cannot be asked, or a document is too slow (the first two
+     * times), the mark is taken back and the answer says what stood in the way: the caller leaves the message as it is.
+     *
+     * <p>The log says how many documents were used, never a name, a size or a word.
+     */
+    private DocumentsRead documentsOf(MessageHandle handle, List<MailReading.Document> listed) {
+        List<MailReading.Document> chosen = usable(listed);
+        if (chosen.isEmpty()) {
+            return DocumentsRead.of(List.of());
+        }
+        if (pdfText.busy()) {
+            return DocumentsRead.stoppedBy(Hindrance.HELD);
+        }
+        if (!mail.beginDocuments(handle)) {
+            return DocumentsRead.of(List.of());
+        }
+        List<MailExtraction.Document> read = new ArrayList<>();
+        int room = MailExtraction.MOST_DOCUMENT_CHARACTERS;
+        for (MailReading.Document document : chosen) {
+            if (room <= 0) {
+                break;
+            }
+            Fetched fetched = mail.document(handle, document);
+            if (fetched instanceof NotFetched notFetched) {
+                switch (notFetched.why()) {
+                    case NOT_CONNECTED, NEEDS_RECONNECTING, REFUSED_FOR_NOW -> {
+                        mail.endDocuments(handle);
+                        return DocumentsRead.stoppedBy(Hindrance.MAILBOX);
+                    }
+                    case INTERRUPTED -> {
+                        if (timesPutOff(handle) < PUT_OFFS_BEFORE_LEAVING_OUT) {
+                            mail.endDocuments(handle);
+                            return DocumentsRead.stoppedBy(Hindrance.SLOW);
+                        }
+                    }
+                    case TOO_LARGE, NOT_A_DOCUMENT, GONE -> {
+                    }
+                }
+                continue;
+            }
+            Optional<PdfText.Read> text = pdfText.read(((Pdf) fetched).bytes());
+            if (text.isEmpty()) {
+                continue;
+            }
+            Optional<MailExtraction.Document> fitted = RequestText.fitted(document.name(), text.get().text(), text.get().cut(), room);
+            if (fitted.isEmpty()) {
+                continue;
+            }
+            room -= RequestText.characters(fitted.get().text());
+            read.add(fitted.get());
+        }
+        // Not in a finally: an exception on the way leaves the mark, as a stop of the server does.
+        mail.endDocuments(handle);
+        log.info("Read the documents of a message of member {}: {} of {} listed were used", handle.memberId(), read.size(), listed.size());
+        return DocumentsRead.of(List.copyOf(read));
+    }
+
+    private void leaveMailboxOut(MessageHandle handle, Round round) {
+        if (round.leftOut.add(handle.memberId())) {
+            log.info("The mailbox of member {} cannot be asked for a document for now; it is left out of this round", handle.memberId());
+        }
+    }
+
+    /** One line a round, however many messages find the reader held. */
+    private void saidHeld(Round round) {
+        if (!round.heldSaid) {
+            round.heldSaid = true;
+            log.warn("A document that was given up on is still being worked on: no document is read until it ends");
+        }
+    }
+
+    // ---------------------------------------------------------------- messages read before their documents could be (S04 section 3)
+
+    /**
+     * The messages about the wedding whose documents were never looked at, a few, the newest first: each is looked at once,
+     * under the same brakes as every message.
+     */
+    private void lookAgainAtSome(Round round) {
+        Instant now = clock.instant();
+        List<MessageHandle> got = mail.waitingForDocuments(DOCUMENT_LOOKS_PER_ROUND + activePutOffs(now), round.leftOut);
+        int taken = 0;
+        for (MessageHandle handle : got) {
+            if (taken >= DOCUMENT_LOOKS_PER_ROUND || stopping || stateNow() != State.READING) {
+                break;
+            }
+            if (pdfText.busy()) {
+                // The messages stay as they are, to be looked at once the reader is free.
+                saidHeld(round);
+                break;
+            }
+            if (round.leftOut.contains(handle.memberId()) || isPutOff(handle, now)) {
+                continue;
+            }
+            if (suggestionsToday(handle) >= rules.dailySuggestionsPerMailbox()) {
+                round.leftOut.add(handle.memberId());
+                log.info("Member {} has reached the day's limit of new suggestions; that mailbox waits until tomorrow", handle.memberId());
+                continue;
+            }
+            taken++;
+            Result result;
+            try {
+                result = lookAgain(handle, round);
+            } catch (RuntimeException unexpected) {
+                // Only its kind. The documents may have been begun, and then they are not tried again; if not, it is asked again later.
+                log.warn("A message of member {} was left as it is after an unexpected failure ({}) in the look for its documents",
+                        handle.memberId(), unexpected.getClass().getSimpleName());
+                putOff(handle);
+                result = Result.LEFT;
+            }
+            if (result == Result.MARKED) {
+                round.looked++;
+                forgetPutOff(handle);
+            }
+            if (result == Result.ENDS_THE_ROUND) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * The second look at a message that was read before its documents could be: fetch the letter; no PDF, nothing more; with
+     * one, triage again (how sure it was is not kept) and only with a "yes" of at least the share go on to extraction with the
+     * documents, told everything already proposed from the message as well. Then done with, whatever came of it.
+     * {@code MARKED} here means "done with"; it is not the first verdict, which stands.
+     */
+    private Result lookAgain(MessageHandle handle, Round round) {
+        Content content = mail.read(handle);
+        if (content instanceof Unavailable unavailable) {
+            return switch (unavailable.why()) {
+                // Nothing can come of the documents of a message that cannot be had.
+                case GONE, NO_TEXT, TOO_LARGE -> documentsDone(handle, 0, "");
+                case NOT_CONNECTED, NEEDS_RECONNECTING, REFUSED_FOR_NOW -> {
+                    if (round.leftOut.add(handle.memberId())) {
+                        log.info("The mailbox of member {} cannot be read for now ({}); it is left out of this round", handle.memberId(),
+                                unavailable.why());
+                    }
+                    yield Result.LEFT;
+                }
+                case INTERRUPTED -> {
+                    putOff(handle);
+                    yield Result.LEFT;
+                }
+            };
+        }
+        Letter letter = (Letter) content;
+        // A copy of this letter, in either mailbox, whose documents were looked at: nothing is asked or fetched or proposed twice.
+        if (mail.documentsOfACopyWereLookedAt(handle, letter.key())) {
+            log.info("A message of member {} is a copy of a letter whose documents were looked at already (nothing was asked)", handle.memberId());
+            return documentsDone(handle, 0, letter.key());
+        }
+        List<MailReading.Document> usable = usable(letter.documents());
+        if (usable.isEmpty()) {
+            // A message without a PDF costs this look at Gmail and nothing else.
+            return documentsDone(handle, 0, letter.key());
+        }
+        Optional<WeddingFacts> facts = weddings.factsOf(handle.weddingId());
+        Optional<String> link = mail.linkTo(handle);
+        if (facts.isEmpty() || link.isEmpty()) {
+            round.leftOut.add(handle.memberId());
+            putOff(handle);
+            return Result.LEFT;
+        }
+        Sender from = new Sender(orEmpty(letter.from().name()), orEmpty(letter.from().address()));
+        String subject = orEmpty(letter.subject());
+
+        Outcome<MailTriage.Triaged> triaged = steps.triage(new MailTriage.Input(from, subject, letter.arrived(), letter.text().text()));
+        count(UsageRepository.Step.TRIAGE, triaged.used());
+        if (triaged instanceof Outcome.Unanswered<MailTriage.Triaged> failed) {
+            return stoppedAgain(handle, failed.why(), "triage", letter.key());
+        }
+        served();
+        MailTriage.Triaged verdict = ((Outcome.Answered<MailTriage.Triaged>) triaged).answer();
+        if (!verdict.concernsTheWedding() || verdict.sure() < rules.documentsSure()) {
+            return documentsDone(handle, 0, letter.key());
+        }
+        DocumentsRead read = documentsOf(handle, letter.documents());
+        switch (read.hindrance()) {
+            case MAILBOX -> {
+                leaveMailboxOut(handle, round);
+                return Result.LEFT;
+            }
+            case SLOW -> {
+                putOff(handle);
+                return Result.LEFT;
+            }
+            case HELD -> {
+                saidHeld(round);
+                return Result.LEFT;
+            }
+            case NONE -> {
+            }
+        }
+        List<MailExtraction.Document> documents = read.documents();
+        if (documents.isEmpty()) {
+            // Nothing was read and nothing stood in the way: there is nothing more to be had.
+            return documentsDone(handle, 0, letter.key());
+        }
+        MailReading.Keys keys = mail.keysOf(handle);
+        // Here what this message itself proposed is told too: it is what must not come twice.
+        List<String> alreadyProposed = alreadyProposed(handle, keys.thread() + "/", null, facts.get().currency());
+        Outcome<MailExtraction.Extracted> extracted =
+                steps.extract(extractionInput(letter, from, subject, facts.get(), alreadyProposed, documents));
+        count(UsageRepository.Step.EXTRACTION, extracted.used());
+        if (extracted instanceof Outcome.Unanswered<MailExtraction.Extracted> failed) {
+            return stoppedAgain(handle, failed.why(), "extraction", letter.key());
+        }
+        served();
+        ProposalMaker.Origin origin =
+                new ProposalMaker.Origin(handle.weddingId(), handle.memberId(), from.name(), from.address(), subject, letter.arrived(), link.get());
+        List<MailExtraction.Proposed> proposals = ((Outcome.Answered<MailExtraction.Extracted>) extracted).answer().proposals();
+        int handedIn = handIn(handle, origin, proposals, keys.thread() + "/" + keys.message() + "/d", facts.get());
+        documentsDone(handle, handedIn, letter.key());
+        log.info("Looked again at a message of member {} for its documents: {} proposals of {} handed in", handle.memberId(), handedIn,
                 proposals.size());
+        return Result.MARKED;
+    }
+
+    /** A step did not answer in a second look: the service's trouble ends the round; whatever else it was, the message is done with. */
+    private Result stoppedAgain(MessageHandle handle, Outcome.Why why, String step, String letterKey) {
+        switch (why) {
+            case DECLINED, CANNOT_BE_USED, TOO_MANY_PROPOSALS -> {
+                served();
+                log.info("Looked again at a message of member {} for its documents: nothing came of it ({}, in {})", handle.memberId(), why, step);
+                return documentsDone(handle, 0, letterKey);
+            }
+            case TRY_LATER -> {
+                // A busy service costs no message its documents: it is left as it is, still to be looked at.
+                waitAWhile();
+                return Result.ENDS_THE_ROUND;
+            }
+            case NOT_ACCEPTED -> {
+                keyNotAccepted = true;
+                log.warn("The AI service does not accept the key or the account (asked in {}): the reading stops until the server is started again", step);
+                return Result.ENDS_THE_ROUND;
+            }
+            case ASKED_NOTHING -> {
+                return Result.ENDS_THE_ROUND;
+            }
+        }
+        throw new IllegalStateException("why");
+    }
+
+    /** The documents of this message are done with. */
+    private Result documentsDone(MessageHandle handle, int moreProposals, String letterKey) {
+        mail.documentsDone(handle, moreProposals, letterKey);
         return Result.MARKED;
     }
 
     /**
      * What the extraction is told was proposed, one line each, without anything twice and without what this message itself
      * proposed (an earlier try of it): first what came from this thread, then what came from any mail of the wedding in the
-     * last {@link #LATELY}, at most {@link #LATELY_TOLD}.
+     * last {@link #LATELY}, at most {@link #LATELY_TOLD}. With {@code ownKeys} null nothing is left out: that is what the second
+     * look for documents does, since what the message itself proposed is what must not come twice.
      */
     private List<String> alreadyProposed(MessageHandle handle, String threadKeys, String ownKeys, String currency) {
         Set<String> told = new HashSet<>();
         List<String> lines = new ArrayList<>();
         suggestions.proposedUnder(handle.weddingId(), threadKeys, TITLES_TOLD + MOST_OWN).stream()
-                .filter(proposed -> !proposed.sourceKey().startsWith(ownKeys))
+                .filter(proposed -> ownKeys == null || !proposed.sourceKey().startsWith(ownKeys))
                 .limit(TITLES_TOLD)
                 .forEach(proposed -> {
                     told.add(proposed.sourceKey());
                     lines.add(line(proposed, currency));
                 });
         suggestions.proposedSince(handle.weddingId(), clock.instant().minus(LATELY), LATELY_TOLD + TITLES_TOLD + MOST_OWN).stream()
-                .filter(proposed -> !proposed.sourceKey().startsWith(ownKeys) && !told.contains(proposed.sourceKey()))
+                .filter(proposed -> (ownKeys == null || !proposed.sourceKey().startsWith(ownKeys)) && !told.contains(proposed.sourceKey()))
                 .limit(LATELY_TOLD)
                 .forEach(proposed -> lines.add(line(proposed, currency)));
         return lines;
@@ -520,6 +874,10 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
         mail.mark(handle, verdict, letterKey);
     }
 
+    private void mark(MessageHandle handle, Verdict verdict, String letterKey, boolean documentsStillToLookAt) {
+        mail.mark(handle, verdict, letterKey, documentsStillToLookAt);
+    }
+
     private static String orEmpty(String text) {
         return text == null ? "" : text;
     }
@@ -574,6 +932,15 @@ class ReadingRound implements ReadingReport, SchedulingConfigurer {
                 oldest.next();
                 oldest.remove();
             }
+        }
+    }
+
+    /** How many times in a row this message was put off (0 when it is not). */
+    int timesPutOff(MessageHandle handle) {
+        String key = mail.keysOf(handle).message();
+        synchronized (putOff) {
+            PutOff note = putOff.get(key);
+            return note == null ? 0 : note.times();
         }
     }
 

@@ -604,7 +604,11 @@ asked for attachments to be read — and only where the planner is quite sure th
 3. **Limits**: three documents, 10 MB and fifty pages each, 40,000 characters in all, a few seconds each; what
    does not fit or cannot be read is left out and the message is read without it.
 4. **Up to eight proposals** from a message with documents; payments still wait for a person.
-5. **A message's documents are tried once**, and messages read before this are read once more for theirs.
+5. **Fetching a message's documents and taking their text out is tried once**: a file that stops the server
+   is not opened a second time. What goes wrong afterwards or elsewhere — the AI service busy, Gmail not to be
+   asked for the moment — is no such try, and the documents are read again when the message is.
+6. **Messages read before this are read once more for their documents**, and a letter that is in both
+   mailboxes has its documents looked at once.
 
 ### What it costs, and what would change the decision
 
@@ -613,6 +617,9 @@ asked for attachments to be read — and only where the planner is quite sure th
   files only, with the quotation then unchecked and said to be.
 - The server now opens files that anybody can send. The library that does it reads and does not run, and the
   limits bound what one file can cost; a file that stops the server is not opened a second time.
+- One document is in work at a time. One that cannot be stopped when its ten seconds are over holds that place
+  until the server is started again: mail is read on without its documents meanwhile, and looked at again for
+  them afterwards. Starting a second beside it would let such files pile up instead.
 - More is sent to the AI service per message: an offer of five pages is roughly as much text again as a long
   thread. The estimate of D-007 holds per message without documents; the e-mail page shows what it comes to.
 - Word files, spreadsheets and pictures stay unread. Each would be a decision like this one.

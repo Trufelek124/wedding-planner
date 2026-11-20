@@ -210,7 +210,7 @@ class ReadingOutcomesIntegrationTest extends RoundTestBase {
         annaGets("m-1", "A question", POLISH);
         note();
         io.github.trufelek124.weddingplanner.wedding.Weddings none = org.mockito.Mockito.mock(io.github.trufelek124.weddingplanner.wedding.Weddings.class);
-        ReadingRound mine = new ReadingRound(steps, rules(), mail, suggestions, none, maker, usage, clock);
+        ReadingRound mine = new ReadingRound(steps, rules(), mail, suggestions, none, maker, usage, pdfText, clock);
 
         assertThat(mine.round()).isZero();
 

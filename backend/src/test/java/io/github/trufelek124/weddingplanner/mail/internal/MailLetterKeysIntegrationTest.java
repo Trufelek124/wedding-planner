@@ -256,10 +256,10 @@ class MailLetterKeysIntegrationTest extends MailLettersTestBase {
                 "verdict = 'NOT_WEDDING', letter_key = 'l1-" + "A".repeat(42) + "', read_at = now()",
                 "verdict = 'NOT_WEDDING', letter_key = '<letter-1.Qk7@vendor.example>', read_at = now()",
                 "verdict = 'NOT_WEDDING', letter_key = 'l1-" + "A".repeat(43) + "!', read_at = now()")) {
-            assertThatThrownBy(() -> jdbc.update("UPDATE mail_message SET " + update + " WHERE message_id = 'a-1'"))
+            assertThatThrownBy(() -> jdbc.update("UPDATE mail_message SET documents = 'DONE', " + update + " WHERE message_id = 'a-1'"))
                     .as(update).isInstanceOf(DataIntegrityViolationException.class);
         }
-        jdbc.update("UPDATE mail_message SET verdict = 'COPY', letter_key = 'l1-" + "A".repeat(43) + "', read_at = now() WHERE message_id = 'a-1'");
+        jdbc.update("UPDATE mail_message SET verdict = 'COPY', documents = 'DONE', letter_key = 'l1-" + "A".repeat(43) + "', read_at = now() WHERE message_id = 'a-1'");
     }
 
     @Test

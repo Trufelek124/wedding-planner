@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Supplier;
 
@@ -56,7 +57,9 @@ public final class MeasureReading {
             "APP_AI_TRIAGE_PRICE_OUT", "0.50",
             "APP_AI_EXTRACTION_PRICE_IN", "4",
             "APP_AI_EXTRACTION_PRICE_OUT", "20",
-            "MAIL_READING_TRIAGE_SURE", "60");
+            "MAIL_READING_TRIAGE_SURE", "60",
+            "MAIL_READING_DOCUMENTS_ENABLED", "true",
+            "MAIL_READING_DOCUMENTS_SURE", "80");
 
     /** The rough sizes the dry run counts with. */
     private static final int HEADER_CHARACTERS = 400;
@@ -203,6 +206,8 @@ public final class MeasureReading {
                     "false",
                     "20",
                     text(env.get("MAIL_READING_TRIAGE_SURE"), DEFAULTS.get("MAIL_READING_TRIAGE_SURE")),
+                    text(env.get("MAIL_READING_DOCUMENTS_ENABLED"), DEFAULTS.get("MAIL_READING_DOCUMENTS_ENABLED")),
+                    text(env.get("MAIL_READING_DOCUMENTS_SURE"), DEFAULTS.get("MAIL_READING_DOCUMENTS_SURE")),
                     "20",
                     "2000",
                     "50",
@@ -245,7 +250,9 @@ public final class MeasureReading {
             triageIn += tokens(instructions.triage().length() + HEADER_CHARACTERS + triageText, charactersPerToken);
             if (options.withExtraction() && sample.expected().concernsTheWedding()) {
                 int full = sample.text().length() + sample.earlier().stream().mapToInt(earlier -> earlier.text().length()).sum()
-                        + sample.alreadyProposed().stream().mapToInt(String::length).sum();
+                        + sample.alreadyProposed().stream().mapToInt(String::length).sum()
+                        // The documents are counted as if triage let them through, as it should for a message about the wedding.
+                        + documentsOf(sample, true).stream().mapToInt(document -> document.name().length() + document.text().length()).sum();
                 extractionIn += tokens(instructions.extraction().length() + HEADER_CHARACTERS + full, charactersPerToken);
             }
         }
@@ -257,6 +264,26 @@ public final class MeasureReading {
                 + ", " + (triageCalls + extractionCalls) + " in all.\n"
                 + "Roughly " + (triageIn + extractionIn) + " tokens in and " + (triageOut + extractionOut) + " tokens out, about " + MeasureCosts.usd(cost)
                 + " at the prices in the settings. This is a rough guess from the length of the texts.";
+    }
+
+    /**
+     * What a sample's documents come to when they are sent: the first three, 40,000 characters in all, as the server does it.
+     * {@code sent} is false where the server would not send any (triage was not sure enough).
+     */
+    static List<MailExtraction.Document> documentsOf(SampleSet.Sample sample, boolean sent) {
+        List<MailExtraction.Document> documents = new ArrayList<>();
+        if (!sent) {
+            return documents;
+        }
+        int room = MailExtraction.MOST_DOCUMENT_CHARACTERS;
+        for (SampleSet.SampleDocument document : sample.documents().stream().limit(MailExtraction.MOST_DOCUMENTS).toList()) {
+            Optional<MailExtraction.Document> fitted = RequestText.fitted(document.name(), document.text(), false, room);
+            if (fitted.isPresent()) {
+                room -= RequestText.characters(fitted.get().text());
+                documents.add(fitted.get());
+            }
+        }
+        return documents;
     }
 
     private static long tokens(long characters, double charactersPerToken) {
@@ -357,7 +384,7 @@ public final class MeasureReading {
                 costs.triageMessages++;
                 Outcome<MailExtraction.Extracted> extraction = null;
                 if (options.withExtraction() && (sample.expected().concernsTheWedding() || Scoring.passedOn(triage, rules.triageSure()))) {
-                    MailExtraction.Input extractionInput = extractionInput(item);
+                    MailExtraction.Input extractionInput = extractionInput(item, Scoring.documentsRead(triage, rules));
                     extraction = attempt(false, () -> steps.extract(extractionInput));
                     if (notAccepted(extraction)) {
                         return true;
@@ -417,14 +444,15 @@ public final class MeasureReading {
         }
     }
 
-    private static MailExtraction.Input extractionInput(SampleSet.Item item) {
+    /** @param documentsSent whether the server would send the documents with this message: triage said yes, and was sure enough */
+    private static MailExtraction.Input extractionInput(SampleSet.Item item, boolean documentsSent) {
         SampleSet.Sample sample = item.sample();
         List<MailExtraction.EarlierMessage> earlier = sample.earlier().stream()
                 .map(message -> new MailExtraction.EarlierMessage(sender(message.from()), message.arrived(), message.text()))
                 .toList();
         return new MailExtraction.Input(
                 sender(sample.from()), sample.subject(), sample.arrived(), sample.text(), earlier, item.collection().today(),
-                item.collection().weddingDate(), sample.alreadyProposed());
+                item.collection().weddingDate(), sample.alreadyProposed(), documentsOf(sample, documentsSent));
     }
 
     private static Sender sender(SampleSet.Person person) {

@@ -317,7 +317,7 @@ class ReadingProposalsIntegrationTest extends RoundTestBase {
                 "N".repeat(250) + " <" + "a".repeat(260) + "@palace.example>", "S".repeat(400),
                 io.github.trufelek124.weddingplanner.mail.StandInGoogle.Mime.plain(TEXT), "INBOX");
         note();
-        jdbc.update("UPDATE mail_message SET verdict = 'NOT_WEDDING', read_at = now() WHERE message_id = 'm-1'");
+        jdbc.update("UPDATE mail_message SET verdict = 'NOT_WEDDING', documents = 'DONE', read_at = now() WHERE message_id = 'm-1'");
         service.reset();
         service.answerNextCallsWith(triageSays(true, 90), extractionSays(proposal("TASK", "A task", PASSAGE)));
 

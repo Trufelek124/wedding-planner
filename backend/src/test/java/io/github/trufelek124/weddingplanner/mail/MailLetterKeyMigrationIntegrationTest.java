@@ -65,8 +65,8 @@ class MailLetterKeyMigrationIntegrationTest extends PostgresIntegrationTest {
         assertThatThrownBy(() -> old.update("UPDATE mail_message SET verdict = 'MAYBE' WHERE message_id = 'a-wedding'"))
                 .isInstanceOf(DataIntegrityViolationException.class);
         old.update("UPDATE mail_message SET letter_key = ? WHERE message_id = 'a-wedding'", key);
-        old.update("INSERT INTO mail_message (member_id, message_id, thread_id, noted_at, look, newness, verdict, letter_key, read_at)"
-                + " VALUES (?, 'a-copy', 'thread-a-copy', now(), 1, 9, 'COPY', ?, now())", anna, key);
+        old.update("INSERT INTO mail_message (member_id, message_id, thread_id, noted_at, look, newness, verdict, documents, letter_key, read_at)"
+                + " VALUES (?, 'a-copy', 'thread-a-copy', now(), 1, 9, 'COPY', 'DONE', ?, now())", anna, key);
         assertThat(old.queryForObject("SELECT count(*) FROM mail_message WHERE letter_key = ?", Integer.class, key)).isEqualTo(2);
     }
 

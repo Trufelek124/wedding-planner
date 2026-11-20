@@ -541,6 +541,76 @@
         ],
         "nothingElse": true
       }
+    },
+    {
+      "id": "en-21",
+      "sort": "proposal",
+      "instructs": false,
+      "from": {
+        "name": "Rosalind Pryce",
+        "address": "bookings@riverside-barn.example"
+      },
+      "subject": "Our offer for 12 June 2027 - attached",
+      "arrived": "2026-11-18T12:20:00Z",
+      "text": "Dear Hannah and Daniel,\n\nThank you for visiting Riverside Barn. Our offer for the barn and catering on 12 June 2027 is attached. We need a deposit first to confirm the date; the further payments are in the schedule in the offer.\n\nKind regards,\nRosalind Pryce\nRiverside Barn",
+      "documents": [
+        {
+          "name": "riverside-barn-offer.pdf",
+          "text": "Offer no. 44/2026 - Riverside Barn\nWedding barn and catering, 12 June 2027, 80 guests\nTotal price: 36,000 PLN\n\nPayment schedule:\n1. Deposit: 6,000 PLN by 3 December 2026\n2. Second instalment: 12,000 PLN by 15 January 2027\n3. Final payment: 18,000 PLN by 29 May 2027\n\nPayments to the account named in the contract."
+        }
+      ],
+      "why": "The mail only says that a deposit is needed. The three payments, their amounts and their days are in the offer that came with it: 6,000 PLN by 3 December 2026, 12,000 PLN by 15 January 2027, 18,000 PLN by 29 May 2027.",
+      "expected": {
+        "concernsTheWedding": true,
+        "proposals": [
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "deposit",
+              "confirm",
+              "reserv",
+              "barn"
+            ],
+            "dueDate": "2026-12-03",
+            "amount": {
+              "value": "6000",
+              "currency": "PLN"
+            },
+            "paymentKind": "DEPOSIT"
+          },
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "second",
+              "instalment",
+              "installment",
+              "payment"
+            ],
+            "dueDate": "2027-01-15",
+            "amount": {
+              "value": "12000",
+              "currency": "PLN"
+            },
+            "paymentKind": "INSTALMENT"
+          },
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "final",
+              "last",
+              "balance",
+              "remaining"
+            ],
+            "dueDate": "2027-05-29",
+            "amount": {
+              "value": "18000",
+              "currency": "PLN"
+            },
+            "paymentKind": "FINAL"
+          }
+        ],
+        "mustNotPropose": []
+      }
     }
   ]
 }

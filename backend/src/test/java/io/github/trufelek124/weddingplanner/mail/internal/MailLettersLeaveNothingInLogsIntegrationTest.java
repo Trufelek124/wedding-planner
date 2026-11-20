@@ -118,7 +118,7 @@ class MailLettersLeaveNothingInLogsIntegrationTest extends MailLettersTestBase {
         // The table holds the two identifiers and the order and the verdict; nothing of a message but those.
         assertThat(jdbc.queryForList(
                 "SELECT column_name FROM information_schema.columns WHERE table_name = 'mail_message'", String.class))
-                .containsExactlyInAnyOrder("member_id", "message_id", "thread_id", "noted_at", "look", "newness", "verdict", "unread_reason", "proposals", "read_at", "letter_key");
+                .containsExactlyInAnyOrder("member_id", "message_id", "thread_id", "noted_at", "look", "newness", "verdict", "unread_reason", "proposals", "read_at", "letter_key", "documents");
         assertThat(table).as("only the key of a letter is there").contains("\"letter_key\":\"l1-");
         assertThat(log).doesNotContain("Subject-Secret").doesNotContain("-Qx");
     }

@@ -152,6 +152,15 @@ public final class StandInGoogle {
             return new Mime(type, null, null, filename, attachmentId, null);
         }
 
+        /** As {@link #file(String, String, String)}, with the size Gmail says the file has. */
+        public static Mime file(String filename, String type, String attachmentId, long size) {
+            Mime file = new Mime(type, null, null, filename, attachmentId, null);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> body = (Map<String, Object>) file.part.get("body");
+            body.put("size", size);
+            return file;
+        }
+
         /** A small file that Gmail shows with its data in the thread: still a file, whatever its type says. */
         public static Mime inlineFile(String filename, String type, String text) {
             return new Mime(type, "UTF-8", text.getBytes(java.nio.charset.StandardCharsets.UTF_8), filename, null, null);
@@ -173,6 +182,7 @@ public final class StandInGoogle {
     public static final class Mailbox {
 
         private final List<Message> messages = new ArrayList<>();
+        private final Map<String, byte[]> attachments = new LinkedHashMap<>();
         private long historyId = 1000;
         private long oldestValid = 0;
         private int pageSize = 2;
@@ -214,6 +224,20 @@ public final class StandInGoogle {
             headers.add(Map.of("name", "Date", "value", "Mon, 1 Jan 2001 00:00:00 +0000 (a date the planner must not use)"));
             payload.put("headers", headers);
             messages.add(new Message(id, threadId, Set.of(labels), date, historyId, payload));
+        }
+
+        /** What {@code users.messages.attachments.get} gives for this attachment identifier: these bytes (made up). */
+        public synchronized void attach(String attachmentId, byte[] bytes) {
+            attachments.put(attachmentId, bytes);
+        }
+
+        /** The answer of {@code users.messages.attachments.get}; null when there is no such attachment (404). */
+        private synchronized String attachment(String attachmentId) {
+            byte[] bytes = attachments.get(attachmentId);
+            if (bytes == null) {
+                return null;
+            }
+            return "{\"size\":" + bytes.length + ",\"data\":\"" + Base64.getUrlEncoder().encodeToString(bytes) + "\"}";
         }
 
         /** Gmail's {@code users.threads.get} with {@code format=full}; null when there is no such thread (404). */
@@ -353,11 +377,10 @@ public final class StandInGoogle {
             server.createContext("/gmail/v1/users/me/profile", this::profile);
             server.createContext("/gmail/v1/users/me/messages", exchange -> gmail(exchange, "/gmail/v1/users/me/messages", Mailbox::list));
             server.createContext("/gmail/v1/users/me/threads/", exchange -> thread(exchange));
-            // What the planner must never ask for: a message's own address (and with it an attachment's) is only counted.
-            server.createContext("/gmail/v1/users/me/messages/", exchange -> {
-                record(exchange, "/gmail/v1/users/me/messages/", Map.of());
-                answer(exchange, 404, "application/json", "{\"error\":{\"code\":404}}");
-            });
+            // What the planner must never ask for: a message's own address is only counted and answered with a 404. Below it
+            // only an attachment's address is answered, and only when the planner asks for one; every call is counted under
+            // this path, so a test can say that none was made.
+            server.createContext("/gmail/v1/users/me/messages/", this::belowAMessage);
             server.createContext("/gmail/v1/users/me/history", exchange -> gmail(exchange, "/gmail/v1/users/me/history", Mailbox::history));
             server.createContext("/elsewhere", exchange -> {
                 record(exchange, "/elsewhere", Map.of());
@@ -620,6 +643,40 @@ public final class StandInGoogle {
             return;
         }
         String body = what.apply(mailbox(account), query);
+        if (body == null) {
+            answer(exchange, 404, "application/json", "{\"error\":{\"code\":404,\"status\":\"NOT_FOUND\"}}");
+        } else {
+            answer(exchange, 200, "application/json", body);
+        }
+    }
+
+    private static final java.util.regex.Pattern ATTACHMENT_ADDRESS =
+            java.util.regex.Pattern.compile("/gmail/v1/users/me/messages/([^/]+)/attachments/([^/]+)");
+
+    /** Below a message's own address: {@code users.messages.attachments.get} only; anything else is a 404, and counted. */
+    private void belowAMessage(HttpExchange exchange) throws IOException {
+        String path = "/gmail/v1/users/me/messages/";
+        java.util.regex.Matcher address = ATTACHMENT_ADDRESS.matcher(exchange.getRequestURI().getRawPath());
+        Map<String, String> seen = new LinkedHashMap<>(form(exchange.getRequestURI().getRawQuery()));
+        if (address.matches()) {
+            seen.put("message", address.group(1));
+            seen.put("attachment", address.group(2));
+        }
+        record(exchange, path, seen);
+        if (!address.matches()) {
+            answer(exchange, 404, "application/json", "{\"error\":{\"code\":404}}");
+            return;
+        }
+        String account = accountOf(exchange);
+        Reply prepared = preparedForGmail(path, account);
+        if (prepared != null && replied(exchange, prepared)) {
+            return;
+        }
+        if (account == null) {
+            answer(exchange, 401, "application/json", "{\"error\":{\"code\":401}}");
+            return;
+        }
+        String body = mailbox(account).attachment(address.group(2));
         if (body == null) {
             answer(exchange, 404, "application/json", "{\"error\":{\"code\":404,\"status\":\"NOT_FOUND\"}}");
         } else {

@@ -9,21 +9,23 @@ import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 class RoundSetupTest {
 
     private static RoundProperties good() {
-        return new RoundProperties("1m", "true", "20", "60", "20", "2000", "50", "0.10", "0.50", "4", "20");
+        return new RoundProperties("1m", "true", "20", "60", "true", "80", "20", "2000", "50", "0.10", "0.50", "4", "20");
     }
 
     private static RoundProperties with(String field, String value) {
         RoundProperties p = good();
         return switch (field) {
-            case "interval" -> new RoundProperties(value, p.automatic(), p.batch(), p.triageSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
-            case "automatic" -> new RoundProperties(p.interval(), value, p.batch(), p.triageSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
-            case "batch" -> new RoundProperties(p.interval(), p.automatic(), value, p.triageSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
-            case "sure" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), value, p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
-            case "limit" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), value, p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
-            case "daily" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), p.monthlyLimitUsd(), value, p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
-            case "perMailbox" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), p.monthlyLimitUsd(), p.dailyMessages(), value, p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
-            case "triageIn" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), value, p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
-            case "extractionOut" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), value);
+            case "interval" -> new RoundProperties(value, p.automatic(), p.batch(), p.triageSure(), p.documents(), p.documentsSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
+            case "automatic" -> new RoundProperties(p.interval(), value, p.batch(), p.triageSure(), p.documents(), p.documentsSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
+            case "batch" -> new RoundProperties(p.interval(), p.automatic(), value, p.triageSure(), p.documents(), p.documentsSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
+            case "sure" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), value, p.documents(), p.documentsSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
+            case "limit" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), p.documents(), p.documentsSure(), value, p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
+            case "daily" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), p.documents(), p.documentsSure(), p.monthlyLimitUsd(), value, p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
+            case "perMailbox" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), p.documents(), p.documentsSure(), p.monthlyLimitUsd(), p.dailyMessages(), value, p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
+            case "triageIn" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), p.documents(), p.documentsSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), value, p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
+            case "extractionOut" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), p.documents(), p.documentsSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), value);
+            case "documents" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), value, p.documentsSure(), p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
+            case "documentsSure" -> new RoundProperties(p.interval(), p.automatic(), p.batch(), p.triageSure(), p.documents(), value, p.monthlyLimitUsd(), p.dailyMessages(), p.dailySuggestionsPerMailbox(), p.triagePriceIn(), p.triagePriceOut(), p.extractionPriceIn(), p.extractionPriceOut());
             default -> throw new IllegalArgumentException(field);
         };
     }
@@ -38,6 +40,8 @@ class RoundSetupTest {
         assertThat(parsed.rules().automatic()).isTrue();
         assertThat(parsed.rules().batch()).isEqualTo(20);
         assertThat(parsed.rules().triageSure()).isEqualTo(60);
+        assertThat(parsed.rules().documents()).isTrue();
+        assertThat(parsed.rules().documentsSure()).isEqualTo(80);
         assertThat(parsed.rules().monthlyLimitUsd()).isEqualByComparingTo("20");
         assertThat(parsed.rules().dailyMessages()).isEqualTo(2000);
         assertThat(parsed.rules().dailySuggestionsPerMailbox()).isEqualTo(50);
@@ -60,7 +64,9 @@ class RoundSetupTest {
             {"limit", "-0.01", RoundSetup.MONTHLY_LIMIT}, {"limit", secret, RoundSetup.MONTHLY_LIMIT}, {"limit", "NaN", RoundSetup.MONTHLY_LIMIT},
             {"daily", "-1", RoundSetup.DAILY_MESSAGES}, {"perMailbox", "-1", RoundSetup.DAILY_SUGGESTIONS},
             {"triageIn", secret, RoundSetup.TRIAGE_PRICE_IN}, {"extractionOut", "-3", RoundSetup.EXTRACTION_PRICE_OUT},
-            {"limit", "", RoundSetup.MONTHLY_LIMIT}};
+            {"limit", "", RoundSetup.MONTHLY_LIMIT},
+            {"documents", secret, RoundSetup.DOCUMENTS}, {"documents", "", RoundSetup.DOCUMENTS}, {"documentsSure", "-1", RoundSetup.DOCUMENTS_SURE},
+            {"documentsSure", "101", RoundSetup.DOCUMENTS_SURE}, {"documentsSure", "80.5", RoundSetup.DOCUMENTS_SURE}};
         for (String[] one : bad) {
             RoundSetup.Parsed parsed = RoundSetup.parse(with(one[0], one[1]), true);
 
@@ -68,6 +74,14 @@ class RoundSetupTest {
             assertThat(parsed.rules().on()).isFalse();
             assertThat(parsed.invalid().toString()).doesNotContain(secret);
         }
+    }
+
+    @Test
+    void documentsCanBeSwitchedOffAndTheShareCanBeAnythingFromZeroToAHundred() {
+        assertThat(RoundSetup.parse(with("documents", "false"), true).rules().documents()).isFalse();
+        assertThat(RoundSetup.parse(with("documents", "false"), true).rules().on()).isTrue();
+        assertThat(RoundSetup.parse(with("documentsSure", "0"), true).rules().documentsSure()).isZero();
+        assertThat(RoundSetup.parse(with("documentsSure", "100"), true).rules().documentsSure()).isEqualTo(100);
     }
 
     @Test
@@ -88,7 +102,7 @@ class RoundSetupTest {
     }
 
     private static int tasks(Rules rules) {
-        ReadingRound round = new ReadingRound(new NoSteps(), rules, null, null, null, null, null, java.time.Clock.systemUTC());
+        ReadingRound round = new ReadingRound(new NoSteps(), rules, null, null, null, null, null, null, java.time.Clock.systemUTC());
         ScheduledTaskRegistrar registrar = new ScheduledTaskRegistrar();
         round.configureTasks(registrar);
         return registrar.getFixedDelayTaskList().size();

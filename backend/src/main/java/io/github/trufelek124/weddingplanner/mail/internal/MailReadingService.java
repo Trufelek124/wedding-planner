@@ -119,7 +119,8 @@ class MailReadingService implements MailReading {
                 letter.arrived(),
                 text(letter.text()),
                 letter.earlier().stream().map(MailReadingService::earlier).toList(),
-                letterKey(weddingId, letter.identifier()));
+                letterKey(weddingId, letter.identifier()),
+                letter.documents().stream().map(pdf -> new Document(pdf.name(), pdf.size(), pdf.reference())).toList());
     }
 
     private static EarlierMessage earlier(Earlier earlier) {
@@ -132,6 +133,79 @@ class MailReadingService implements MailReading {
 
     private static Text text(MailSource.Text text) {
         return new Text(text.text(), text.cut());
+    }
+
+    // ---------------------------------------------------------------- documents
+
+    @Override
+    public Fetched document(MessageHandle message, Document document) {
+        if (document.size() > MOST_DOCUMENT_BYTES) {
+            return new NotFetched(DocumentWhy.TOO_LARGE);
+        }
+        if (setup.ready().isEmpty()) {
+            return new NotFetched(DocumentWhy.NOT_CONNECTED);
+        }
+        try {
+            return switch (source.document(message.memberId(), message.messageId(), document.reference())) {
+                case MailSource.Downloaded downloaded -> new Pdf(downloaded.bytes());
+                case MailSource.DocumentGone gone -> new NotFetched(DocumentWhy.GONE);
+                case MailSource.DocumentTooLarge large -> new NotFetched(DocumentWhy.TOO_LARGE);
+                case MailSource.NotAPdf notAPdf -> new NotFetched(DocumentWhy.NOT_A_DOCUMENT);
+            };
+        } catch (SourceFailure failure) {
+            return new NotFetched(switch (failure.kind()) {
+                case NOT_CONNECTED -> DocumentWhy.NOT_CONNECTED;
+                case NEEDS_RECONNECTING -> DocumentWhy.NEEDS_RECONNECTING;
+                case REFUSED_FOR_NOW -> DocumentWhy.REFUSED_FOR_NOW;
+                case INTERRUPTED, MARKER_TOO_OLD -> DocumentWhy.INTERRUPTED;
+            });
+        } catch (RuntimeException unexpected) {
+            // Only the kind: what the exception carries may be a document's.
+            log.warn("A document of a message of member {} could not be fetched unexpectedly ({})", message.memberId(),
+                    unexpected.getClass().getSimpleName());
+            return new NotFetched(DocumentWhy.INTERRUPTED);
+        }
+    }
+
+    @Override
+    public boolean beginDocuments(MessageHandle message) {
+        return messages.beginDocuments(message.weddingId(), message.memberId(), message.messageId());
+    }
+
+    @Override
+    public List<MessageHandle> waitingForDocuments(int most, Collection<UUID> leavingOut) {
+        if (most <= 0) {
+            throw new IllegalArgumentException("most");
+        }
+        if (setup.ready().isEmpty()) {
+            return List.of();
+        }
+        return messages.waitingForDocuments(most, leavingOut).stream().map(MailReadingService::handle).toList();
+    }
+
+    @Override
+    public boolean endDocuments(MessageHandle message) {
+        return messages.endDocuments(message.weddingId(), message.memberId(), message.messageId());
+    }
+
+    @Override
+    public boolean documentsOfACopyWereLookedAt(MessageHandle message, String letterKey) {
+        if (letterKey == null || letterKey.isEmpty()) {
+            return false;
+        }
+        return messages.documentsOfACopyWereLookedAt(message.weddingId(), message.memberId(), message.messageId(), letterKey);
+    }
+
+    @Override
+    public boolean documentsDone(MessageHandle message, int moreProposals, String letterKey) {
+        if (moreProposals < 0) {
+            throw new IllegalArgumentException("moreProposals");
+        }
+        if (letterKey == null || (!letterKey.isEmpty() && !LETTER_KEY.matcher(letterKey).matches())) {
+            throw new IllegalArgumentException("letterKey");
+        }
+        return messages.documentsDone(message.weddingId(), message.memberId(), message.messageId(), moreProposals,
+                letterKey.isEmpty() ? null : letterKey);
     }
 
     // ---------------------------------------------------------------- keys
@@ -177,7 +251,7 @@ class MailReadingService implements MailReading {
     // ---------------------------------------------------------------- verdicts
 
     @Override
-    public boolean mark(MessageHandle message, Verdict verdict, String letterKey) {
+    public boolean mark(MessageHandle message, Verdict verdict, String letterKey, boolean documentsStillToLookAt) {
         if (letterKey == null || (!letterKey.isEmpty() && !LETTER_KEY.matcher(letterKey).matches())) {
             throw new IllegalArgumentException("letterKey");
         }
@@ -191,7 +265,7 @@ class MailReadingService implements MailReading {
             case CopyOfOneRead copy -> new MessageRepository.Verdict("COPY", null, null);
         };
         return messages.mark(message.weddingId(), message.memberId(), message.messageId(), stored,
-                letterKey.isEmpty() ? null : letterKey, clock.instant());
+                letterKey.isEmpty() ? null : letterKey, clock.instant(), documentsStillToLookAt && verdict instanceof AboutTheWedding);
     }
 
     @Override

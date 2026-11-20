@@ -14,6 +14,8 @@ final class RoundSetup {
     static final String AUTOMATIC = "MAIL_READING_ENABLED";
     static final String BATCH = "app.reading.batch";
     static final String TRIAGE_SURE = "MAIL_READING_TRIAGE_SURE";
+    static final String DOCUMENTS = "MAIL_READING_DOCUMENTS_ENABLED";
+    static final String DOCUMENTS_SURE = "MAIL_READING_DOCUMENTS_SURE";
     static final String MONTHLY_LIMIT = "MAIL_READING_MONTHLY_LIMIT_USD";
     static final String DAILY_MESSAGES = "MAIL_READING_DAILY_MESSAGES";
     static final String DAILY_SUGGESTIONS = "MAIL_READING_DAILY_SUGGESTIONS";
@@ -37,9 +39,11 @@ final class RoundSetup {
     static Parsed parse(RoundProperties properties, boolean keyGiven) {
         List<String> invalid = new ArrayList<>();
         Duration interval = duration(properties.interval(), invalid);
-        Boolean automatic = bool(properties.automatic(), invalid);
+        Boolean automatic = bool(properties.automatic(), AUTOMATIC, invalid);
         int batch = whole(properties.batch(), 1, MOST_BATCH, BATCH, invalid);
         int sure = whole(properties.triageSure(), 0, 100, TRIAGE_SURE, invalid);
+        Boolean documents = bool(properties.documents(), DOCUMENTS, invalid);
+        int documentsSure = whole(properties.documentsSure(), 0, 100, DOCUMENTS_SURE, invalid);
         BigDecimal limit = money(properties.monthlyLimitUsd(), MONTHLY_LIMIT, invalid);
         int daily = whole(properties.dailyMessages(), 0, MOST_COUNT, DAILY_MESSAGES, invalid);
         int perMailbox = whole(properties.dailySuggestionsPerMailbox(), 0, MOST_COUNT, DAILY_SUGGESTIONS, invalid);
@@ -51,7 +55,7 @@ final class RoundSetup {
         boolean valid = invalid.isEmpty();
         return new Parsed(
                 new Rules(keyGiven && valid, valid ? interval : Duration.ofMinutes(1), valid && automatic, valid ? batch : 1, sure,
-                        limit, daily, perMailbox, triage, extraction),
+                        valid && documents, documentsSure, limit, daily, perMailbox, triage, extraction),
                 List.copyOf(invalid));
     }
 
@@ -68,7 +72,7 @@ final class RoundSetup {
         return Duration.ofMinutes(1);
     }
 
-    private static Boolean bool(String text, List<String> invalid) {
+    private static Boolean bool(String text, String name, List<String> invalid) {
         String word = text == null ? "" : text.strip().toLowerCase(Locale.ROOT);
         if (word.equals("true")) {
             return true;
@@ -76,7 +80,7 @@ final class RoundSetup {
         if (word.equals("false")) {
             return false;
         }
-        invalid.add(AUTOMATIC);
+        invalid.add(name);
         return false;
     }
 

@@ -158,6 +158,8 @@ e-mail import existed passes none of them.
 | `MAIL_READING_DAILY_MESSAGES` | no, default `2000` | How many messages are read in a day at most. |
 | `MAIL_READING_DAILY_SUGGESTIONS` | no, default `50` | How many new suggestions one mailbox may bring in a day; then that mailbox waits until the next day. |
 | `MAIL_READING_TRIAGE_SURE` | no, default `60` | A "not about the wedding" that is less sure than this (0 to 100) is read in full all the same. |
+| `MAIL_READING_DOCUMENTS_ENABLED` | no, default `true` | `false`: the PDF documents that come with a message are never fetched or read (D-011). |
+| `MAIL_READING_DOCUMENTS_SURE` | no, default `80` | How sure (0 to 100) the first step must be that a message concerns the wedding for its PDF documents to be read with it. |
 | `MAIL_READING_INTERVAL` | no, default `1m` | How often the server reads what waits, twenty messages at a time. |
 | `MAIL_READING_ENABLED` | no, default `true` | `false`: nothing is read by itself. |
 | `DEV_LOGIN_ENABLED` | no, default `false` | Signing in as an allowed address without Google. **Never `true` on a server others can reach.** |
@@ -221,9 +223,14 @@ What the owner does once:
 
 What to expect, and what to do:
 
-- **The first look** over three months of two mailboxes is spread over days: at most 2,000 messages a day, and
-  at most 50 new suggestions from one mailbox in a day. D-007 estimates about 3 US dollars for a thousand
-  messages; the page shows what it really comes to.
+- **Earlier mail**, once an owner asks for it on the page (D-009), can be spread over days when it is much: at
+  most 2,000 messages a day, and at most 50 new suggestions from one mailbox in a day. D-007 estimates about
+  3 US dollars for a thousand messages; the page shows what it really comes to.
+- **PDF documents** (D-011): the text of a message's PDF documents — an offer, a contract — is read with it when
+  the first step was at least 80 in 100 sure that the message concerns the wedding. Mail that was read before
+  the server could do this is looked at once more for its documents, a few messages a minute, by itself. A
+  scanned document (pictures of pages) has no text and is not read. `MAIL_READING_DOCUMENTS_ENABLED=false`
+  switches all of it off.
 - **The service is busy**: the reading waits, for longer each time, and goes on by itself.
 - **The key is not accepted** (a wrong key, no credit, a model the account does not know): the reading stops and
   the page says so. Correct the setting and **start the server again** — it does not try again by itself.
@@ -236,8 +243,8 @@ Nothing of this has run against the real service yet: the first days are worth w
 
 ### Measuring it before switching it on
 
-The repository holds sixty invented messages — twenty each in Polish, Ukrainian and English — with what the two
-steps should answer, and a tool that runs the steps over them **with the real AI service** and says how often
+The repository holds sixty-three invented messages — twenty-one each in Polish, Ukrainian and English, one of
+them in each language with a vendor's offer as a document — with what the two steps should answer, and a tool that runs the steps over them **with the real AI service** and says how often
 each was right and what it cost. It is not part of the gate and no session runs it: a run costs money and is the
 owner's to order. On a machine with the repository and JDK 25:
 

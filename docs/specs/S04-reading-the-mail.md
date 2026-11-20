@@ -58,7 +58,8 @@ A message that concerned the wedding and was read before the planner could read 
 for its documents only**: the same message with their text, with what it already proposed told to the model so
 that nothing is proposed twice. What comes of it are further suggestions from the same message. It happens by
 itself, once per message, under the same limits as all reading; a message without a PDF costs one look at
-Gmail and nothing else.
+Gmail and nothing else. A letter that is in both mailboxes has its documents looked at once: the copy that is
+reached second is done with, with nothing asked.
 
 ## 4. What the two steps answer
 
@@ -89,7 +90,9 @@ A message is written by anybody, and the models read it. So:
   the file is run, followed or fetched, and the file is not kept. What the text says is somebody else's words
   like the mail's, set apart in the request in the same way. A document that cannot be read — locked, damaged,
   too large — is left out and the message is read without it. Reading one message's documents is tried once: if
-  the server stops while it does, that message is read without them the next time.
+  the server stops while it fetches them or takes their text out, that message is read without them the next
+  time. What goes wrong afterwards or elsewhere is no such try: when the AI service is busy, or Gmail cannot be
+  asked for the moment, the message waits and is read later with its documents.
 - **Names are matched by the server, not by the model**: a vendor is linked when the sender's address is a
   vendor's address, or the proposed name is exactly a vendor's name; a category when the proposed name is
   exactly one of the planner's. Otherwise the name stays what S02 calls a name the planner does not have yet.
@@ -128,7 +131,9 @@ A message is written by anybody, and the models read it. So:
 | The AI service does not accept the server's key, the account has no credit, or it does not know the model that is set | The reading stops and the e-mail page says so. It starts again when the server is started with a key that works. |
 | The model declines a message, or answers in a shape the server cannot use | The message's verdict is "could not be read". It is not tried again. |
 | A message is too large to fetch, or has no text | "Could not be read." |
-| A document cannot be fetched or read | The message is read without it. |
+| A document is locked, damaged, too large, not a PDF after all, or gone | The message is read without it. |
+| Gmail cannot be asked for a document for the moment | The message waits and is read later, with its documents. A document that is cut off or too slow three times in a row is left out. |
+| A document takes longer than its ten seconds and cannot be stopped | No further document is opened until the server is started again. Mail is read on without its documents meanwhile and is looked at again for them afterwards. |
 | Gmail no longer has the message | "Could not be read." |
 | Gmail refuses or the permission is gone | As in S03: the mailbox is put off, or has to be connected again. |
 
@@ -157,10 +162,11 @@ A setting that is not valid turns the reading off, and the log names the setting
   and what extraction should propose — and a tool that runs the two steps over it with the real AI service and
   reports how often each was right and what the run cost. It is not part of the gate: **no test ever calls the
   real AI service**, and a run costs money. It is run when the owner says so, with the owner's key:
-  `docs/deployment.md`, "Measuring it before switching it on". The set is twenty messages in each language under
+  `docs/deployment.md`, "Measuring it before switching it on". The set is twenty-one messages in each language under
   `backend/src/test/resources/mailreading/samples/`; among them messages whose point comes after the beginning,
   a day given only relative to the wedding, an amount in another currency, a reply whose amount stands in an
-  earlier message, and messages that try to instruct the reader.
+  earlier message, an offer whose further payments stand only in the document that came with it, and messages
+  that try to instruct the reader.
 - When there is a server: an API key of the Anthropic account in the server's environment, with a spending limit
   set on the account itself as a second brake; then the e-mail page shows the reading going on and what it costs.
 

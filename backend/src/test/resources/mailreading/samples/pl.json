@@ -548,6 +548,79 @@
         ],
         "nothingElse": true
       }
+    },
+    {
+      "id": "pl-21",
+      "sort": "proposal",
+      "instructs": false,
+      "from": {
+        "name": "Magdalena Wrońska",
+        "address": "rezerwacje@dwor-nad-rzeka.example"
+      },
+      "subject": "Oferta na 12 czerwca 2027 - w załączniku",
+      "arrived": "2026-11-18T12:20:00Z",
+      "text": "Dzień dobry,\n\ndziękujemy za wizytę w Dworze nad Rzeką. W załączniku przesyłamy ofertę na salę i catering na 12 czerwca 2027. Na początek potrzebna jest zaliczka, żeby potwierdzić termin; dalsze płatności są w harmonogramie w ofercie.\n\nPozdrawiam,\nMagdalena Wrońska\nDwór nad Rzeką",
+      "documents": [
+        {
+          "name": "oferta-dwor-nad-rzeka.pdf",
+          "text": "Oferta nr 44/2026 - Dwór nad Rzeką\nSala weselna i catering, 12 czerwca 2027, 80 osób\nCena całkowita: 36 000 PLN\n\nHarmonogram płatności:\n1. Zaliczka: 6 000 PLN do 3 grudnia 2026\n2. Druga rata: 12 000 PLN do 15 stycznia 2027\n3. Płatność końcowa: 18 000 PLN do 29 maja 2027\n\nWpłaty na rachunek podany w umowie."
+        }
+      ],
+      "why": "The mail only says that a deposit is needed. The three payments, their amounts and their days are in the offer that came with it: 6,000 PLN by 3 December 2026, 12,000 PLN by 15 January 2027, 18,000 PLN by 29 May 2027.",
+      "expected": {
+        "concernsTheWedding": true,
+        "proposals": [
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "zaliczk",
+              "rezerwac",
+              "potwierdz",
+              "dwór",
+              "dwor"
+            ],
+            "dueDate": "2026-12-03",
+            "amount": {
+              "value": "6000",
+              "currency": "PLN"
+            },
+            "paymentKind": "DEPOSIT"
+          },
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "rat",
+              "druga",
+              "drugą",
+              "kolejn"
+            ],
+            "dueDate": "2027-01-15",
+            "amount": {
+              "value": "12000",
+              "currency": "PLN"
+            },
+            "paymentKind": "INSTALMENT"
+          },
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "końcow",
+              "koncow",
+              "ostatni",
+              "reszt",
+              "finał",
+              "final"
+            ],
+            "dueDate": "2027-05-29",
+            "amount": {
+              "value": "18000",
+              "currency": "PLN"
+            },
+            "paymentKind": "FINAL"
+          }
+        ],
+        "mustNotPropose": []
+      }
     }
   ]
 }

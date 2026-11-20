@@ -6,6 +6,7 @@ import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Found;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Gone;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Letter;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.NoText;
+import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Pdf;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Person;
 import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Text;
 import java.io.ByteArrayOutputStream;
@@ -99,7 +100,66 @@ final class GmailLetters {
         }
         return new Found(new Letter(
                 person(header(target, "From")), bounded(decodedWords(header(target, "Subject")), LONGEST_SUBJECT), arrived, cut(body),
-                earlier, identifierOf(header(target, "Message-ID"))));
+                earlier, identifierOf(header(target, "Message-ID")), pdfsOf(target.get("payload"))));
+    }
+
+    /** What Gmail's identifier of an attachment looks like (never dots alone: that would be a step of a path); anything else is not fetched, and its part is not listed. */
+    static final Pattern REFERENCE = Pattern.compile("(?!\\.+$)[A-Za-z0-9_.=-]{1,2048}");
+    /** How many documents one message lists at most: what is beyond is of no use to anybody and is not carried about. */
+    static final int MOST_LISTED = 20;
+
+    private static final byte[] PDF_BEGINNING = "%PDF-".getBytes(StandardCharsets.US_ASCII);
+
+    /** Whether the bytes begin the way every PDF does. */
+    static boolean beginsLikeAPdf(byte[] bytes) {
+        if (bytes.length < PDF_BEGINNING.length) {
+            return false;
+        }
+        for (int i = 0; i < PDF_BEGINNING.length; i++) {
+            if (bytes[i] != PDF_BEGINNING[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * The PDF documents of a message, in the order of the mail: a part that has an attachment identifier and whose type is
+     * {@code application/pdf} or whose file name ends in {@code .pdf}, whatever type it claims. Any other file is not listed.
+     * Nothing is fetched: this only reads what the thread's own answer holds.
+     */
+    static List<Pdf> pdfsOf(JsonNode payload) {
+        List<Pdf> found = new ArrayList<>();
+        collectPdfs(payload, found, 0);
+        return List.copyOf(found);
+    }
+
+    private static void collectPdfs(JsonNode part, List<Pdf> found, int depth) {
+        if (part == null || !part.isObject() || depth > DEEPEST_PARTS || found.size() >= MOST_LISTED) {
+            return;
+        }
+        JsonNode children = part.get("parts");
+        if (children != null && children.isArray()) {
+            for (JsonNode child : children) {
+                collectPdfs(child, found, depth + 1);
+            }
+            return;
+        }
+        String reference = part.path("body").path("attachmentId").asString("");
+        String filename = part.path("filename").asString("").strip();
+        String type = part.path("mimeType").asString("").toLowerCase(Locale.ROOT).trim();
+        boolean pdf = type.equals("application/pdf") || filename.toLowerCase(Locale.ROOT).endsWith(".pdf");
+        if (pdf && REFERENCE.matcher(reference).matches()) {
+            found.add(new Pdf(bounded(decodedWords(filename).replaceAll("[\\p{Cntrl}\\p{Zl}\\p{Zp}]+", " ").strip(), LONGEST_NAME),
+                    sizeOf(part.path("body").get("size")), reference));
+        }
+    }
+
+    private static long sizeOf(JsonNode size) {
+        if (size == null || !size.isNumber() || size.asLong() < 0) {
+            return 0;
+        }
+        return size.asLong();
     }
 
     /**

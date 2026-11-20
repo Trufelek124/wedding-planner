@@ -123,13 +123,14 @@ final class AnthropicSteps implements ReadingSteps {
                 .flatMap(block -> block.text().stream())
                 .map(com.anthropic.models.beta.messages.StructuredTextBlock::text)
                 .toList());
-        if (raw != null && raw.proposals() != null && raw.proposals().size() > MailExtraction.MOST_PROPOSALS) {
+        if (raw != null && raw.proposals() != null && raw.proposals().size() > message.mostProposals()) {
             return ended("extraction", Outcome.Why.TOO_MANY_PROPOSALS, used);
         }
         List<String> sent = new ArrayList<>();
         sent.add(message.text());
         fitted.kept().forEach(earlier -> sent.add(earlier.text()));
-        Optional<MailExtraction.Extracted> checked = Checking.extracted(raw, sent);
+        message.documents().forEach(document -> sent.add(document.text()));
+        Optional<MailExtraction.Extracted> checked = Checking.extracted(raw, sent, message.mostProposals());
         if (checked.isEmpty()) {
             return ended("extraction", Outcome.Why.CANNOT_BE_USED, used);
         }

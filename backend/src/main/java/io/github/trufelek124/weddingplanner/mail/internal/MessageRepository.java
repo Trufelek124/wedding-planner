@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** The messages the sync has noted in the owners' mailboxes: two identifiers each, nothing of the message itself. */
@@ -197,13 +198,102 @@ class MessageRepository {
      * @param letterKey what the letter is known by (a hash), or null where no letter was had
      * @return whether this call gave the verdict; false when it had one, or the message is not there (any more)
      */
-    boolean mark(UUID weddingId, UUID memberId, String messageId, Verdict verdict, String letterKey, Instant now) {
+    boolean mark(UUID weddingId, UUID memberId, String messageId, Verdict verdict, String letterKey, Instant now, boolean documentsStillToLookAt) {
         return jdbc.sql("""
-                UPDATE mail_message SET verdict = ?, unread_reason = ?, proposals = ?, letter_key = ?, read_at = ?
+                UPDATE mail_message SET verdict = ?, unread_reason = ?, proposals = ?, letter_key = ?, read_at = ?,
+                    documents = CASE WHEN ? THEN 'PENDING' ELSE 'DONE' END
                 WHERE member_id = ? AND message_id = ? AND verdict IS NULL
                   AND member_id IN (SELECT id FROM wedding_member WHERE wedding_id = ?)
                 """)
-                .params(verdict.word(), verdict.reason(), verdict.proposals(), letterKey, at(now), memberId, messageId, weddingId)
+                .params(verdict.word(), verdict.reason(), verdict.proposals(), letterKey, at(now), documentsStillToLookAt, memberId, messageId, weddingId)
+                .update() == 1;
+    }
+
+    /**
+     * Writes that the documents of this message are about to be read, in a transaction of its own and at once: before
+     * anything is fetched, so that a message whose documents stopped the server is not tried a second time (S04 section 5).
+     * It counts only for a message of this wedding's member whose documents were still to be looked at.
+     *
+     * @return whether this call was the first: true once for a message, false for every call after it
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    boolean beginDocuments(UUID weddingId, UUID memberId, String messageId) {
+        return jdbc.sql("""
+                UPDATE mail_message SET documents = 'BEGUN'
+                WHERE member_id = ? AND message_id = ? AND documents = 'PENDING'
+                  AND member_id IN (SELECT id FROM wedding_member WHERE wedding_id = ?)
+                """)
+                .params(memberId, messageId, weddingId)
+                .update() == 1;
+    }
+
+    /** The mark of {@link #beginDocuments} is taken back (BEGUN to PENDING), in a transaction of its own. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    boolean endDocuments(UUID weddingId, UUID memberId, String messageId) {
+        return jdbc.sql("""
+                UPDATE mail_message SET documents = 'PENDING'
+                WHERE member_id = ? AND message_id = ? AND documents = 'BEGUN'
+                  AND member_id IN (SELECT id FROM wedding_member WHERE wedding_id = ?)
+                """)
+                .params(memberId, messageId, weddingId)
+                .update() == 1;
+    }
+
+    /**
+     * Whether another noted message of this wedding has this key, the verdict WEDDING and its documents done with. Served by the
+     * index on {@code letter_key}.
+     */
+    boolean documentsOfACopyWereLookedAt(UUID weddingId, UUID memberId, String messageId, String letterKey) {
+        return jdbc.sql("""
+                SELECT EXISTS (
+                    SELECT 1 FROM mail_message m JOIN wedding_member w ON w.id = m.member_id
+                    WHERE m.letter_key = ? AND m.verdict = 'WEDDING' AND m.documents = 'DONE' AND w.wedding_id = ?
+                      AND NOT (m.member_id = ? AND m.message_id = ?))
+                """)
+                .params(letterKey, weddingId, memberId, messageId)
+                .query(Boolean.class)
+                .single();
+    }
+
+    /**
+     * The messages about the wedding whose documents were never looked at, the newest first, of the mailboxes that are
+     * connected, without the mailboxes of these members. A message whose documents were begun is not among them.
+     */
+    List<Waiting> waitingForDocuments(int most, Collection<UUID> leavingOut) {
+        String leaving = leavingOut.isEmpty() ? "" : " AND m.member_id NOT IN (:leavingOut)";
+        return jdbc.sql("""
+                SELECT w.wedding_id, m.member_id, m.message_id, m.thread_id
+                FROM mail_message m
+                JOIN mail_connection c ON c.member_id = m.member_id AND c.state = 'CONNECTED'
+                JOIN wedding_member w ON w.id = m.member_id
+                WHERE m.verdict = 'WEDDING' AND m.documents = 'PENDING'""" + leaving + """
+
+                ORDER BY m.look DESC, m.newness DESC
+                LIMIT :most
+                """)
+                .param("most", most)
+                .params(leavingOut.isEmpty() ? Map.<String, Object>of() : Map.<String, Object>of("leavingOut", List.copyOf(leavingOut)))
+                .query((rows, number) -> new Waiting(
+                        rows.getObject("wedding_id", UUID.class),
+                        rows.getObject("member_id", UUID.class),
+                        rows.getString("message_id"),
+                        rows.getString("thread_id")))
+                .list();
+    }
+
+    /**
+     * The documents of a message about the wedding are dealt with, and the proposals they brought are added to the number
+     * kept with the message, in one statement. Only a message about the wedding whose documents were not yet done with.
+     *
+     * @return whether this call did it
+     */
+    boolean documentsDone(UUID weddingId, UUID memberId, String messageId, int moreProposals, String letterKey) {
+        return jdbc.sql("""
+                UPDATE mail_message SET documents = 'DONE', proposals = proposals + ?, letter_key = COALESCE(letter_key, ?)
+                WHERE member_id = ? AND message_id = ? AND verdict = 'WEDDING' AND documents <> 'DONE'
+                  AND member_id IN (SELECT id FROM wedding_member WHERE wedding_id = ?)
+                """)
+                .params(moreProposals, letterKey, memberId, messageId, weddingId)
                 .update() == 1;
     }
 

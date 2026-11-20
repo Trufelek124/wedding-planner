@@ -554,6 +554,76 @@
           }
         ]
       }
+    },
+    {
+      "id": "uk-21",
+      "sort": "proposal",
+      "instructs": false,
+      "from": {
+        "name": "Олена Бондар",
+        "address": "rezervatsii@maietok-nad-richkoiu.example"
+      },
+      "subject": "Пропозиція на 12 червня 2027 - у вкладенні",
+      "arrived": "2026-11-18T12:20:00Z",
+      "text": "Добрий день!\n\nДякуємо за візит до маєтку «Над річкою». У вкладенні надсилаємо пропозицію на залу та кейтеринг на 12 червня 2027. Спочатку потрібен завдаток, щоб підтвердити дату; решта платежів - у графіку в пропозиції.\n\nЗ повагою,\nОлена Бондар\nМаєток «Над річкою»",
+      "documents": [
+        {
+          "name": "propozytsiia-maietok.pdf",
+          "text": "Пропозиція № 44/2026 - Маєток «Над річкою»\nВесільна зала та кейтеринг, 12 червня 2027, 80 осіб\nЗагальна вартість: 36 000 PLN\n\nГрафік платежів:\n1. Завдаток: 6 000 PLN до 3 грудня 2026\n2. Друга сплата: 12 000 PLN до 15 січня 2027\n3. Остаточний платіж: 18 000 PLN до 29 травня 2027\n\nОплата на рахунок, указаний у договорі."
+        }
+      ],
+      "why": "The mail only says that a deposit is needed. The three payments, their amounts and their days are in the offer that came with it: 6,000 PLN by 3 December 2026, 12,000 PLN by 15 January 2027, 18,000 PLN by 29 May 2027.",
+      "expected": {
+        "concernsTheWedding": true,
+        "proposals": [
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "завдат",
+              "підтверд",
+              "маєт",
+              "маєток"
+            ],
+            "dueDate": "2026-12-03",
+            "amount": {
+              "value": "6000",
+              "currency": "PLN"
+            },
+            "paymentKind": "DEPOSIT"
+          },
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "друг",
+              "сплат",
+              "внес",
+              "платіж"
+            ],
+            "dueDate": "2027-01-15",
+            "amount": {
+              "value": "12000",
+              "currency": "PLN"
+            },
+            "paymentKind": "INSTALMENT"
+          },
+          {
+            "kind": "PAYMENT",
+            "titleMentions": [
+              "остаточ",
+              "решт",
+              "кінцев",
+              "фінал"
+            ],
+            "dueDate": "2027-05-29",
+            "amount": {
+              "value": "18000",
+              "currency": "PLN"
+            },
+            "paymentKind": "FINAL"
+          }
+        ],
+        "mustNotPropose": []
+      }
     }
   ]
 }

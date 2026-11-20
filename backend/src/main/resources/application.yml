@@ -101,6 +101,10 @@ app:
     # A "no, this is not about the wedding" that is less sure than this (0 to 100) is read on as if it were a "yes":
     # missing a message about the wedding is worse than paying for one extraction that proposes nothing.
     triage-sure: ${MAIL_READING_TRIAGE_SURE:60}
+    # The text of the PDF documents that come with a message is read and sent with it (S04 sections 3 and 5, D-011), only for
+    # a message that triage called a "yes" and was at least this sure (0 to 100) of. false: documents are never fetched.
+    documents: ${MAIL_READING_DOCUMENTS_ENABLED:true}
+    documents-sure: ${MAIL_READING_DOCUMENTS_SURE:80}
     # The brakes (S04 section 8). The estimate of the month in US dollars; when it reaches this, the reading pauses until
     # the next month. Days and months are UTC.
     monthly-limit-usd: ${MAIL_READING_MONTHLY_LIMIT_USD:20}
@@ -146,6 +150,10 @@ logging:
     com.anthropic: INFO
     okhttp3: INFO
     okio: INFO
+    # The library that takes the text out of a PDF document (D-011) logs what it meets in a file: font and object names, and at
+    # times words of the file itself. Somebody else's file: nothing of it is printed, whatever the rest is set to.
+    org.apache.pdfbox: "OFF"
+    org.apache.fontbox: "OFF"
 
 management:
   endpoints:

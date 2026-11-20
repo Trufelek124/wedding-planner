@@ -7,6 +7,7 @@ import io.github.trufelek124.weddingplanner.mail.internal.MailSource.Text;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /** How a made-up message's words are made out of what Gmail gives: encoded headers, senders, HTML and the cut. No server. */
@@ -113,8 +114,65 @@ class GmailLettersTest {
         assertThat(new Text("Secret text", false).toString()).doesNotContain("Secret");
         assertThat(new MailSource.Earlier(new Person("S", "s@x.example"), java.time.Instant.EPOCH, new Text("Secret", false)).toString())
                 .doesNotContain("Secret").doesNotContain("s@x");
-        assertThat(new MailSource.Letter(new Person("S", "s@x.example"), "Secret subject", java.time.Instant.EPOCH, new Text("Secret", false), java.util.List.of(), "secret-id@x.example").toString())
-                .doesNotContain("Secret").doesNotContain("s@x");
+        assertThat(new MailSource.Letter(new Person("S", "s@x.example"), "Secret subject", java.time.Instant.EPOCH, new Text("Secret", false), java.util.List.of(), "secret-id@x.example", java.util.List.of(new MailSource.Pdf("secret-offer.pdf", 99, "att-1"))).toString())
+                .doesNotContain("Secret").doesNotContain("s@x").doesNotContain("secret-offer");
+        assertThat(new MailSource.Pdf("secret-offer.pdf", 99, "att-secret").toString()).doesNotContain("secret").doesNotContain("99");
+        assertThat(new MailSource.Downloaded("%PDF-secret".getBytes()).toString()).doesNotContain("secret").doesNotContain("PDF");
+        assertThat(new io.github.trufelek124.weddingplanner.mail.MailReading.Document("secret-offer.pdf", 99, "att-secret").toString())
+                .doesNotContain("secret").doesNotContain("99");
+        assertThat(new io.github.trufelek124.weddingplanner.mail.MailReading.Pdf("%PDF-secret".getBytes()).toString())
+                .doesNotContain("secret").doesNotContain("PDF");
+    }
+
+    private static tools.jackson.databind.JsonNode part(String json) {
+        return tools.jackson.databind.json.JsonMapper.builder().build().readTree(json);
+    }
+
+    @Test
+    void aPdfPartIsListedByItsTypeOrItsNameWithAnAttachmentIdentifierAndNothingElseIs() {
+        String payload = """
+                {"mimeType":"multipart/mixed","parts":[
+                  {"mimeType":"text/plain","filename":"","body":{"size":4,"data":"dGVzdA"}},
+                  {"mimeType":"application/pdf","filename":"A.pdf","body":{"attachmentId":"att-1","size":1200}},
+                  {"mimeType":"application/octet-stream","filename":"B.PDF","body":{"attachmentId":"att-2","size":34}},
+                  {"mimeType":"application/pdf","filename":"no-size.pdf","body":{"attachmentId":"att-3"}},
+                  {"mimeType":"application/pdf","filename":"negative.pdf","body":{"attachmentId":"att-4","size":-5}},
+                  {"mimeType":"application/pdf","filename":"inline.pdf","body":{"size":9,"data":"dGVzdA"}},
+                  {"mimeType":"image/png","filename":"pdf.png","body":{"attachmentId":"att-5","size":7}},
+                  {"mimeType":"application/vnd.ms-excel","filename":"sheet.pdf.xls","body":{"attachmentId":"att-6","size":7}},
+                  {"mimeType":"application/pdf","filename":"bad-id.pdf","body":{"attachmentId":"a b/../c","size":7}},
+                  {"mimeType":"application/pdf","filename":"dots.pdf","body":{"attachmentId":"..","size":7}},
+                  {"mimeType":"application/pdf","filename":"dot.pdf","body":{"attachmentId":".","size":7}}]}
+                """;
+
+        List<MailSource.Pdf> found = GmailLetters.pdfsOf(part(payload));
+
+        assertThat(found).extracting(MailSource.Pdf::name, MailSource.Pdf::size, MailSource.Pdf::reference).containsExactly(
+                org.assertj.core.groups.Tuple.tuple("A.pdf", 1200L, "att-1"), org.assertj.core.groups.Tuple.tuple("B.PDF", 34L, "att-2"),
+                org.assertj.core.groups.Tuple.tuple("no-size.pdf", 0L, "att-3"), org.assertj.core.groups.Tuple.tuple("negative.pdf", 0L, "att-4"));
+    }
+
+    @Test
+    void aPdfsNameIsDecodedMadeOneLineAndBounded() {
+        String payload = "{\"mimeType\":\"multipart/mixed\",\"parts\":[{\"mimeType\":\"application/pdf\",\"filename\":\"" + b("UTF-8", "Oferta Pałac") + ".pdf\","
+                + "\"body\":{\"attachmentId\":\"att-1\"}},{\"mimeType\":\"application/pdf\",\"filename\":\"line\\nbreak\\u0007.pdf\",\"body\":{\"attachmentId\":\"att-2\"}},"
+                + "{\"mimeType\":\"application/pdf\",\"filename\":\"" + "n".repeat(500) + ".pdf\",\"body\":{\"attachmentId\":\"att-3\"}}]}";
+
+        List<MailSource.Pdf> found = GmailLetters.pdfsOf(part(payload));
+
+        assertThat(found.get(0).name()).isEqualTo("Oferta Pałac.pdf");
+        assertThat(found.get(1).name()).isEqualTo("line break .pdf");
+        assertThat(found.get(2).name()).hasSize(200);
+    }
+
+    @Test
+    void whatBeginsLikeAPdfIsExactlyWhatStartsWithItsFiveCharacters() {
+        assertThat(GmailLetters.beginsLikeAPdf("%PDF-1.7".getBytes())).isTrue();
+        assertThat(GmailLetters.beginsLikeAPdf("%PDF-".getBytes())).isTrue();
+        assertThat(GmailLetters.beginsLikeAPdf("%PDF".getBytes())).isFalse();
+        assertThat(GmailLetters.beginsLikeAPdf("%pdf-1.7".getBytes())).isFalse();
+        assertThat(GmailLetters.beginsLikeAPdf(" %PDF-1.7".getBytes())).isFalse();
+        assertThat(GmailLetters.beginsLikeAPdf(new byte[0])).isFalse();
     }
 
     @Test

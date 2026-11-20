@@ -119,6 +119,40 @@ class GmailSource implements MailSource {
         }
     }
 
+    /** The answer to an attachment is base64 in JSON: a third as large again as the file, and a little more. */
+    private static final int MOST_DOCUMENT_ANSWER_BYTES = (int) (MOST_DOCUMENT_BYTES * 4L / 3) + 8 * 1024;
+
+    @Override
+    public Download document(UUID owner, String messageId, String reference) throws SourceFailure {
+        if (identifier(messageId).isEmpty() || !GmailLetters.REFERENCE.matcher(reference == null ? "" : reference).matches()) {
+            return new DocumentGone();
+        }
+        JsonNode answer;
+        try {
+            answer = read(owner, "messages/" + messageId + "/attachments/" + reference, Map.of(), MOST_DOCUMENT_ANSWER_BYTES, true);
+        } catch (GoogleFailure failure) {
+            return switch (failure.failure()) {
+                case NOT_FOUND -> new DocumentGone();
+                case TOO_LARGE -> new DocumentTooLarge();
+                default -> throw translated(failure);
+            };
+        }
+        JsonNode data = answer.get("data");
+        if (data == null || !data.isString()) {
+            return new NotAPdf();
+        }
+        byte[] bytes;
+        try {
+            bytes = java.util.Base64.getUrlDecoder().decode(data.asString());
+        } catch (IllegalArgumentException notBase64) {
+            return new NotAPdf();
+        }
+        if (bytes.length > MOST_DOCUMENT_BYTES) {
+            return new DocumentTooLarge();
+        }
+        return GmailLetters.beginsLikeAPdf(bytes) ? new Downloaded(bytes) : new NotAPdf();
+    }
+
     // ---------------------------------------------------------------- reading
 
     /**

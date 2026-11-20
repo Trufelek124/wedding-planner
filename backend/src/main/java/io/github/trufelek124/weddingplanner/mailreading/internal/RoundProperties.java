@@ -12,6 +12,8 @@ record RoundProperties(
         String automatic,
         String batch,
         String triageSure,
+        String documents,
+        String documentsSure,
         String monthlyLimitUsd,
         String dailyMessages,
         String dailySuggestionsPerMailbox,

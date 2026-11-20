@@ -342,6 +342,104 @@ class MeasureReadingTest {
         assertThat(report()).contains("pl-c").contains("en-d");
     }
 
+    // ------------------------------------------------------------------------------- a sample that carries documents
+
+    /** Words that stand only in the documents below: none of them may ever come out of the tool. */
+    private static final String[] DOCUMENT_WORDS = {"Dokument-Qx", "Plik-Qx.pdf", "Rata-Qx"};
+
+    private static String sampleWithDocuments(String id) {
+        return sample(id, true, DEPOSIT_EXPECTED).replace("\"alreadyProposed\"",
+                "\"documents\":[{\"name\":\"Plik-Qx.pdf\",\"text\":\"Dokument-Qx Rata-Qx: zaliczkę 5000 zł do 4 grudnia 2026\"},"
+                        + "{\"name\":\"Drugi-Qx.pdf\",\"text\":\"Drugi dokument-Qx\"}],\"alreadyProposed\"");
+    }
+
+    @Test
+    void aSampleMayCarryDocumentsAsTextAndOneWithoutHasNone() {
+        SampleSet.Collection file = SampleSet.parse(file("pl", sampleWithDocuments("pl-d"), sample("pl-a", true, DEPOSIT_EXPECTED)));
+
+        assertThat(file.samples().get(0).documents()).extracting(SampleSet.SampleDocument::name).containsExactly("Plik-Qx.pdf", "Drugi-Qx.pdf");
+        assertThat(file.samples().get(0).documents().get(0).text()).startsWith("Dokument-Qx");
+        assertThat(file.samples().get(1).documents()).isEmpty();
+        assertThat(file.samples().get(0).toString()).doesNotContain("Qx").doesNotContain("Dokument");
+    }
+
+    @Test
+    void theDocumentsOfASampleGoToExtractionWhereTriageSaysYesAndIsSureEnoughAndNowhereElse() {
+        service.answerNextCallsWith(
+                Reply.says(triage(true, 95), "claude-haiku-5-5", 100, 10), Reply.says(Answers.proposals(), "claude-opus-5-5", 1_000, 200),
+                Reply.says(triage(true, 79), "claude-haiku-5-5", 100, 10), Reply.says(Answers.proposals(), "claude-opus-5-5", 1_000, 200),
+                Reply.says(triage(false, 30), "claude-haiku-5-5", 100, 10), Reply.says(Answers.proposals(), "claude-opus-5-5", 1_000, 200));
+        SampleSet set = samples(sampleWithDocuments("pl-a"), sampleWithDocuments("pl-b"), sampleWithDocuments("pl-c"));
+
+        MeasureReading.run(new String[] {"--spend-money=yes"}, around(Map.of("APP_AI_API_KEY", KEY), set));
+
+        List<StandInAnthropic.Call> extractions = service.calls().stream().filter(call -> "claude-opus-5-5".equals(call.json().get("model"))).toList();
+        assertThat(extractions).hasSize(3);
+        assertThat(extractions.get(0).userTurn()).as("a yes, 95 sure").contains("document 1 of 2 that came with the message", "Dokument-Qx Rata-Qx", "document 2 of 2")
+                .contains("File name: Plik-Qx.pdf").contains("At most 8 proposals");
+        assertThat(extractions.get(1).userTurn()).as("a yes, 79 sure").doesNotContain("came with the message").contains("At most 5 proposals");
+        assertThat(extractions.get(2).userTurn()).as("a no read on").doesNotContain("came with the message");
+        for (StandInAnthropic.Call triageCall : service.calls().stream().filter(call -> "claude-haiku-5-5".equals(call.json().get("model"))).toList()) {
+            assertThat(triageCall.userTurn()).as("triage never sees a document").doesNotContain("Dokument-Qx").doesNotContain("Plik-Qx");
+        }
+    }
+
+    @Test
+    void theShareAndTheSwitchForDocumentsComeFromTheSameSettingsAsTheServers() {
+        service.answerEveryCallWith(Reply.says(triage(true, 70), "claude-haiku-5-5", 100, 10));
+        SampleSet set = samples(sampleWithDocuments("pl-a"));
+
+        MeasureReading.run(new String[] {"--spend-money=yes"}, around(Map.of("APP_AI_API_KEY", KEY, "MAIL_READING_DOCUMENTS_SURE", "70"), set));
+        assertThat(service.calls().getLast().userTurn()).as("70 is sure enough where the share is 70").contains("came with the message");
+
+        service.reset();
+        service.answerEveryCallWith(Reply.says(triage(true, 99), "claude-haiku-5-5", 100, 10));
+        MeasureReading.run(new String[] {"--spend-money=yes"}, around(Map.of("APP_AI_API_KEY", KEY, "MAIL_READING_DOCUMENTS_ENABLED", "false"), set));
+        assertThat(service.calls().getLast().userTurn()).as("switched off").doesNotContain("came with the message");
+    }
+
+    @Test
+    void theDryRunCountsTheLengthOfTheDocumentsOnlyAsFarAsTheServerWouldSendThem() {
+        MeasureReading.Options options = new MeasureReading.Options(false, true, List.of(), true, null, null);
+        SampleSet plain = samples(sample("pl-a", true, DEPOSIT_EXPECTED));
+        String longText = "x".repeat(30_000);
+        String big = sample("pl-a", true, DEPOSIT_EXPECTED).replace("\"alreadyProposed\"",
+                "\"documents\":[{\"name\":\"a.pdf\",\"text\":\"" + longText + "\"},{\"name\":\"b.pdf\",\"text\":\"" + longText + "\"},"
+                        + "{\"name\":\"c.pdf\",\"text\":\"" + longText + "\"},{\"name\":\"d.pdf\",\"text\":\"" + longText + "\"}],\"alreadyProposed\"");
+        SampleSet withDocuments = samples(big);
+        Rules rules = RoundSetup.parse(new RoundProperties("1m", "false", "20", "60", "true", "80", "20", "2000", "50", "0.10", "0.50", "4", "20"), true).rules();
+
+        String without = MeasureReading.estimate(plain.items(), options, rules);
+        String with = MeasureReading.estimate(withDocuments.items(), options, rules);
+
+        assertThat(tokensIn(with)).as("documents are counted").isGreaterThan(tokensIn(without) + 10_000);
+        // Forty thousand characters at three to a token: not the hundred and twenty thousand that were given.
+        assertThat(tokensIn(with)).as("only what the server would send").isLessThan(tokensIn(without) + 14_500);
+        // 30,000 and then the 10,000 that are left of the 40,000: the third and the fourth find no room.
+        assertThat(MeasureReading.documentsOf(withDocuments.items().get(0).sample(), true)).hasSize(2);
+        assertThat(MeasureReading.documentsOf(withDocuments.items().get(0).sample(), true).stream().mapToInt(document -> document.text().length()).sum())
+                .isEqualTo(40_000);
+        assertThat(MeasureReading.documentsOf(withDocuments.items().get(0).sample(), false)).isEmpty();
+    }
+
+    private static long tokensIn(String estimate) {
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("Roughly (\\d+) tokens in").matcher(estimate);
+        assertThat(matcher.find()).as(estimate).isTrue();
+        return Long.parseLong(matcher.group(1));
+    }
+
+    @Test
+    void theReportAndTheOutputHoldNoWordOfADocumentEither() throws IOException {
+        service.answerNextCallsWith(Reply.says(triage(true, 95), "claude-haiku-5-5", 100, 10), Reply.says(deposit("Zaliczka"), "claude-opus-5-5", 1_000, 200));
+
+        MeasureReading.run(new String[] {"--spend-money=yes"}, around(Map.of("APP_AI_API_KEY", KEY), samples(sampleWithDocuments("pl-d"))));
+
+        for (String word : DOCUMENT_WORDS) {
+            assertThat(report()).as("the report, " + word).doesNotContain(word);
+            assertThat(output()).as("the output, " + word).doesNotContain(word);
+        }
+    }
+
     // ------------------------------------------------------------------------------------------------------ the rest
 
     @Test

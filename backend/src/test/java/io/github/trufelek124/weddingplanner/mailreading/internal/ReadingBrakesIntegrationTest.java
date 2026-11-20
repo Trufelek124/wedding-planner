@@ -30,15 +30,15 @@ class ReadingBrakesIntegrationTest extends RoundTestBase {
     }
 
     private static Rules withDailyMessages(Rules r, int daily) {
-        return new Rules(r.on(), r.interval(), r.automatic(), r.batch(), r.triageSure(), r.monthlyLimitUsd(), daily, r.dailySuggestionsPerMailbox(), r.triagePrice(), r.extractionPrice());
+        return new Rules(r.on(), r.interval(), r.automatic(), r.batch(), r.triageSure(), r.documents(), r.documentsSure(), r.monthlyLimitUsd(), daily, r.dailySuggestionsPerMailbox(), r.triagePrice(), r.extractionPrice());
     }
 
     private static Rules withSuggestionsPerMailbox(Rules r, int most, int batch) {
-        return new Rules(r.on(), r.interval(), r.automatic(), batch, r.triageSure(), r.monthlyLimitUsd(), r.dailyMessages(), most, r.triagePrice(), r.extractionPrice());
+        return new Rules(r.on(), r.interval(), r.automatic(), batch, r.triageSure(), r.documents(), r.documentsSure(), r.monthlyLimitUsd(), r.dailyMessages(), most, r.triagePrice(), r.extractionPrice());
     }
 
     private static Rules withTriagePrice(Rules r, Rules.Price price) {
-        return new Rules(r.on(), r.interval(), r.automatic(), r.batch(), r.triageSure(), r.monthlyLimitUsd(), r.dailyMessages(), r.dailySuggestionsPerMailbox(), price, r.extractionPrice());
+        return new Rules(r.on(), r.interval(), r.automatic(), r.batch(), r.triageSure(), r.documents(), r.documentsSure(), r.monthlyLimitUsd(), r.dailyMessages(), r.dailySuggestionsPerMailbox(), price, r.extractionPrice());
     }
 
     // ---------------------------------------------------------------- the month

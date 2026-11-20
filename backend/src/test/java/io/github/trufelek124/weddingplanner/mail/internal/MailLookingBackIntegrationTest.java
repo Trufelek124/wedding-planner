@@ -326,7 +326,7 @@ class MailLookingBackIntegrationTest extends MailSyncTestBase {
         received("m-1", daysAgo(2));
         asked(wedding.anna, 30);
         sync.lookAtAll();
-        jdbc.update("UPDATE mail_message SET verdict = 'NOT_WEDDING', read_at = now() WHERE message_id = 'm-1'");
+        jdbc.update("UPDATE mail_message SET verdict = 'NOT_WEDDING', documents = 'DONE', read_at = now() WHERE message_id = 'm-1'");
 
         asked(wedding.anna, 90);
         sync.lookAtAll();

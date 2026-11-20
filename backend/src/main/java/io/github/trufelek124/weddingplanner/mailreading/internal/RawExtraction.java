@@ -8,7 +8,7 @@ import java.util.List;
  * the schema asks for nothing the server would have to trust, and {@link Checking} checks all of it again.
  */
 record RawExtraction(
-        @JsonPropertyDescription("at most five proposals, the most important first; empty when the message asks for nothing")
+        @JsonPropertyDescription("at most as many proposals as the request says (five, eight when documents came with the message), the most important first; empty when the message asks for nothing")
                 List<Proposal> proposals) {
 
     record Proposal(
@@ -26,7 +26,7 @@ record RawExtraction(
             @JsonPropertyDescription("the vendor's phone number as written, or empty") String vendorPhone,
             @JsonPropertyDescription("the vendor's website as written, or empty") String vendorWebsite,
             @JsonPropertyDescription("how sure the proposal is right, a whole number from 0 to 100") Integer howSure,
-            @JsonPropertyDescription("the words of the message the proposal rests on, copied word for word") String passage) {
+            @JsonPropertyDescription("the words of the message (or of a document that came with it) the proposal rests on, copied word for word") String passage) {
 
         @Override
         public String toString() {

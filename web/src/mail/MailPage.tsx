@@ -444,13 +444,14 @@ function WhatConnectingMeans({ reading }: { reading: MailReading }) {
         {reading.state === 'OFF' ? (
           <li>
             Nothing is sent to an AI service on this server yet. Once reading is switched on, the sender, the subject and the beginning of every message
-            will be sent to it, to decide whether the message concerns the wedding, and a message that does will be sent in full. Attachments are never
-            sent.
+            will be sent to it, to decide whether the message concerns the wedding, and a message that does will be sent in full. When the planner is
+            sure that a message concerns the wedding, the text of its PDF documents will be sent with it. Other attachments are never sent.
           </li>
         ) : (
           <li>
             The sender, the subject and the beginning of every message are sent to an AI service, to decide whether the message concerns the wedding. A
-            message that does is sent in full. Attachments are never sent.
+            message that does is sent in full. When the planner is sure that a message concerns the wedding, the text of its PDF documents is sent with it.
+            Other attachments are never sent.
           </li>
         )}
         <li>

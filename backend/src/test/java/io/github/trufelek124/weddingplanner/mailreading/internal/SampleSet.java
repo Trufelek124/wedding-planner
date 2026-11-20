@@ -37,11 +37,15 @@ record SampleSet(List<Collection> collections) {
 
     record Earlier(Person from, Instant arrived, String text) {}
 
+    /** A PDF document that came with the message, as the server would have taken its text out: invented. */
+    record SampleDocument(String name, String text) {}
+
     /**
      * @param sort what kind of mail it is: {@code proposal} (about the wedding, with something to propose),
      *     {@code nothing} (about the wedding, nothing to propose), {@code unrelated} or {@code hard}
      * @param instructs whether the message tries to instruct its reader
      * @param earlier the earlier messages of the thread, oldest first
+     * @param documents the text of the PDF documents that came with the message (D-011), in the order of the mail
      * @param alreadyProposed titles already proposed from the thread
      * @param why how the expected days and amounts follow from the text, "today" and the wedding's date
      */
@@ -54,12 +58,14 @@ record SampleSet(List<Collection> collections) {
             Instant arrived,
             String text,
             List<Earlier> earlier,
+            List<SampleDocument> documents,
             List<String> alreadyProposed,
             String why,
             Expected expected) {
 
         Sample {
             earlier = earlier == null ? List.of() : List.copyOf(earlier);
+            documents = documents == null ? List.of() : List.copyOf(documents);
             alreadyProposed = alreadyProposed == null ? List.of() : List.copyOf(alreadyProposed);
         }
 
