@@ -164,8 +164,8 @@
   "docs/specs/S06-tasks-from-a-file.md": {
    "publicId": "WP-DOC-20",
    "id": "f49f6855-e4ce-4e11-b976-1f614fdb8981",
-   "sha256": "a70012262775dae0814e5ddd3fcc59998827ff3c19e5a1c68e85f810558b370a",
-   "commit": "4368077"
+   "sha256": "1bafff8fca866fcec55b9eec29f5d24ad9593295c070bd6f7511166ef60d6fb5",
+   "commit": "7102293"
   },
   "docs/decisions.md#D-013": {
    "publicId": "WP-DOC-21",
