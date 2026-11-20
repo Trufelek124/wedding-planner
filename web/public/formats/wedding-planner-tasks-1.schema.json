@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wedding-planner:tasks-file:1",
+  "title": "Wedding planner: a file of tasks, version 1",
+  "description": "A list of tasks to upload at the bottom of the planner's task list. Every row has a key that its author chooses; the planner remembers it. Uploading a file again changes the tasks the planner already has from it, in the fields the row gives and only there, and adds the rows whose key is new. A field that is left out is not touched; a field given as null is emptied. Nothing in a file removes a task. A file is taken whole or not at all, and is at most 1 MB.",
+  "type": "object",
+  "required": ["format", "version", "tasks"],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "wedding-planner-tasks"
+    },
+    "version": {
+      "const": 1
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1000,
+      "items": { "$ref": "#/$defs/task" }
+    }
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "required": ["key", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "description": "What this row is known by. Any text its author chooses; no two rows of a file share one, and capital and small letters are different keys. No line break, and no space at its beginning or end.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\s\\p{Cc}]([^\\p{Cc}]*[^\\s\\p{Cc}])?$"
+        },
+        "title": {
+          "description": "What is to be done. Not only spaces.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "notes": {
+          "description": "Anything else worth knowing. An empty text empties the notes.",
+          "type": "string",
+          "maxLength": 10000
+        },
+        "dueDate": {
+          "description": "The day it is due, YYYY-MM-DD, or null for none.",
+          "type": ["string", "null"],
+          "format": "date"
+        },
+        "status": {
+          "description": "Left out, a new task is NOT_STARTED and a task the planner has keeps its status.",
+          "enum": ["NOT_STARTED", "IN_PROGRESS", "DONE", "DROPPED"]
+        },
+        "priority": {
+          "description": "null lets the planner set the priority from the dates.",
+          "enum": ["CRITICAL", "HIGH", "NORMAL", "LOW", null]
+        },
+        "category": {
+          "description": "The name of a category, or null for none. A name the planner does not have yet is added as a category. Compared without regard to capital letters and to spaces around it.",
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "vendor": {
+          "description": "The name of a vendor the planner already has, or null for none. Compared like a category's name. A vendor is never made from a file.",
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "amount": {
+          "description": "With an amount the task is a payment. null for none.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/money" }]
+        },
+        "paymentKind": {
+          "description": "Needs an amount.",
+          "enum": ["DEPOSIT", "INSTALMENT", "FINAL", null]
+        },
+        "paidOn": {
+          "description": "The day a payment was paid, YYYY-MM-DD, or null. Needs an amount and the status DONE, and is not in the future.",
+          "type": ["string", "null"],
+          "format": "date"
+        }
+      }
+    },
+    "money": {
+      "type": "object",
+      "required": ["value", "currency"],
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "description": "The amount as people write it, without separators: \"12000\", \"12000.00\", or the same as a number. Not negative, and with no more decimals than the currency has. Nothing is rounded.",
+          "oneOf": [
+            { "type": "string", "pattern": "^[0-9]{1,13}(\\.[0-9]{1,3})?$" },
+            { "type": "number", "minimum": 0 }
+          ]
+        },
+        "currency": {
+          "description": "The ISO 4217 code of the wedding's currency. An amount in another currency is refused.",
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    }
+  }
+}

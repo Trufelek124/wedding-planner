@@ -1,0 +1,97 @@
+{
+ "projectCode": "WP",
+ "stories": [
+  {
+   "key": "EP2-S6",
+   "epic": "EP2",
+   "title": "Tasks from a file",
+   "description": "An owner uploads a file of tasks at the bottom of the task list. The file has a written, published format, so that another tool can make it. Every row carries a key of its author's choosing; the planner remembers it, so that uploading the file again changes the tasks it already has from it and adds the ones it has not. Nothing in a file removes a task.",
+   "goal": "Bring a task list that was made elsewhere into the planner, and keep it up to date from the same file, without typing it in.",
+   "rationale": "A wedding's task list often starts outside the planner: in a checklist from a planner's site, a spreadsheet, or a list another tool wrote. Typing it in by hand is the work the planner is meant to save, and a second upload must not double what the first one added.",
+   "expectedBehavior": "At the bottom of the task list on the web there is a part Upload tasks, with a link to the format of the file and to an example. Choosing a file shows what it would do before anything changes: which tasks are new, which would change and how, which stay as they are, and what in the file cannot be taken, row by row. One press then applies it, all of it or nothing. A row whose key the planner knows changes that task in the fields the row gives and leaves the others alone; a new key adds a task. A task that is not in the file is left as it is.",
+   "priority": "NORMAL",
+   "rank": 60,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "The format of the file is written down in the repository and served by the planner itself, with an example, and the server takes exactly what that format describes.",
+     "source": "S06 sections 2 and 3"
+    },
+    {
+     "text": "A file is checked before it is applied, and the check says for every row whether it is new, changed (and in what), unchanged or refused (and why).",
+     "source": "S06 section 4"
+    },
+    {
+     "text": "Uploading the same file twice adds nothing twice; a changed row changes its task; a field a row does not give is not touched.",
+     "source": "S06 section 3"
+    },
+    {
+     "text": "A file is applied whole or not at all, and nothing in a file can remove a task.",
+     "source": "S06 sections 3 and 5"
+    },
+    {
+     "text": "The rules of the planner's own form hold for every row, with the same words, and money is taken exactly and only in the wedding's currency.",
+     "source": "S06 section 3"
+    }
+   ]
+  }
+ ],
+ "tasks": [
+  {
+   "key": "EP2-S6-T1",
+   "story": "EP2-S6",
+   "title": "Spec, decision and format: tasks from a file",
+   "description": "S06 says what the upload does: the format of the file (JSON, version 1), how a row is known again (a key its author chooses), what a row changes (only the fields it gives), that a file is checked first and applied whole or not at all, that nothing is removed, the limits, and what the page shows. D-013 records what was compared. The format itself is a JSON Schema with an example, in the web app's static files so that the planner serves them. Done when the documents and the two files are committed and the documents mirrored.",
+   "dependsOn": [],
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "documentation"
+   ]
+  },
+  {
+   "key": "EP2-S6-T2",
+   "story": "EP2-S6",
+   "title": "Backend: a file of tasks is checked and applied",
+   "description": "As S06 says. Two calls for a signed-in owner: one that checks a file and answers what it would do, row by row, and one that applies it in one transaction or not at all. A task keeps the key it came with (a migration); a row with a known key changes that task in the fields it gives through the planning module's own rules, a new key adds a task, a category that is not there yet is added, a vendor is found by its exact name, money is taken exactly in the wedding's currency. Nothing of a file is kept or logged beyond the key. The contract and the web's generated types move together. Done when the backend's tests cover every rule of S06 section 3 and every refusal of section 5, a test holds the server against the published schema and takes the published example, and the gate passes.",
+   "dependsOn": [
+    "EP2-S6-T1"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java"
+   ]
+  },
+  {
+   "key": "EP2-S6-T3",
+   "story": "EP2-S6",
+   "title": "Web: Upload tasks at the bottom of the task list",
+   "description": "As S06 section 4 says. At the bottom of the task list: what the upload does in two sentences, the links to the format and to the example, a file to choose, what the file would do (new, changed with what changes, as they are, and what cannot be taken, row by row), one press to apply and what was done. Everything that comes out of a file is shown as plain text. One request per press; a file that is too large is said before anything is sent. Done when the page's tests cover each state with the stand-in server, the part was looked at as rendered pictures wide and narrow in light and dark, and the gate passes.",
+   "dependsOn": [
+    "EP2-S6-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ]
+  }
+ ]
+}

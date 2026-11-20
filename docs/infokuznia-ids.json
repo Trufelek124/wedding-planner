@@ -756,6 +756,30 @@
    "publicId": "WP-TS-95",
    "id": "fb78e149-d6e7-4c66-9744-27fe0179d9c0",
    "title": "Backend: the reading takes the waiting messages of one thread together"
+  },
+  "EP2-S6": {
+   "type": "story",
+   "publicId": "WP-US-25",
+   "id": "a290d196-e185-4c13-839c-f220ff4f61c4",
+   "title": "Tasks from a file"
+  },
+  "EP2-S6-T1": {
+   "type": "task",
+   "publicId": "WP-TS-96",
+   "id": "9a7155e2-e672-4ef7-ac43-ee4ad127b3e5",
+   "title": "Spec, decision and format: tasks from a file"
+  },
+  "EP2-S6-T2": {
+   "type": "task",
+   "publicId": "WP-TS-97",
+   "id": "d1968bc2-b2a8-4ce6-99fe-9feb6e046738",
+   "title": "Backend: a file of tasks is checked and applied"
+  },
+  "EP2-S6-T3": {
+   "type": "task",
+   "publicId": "WP-TS-98",
+   "id": "bc0a532c-6521-4599-9cdb-3e0baf1c5a80",
+   "title": "Web: Upload tasks at the bottom of the task list"
   }
  }
 }

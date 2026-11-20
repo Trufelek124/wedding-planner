@@ -674,3 +674,49 @@ read on the first load.
   message and is now an upper bound for earlier mail.
 - A later message still does not change an entry that an earlier reading produced (WP-US-22): this only keeps
   the stale proposal from being made when both wait together.
+
+## D-013 — A file of tasks: JSON with a key per row, checked first, taken whole, never removing
+
+**Date:** 2026-11-20 · **Task:** WP-TS-96 · **Decided by:** the owner asked for the upload and left the format open · **Applies to:** tasks from a file (S06)
+
+### Context
+
+The owner wants to upload a task list from a file at the bottom of the task list, in a format that other tools
+can read up on and write; a second upload has to know which rows are already there, change those and add the
+new ones; and nothing is to be deleted by a file.
+
+### What was compared
+
+| Question | Chosen | The alternative, and why not |
+|---|---|---|
+| The kind of file | **JSON**, described by a JSON Schema that the planner serves, with an example | XML: nothing here reads or writes it, and tools that make lists write JSON first. CSV: no way to tell "left out" from "empty", and money, line breaks in notes and Polish letters each need a convention of their own |
+| How a row is known again | **A key its author chooses**, kept with the task | The planner's own id of the task: the author of a new row does not have one, and would have to invent identifiers in a form only the planner cares about. The title: an owner who corrects a title would get the task twice |
+| What a row changes | **Only the fields it gives** | The whole task: a tool that knows titles and days would empty the notes and untick what was done at every upload |
+| When the planner was changed meanwhile | **The row wins, and the page shows every change first** | Refusing like the form does ("changed meanwhile"): a file has no version of each task to compare with, and an upload would fail on every task anybody touched |
+| A row that cannot be taken | **Nothing of the file is applied** | Taking the good rows: the author then has a planner that matches no file, and must work out which rows went in |
+| Checking | **A call of its own that changes nothing**, before the one that applies | One call: an owner would see what a file does only after it has done it |
+| Category and vendor | **By name**; a missing category is added, a missing vendor is refused | By identifier: no other tool has them. Making vendors too: a vendor is a record with contact details and money against it, not a label — a slip in a name would make a second one |
+| Money | **The amount as people write it, with its currency**, taken exactly | Whole numbers of the smallest unit, as the API has them: a list written by hand or by a tool says 6000 and means złoty, and would become sixty |
+| Removing | **Not possible from a file** | A row that deletes, or "what is not in the file goes": the owner asked for neither, and a shortened file would empty the planner |
+
+### Decision
+
+1. **Version 1 of the format is JSON**: `format`, `version`, `tasks`; a row needs `key` and `title`, everything
+   else may be left out. The schema and an example are static files of the web app, served without a sign-in.
+2. **The key is the row's identity**, per wedding, kept in a column of the task.
+3. **Left out is not touched, `null` empties**, and what a row gives overwrites what the planner has.
+4. **Check, then apply**; a file is applied in one piece or not at all, by the planning module's own rules.
+5. **Nothing is removed by a file.** `DROPPED` is the status for what is no longer wanted.
+6. A field the format does not name is refused.
+
+### What it costs, and what would change the decision
+
+- A task that was made in the planner has no key and cannot be changed from a file. Handing the task list out
+  as such a file, with keys given to what has none, is the step that would close that — not built, because
+  nobody asked for it yet.
+- A task an owner removed comes back if the file still has its row. A file cannot know that a removal was
+  meant; the status `DROPPED` says it in a way a file respects.
+- Who a task is assigned to, the step of the plan it belongs to and what it waits for are not in version 1:
+  each needs a way to name something of the planner from outside. They are not touched by an upload.
+- Strictness about unknown fields means that a file written for a later version is refused by an older server.
+  The version number is what such a file changes first.

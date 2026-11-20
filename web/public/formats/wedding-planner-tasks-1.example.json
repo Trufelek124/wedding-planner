@@ -1,0 +1,65 @@
+{
+  "format": "wedding-planner-tasks",
+  "version": 1,
+  "tasks": [
+    {
+      "key": "choose-the-date",
+      "title": "Choose the date and tell the families",
+      "status": "DONE"
+    },
+    {
+      "key": "book-the-registry-office",
+      "title": "Book the registry office",
+      "notes": "They take bookings six months ahead. Both of us have to come with our documents.",
+      "dueDate": "2026-12-11",
+      "priority": "HIGH",
+      "category": "Formalities"
+    },
+    {
+      "key": "venue-deposit",
+      "title": "Pay the venue's deposit",
+      "dueDate": "2026-12-03",
+      "category": "Venue",
+      "amount": { "value": "6000.00", "currency": "PLN" },
+      "paymentKind": "DEPOSIT"
+    },
+    {
+      "key": "venue-second-instalment",
+      "title": "Pay the venue's second instalment",
+      "notes": "By transfer. The account is in the contract.",
+      "dueDate": "2027-01-15",
+      "category": "Venue",
+      "amount": { "value": "12000", "currency": "PLN" },
+      "paymentKind": "INSTALMENT"
+    },
+    {
+      "key": "photographer-booking-fee",
+      "title": "Pay the photographer's booking fee",
+      "status": "DONE",
+      "category": "Photography",
+      "amount": { "value": 1500, "currency": "PLN" },
+      "paymentKind": "DEPOSIT",
+      "paidOn": "2026-10-15"
+    },
+    {
+      "key": "order-the-rings",
+      "title": "Order the rings",
+      "dueDate": "2027-03-01",
+      "status": "IN_PROGRESS",
+      "priority": null
+    },
+    {
+      "key": "send-the-invitations",
+      "title": "Send the invitations",
+      "notes": "",
+      "dueDate": "2027-02-15",
+      "category": "Guests"
+    },
+    {
+      "key": "second-band-audition",
+      "title": "Listen to the second band",
+      "status": "DROPPED",
+      "category": null
+    }
+  ]
+}

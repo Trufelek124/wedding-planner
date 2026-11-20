@@ -26,6 +26,11 @@
    "link": "EP7-S3"
   },
   {
+   "path": "docs/specs/S06-tasks-from-a-file.md",
+   "type": "REQUIREMENTS",
+   "link": "EP2-S6"
+  },
+  {
    "path": "docs/deployment.md",
    "type": "DEPLOYMENT",
    "link": "EP3-S1"
