@@ -52,11 +52,13 @@ class SuggestionWordsTest {
         inboxMemberId: String = "m1",
         passage: String = "Please pay the deposit by 1 December.",
         confidence: Int = 62,
+        fromDocument: Boolean = false,
     ) = Suggestion(
         id = "s1", kind = kind, title = title, notes = notes, startDate = startDate, dueDate = dueDate, amount = amount, paymentKind = paymentKind,
         categoryId = categoryId, vendorId = vendorId, vendorName = vendorName, vendorEmail = vendorEmail, vendorPhone = vendorPhone,
         vendorWebsite = vendorWebsite, senderName = senderName, senderAddress = senderAddress, subject = subject, receivedAt = receivedAt,
         inboxMemberId = inboxMemberId, mailLink = "https://mail.google.com/mail/u/0/#all/18c0ffee", passage = passage, confidence = confidence,
+        fromDocument = fromDocument,
     )
 
     @Test
@@ -194,6 +196,18 @@ class SuggestionWordsTest {
             suggestionInWords(card, planner, warsaw),
         )
         assertFalse(suggestionInWords(suggestion(passage = ""), planner, warsaw).contains("Quotation"))
+    }
+
+    @Test
+    fun `a card whose passage stands in a document says so after the quotation, and one whose words are in the mail says nothing of it`() {
+        val offer = suggestion(SuggestionKind.PAYMENT, amount = 250000, dueDate = LocalDate.of(2026, 12, 1), fromDocument = true)
+        val words = "From a document that came with this e-mail"
+
+        val said = suggestionInWords(offer, planner, warsaw, fromDocument = words)
+
+        assertTrue(said.endsWith("Quotation from the e-mail: \u201cPlease pay the deposit by 1 December.\u201d. $words. 62% sure"))
+        assertFalse(suggestionInWords(suggestion(SuggestionKind.PAYMENT, amount = 250000), planner, warsaw, fromDocument = words).contains(words))
+        assertFalse("without the words nothing is said", suggestionInWords(offer, planner, warsaw).contains("document"))
     }
 
     @Test

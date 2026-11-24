@@ -87,14 +87,26 @@ class SuggestionIntake implements Suggestions {
     }
 
     /**
-     * S05 and D-008: only a task or a step of the plan, never anything that names money, when the import is at least as
-     * sure as the wedding asks, and only as the planner takes it. The suggestion and the entry come into being together
-     * or the suggestion waits and nothing was made.
+     * S05, D-008 and D-014: a task or a step of the plan without an amount, or a payment with an amount whose passage stands
+     * in a document (never a vendor, never a payment that only the mail's words name); when the import is at least as sure as
+     * the wedding asks; for a payment, when the planner does not have that payment already; and only as the planner takes it.
+     * The suggestion and the entry come into being together or the suggestion waits and nothing was made.
      */
     private void addByItselfIfSure(UUID weddingId, SuggestionRow row) {
-        boolean tasksAndStepsOnly = (row.kind() == Kind.TASK || row.kind() == Kind.PLAN_ITEM) && row.amount() == null;
+        boolean taskOrStep = (row.kind() == Kind.TASK || row.kind() == Kind.PLAN_ITEM) && row.amount() == null;
+        boolean paymentFromDocument = row.kind() == Kind.PAYMENT && row.amount() != null && row.fromDocument();
+        if (!taskOrStep && !paymentFromDocument) {
+            return;
+        }
         Settings wanted = settings.of(weddingId);
-        if (!tasksAndStepsOnly || !wanted.addsByItself() || row.confidence() < wanted.threshold()) {
+        if (!wanted.addsByItself() || row.confidence() < wanted.threshold()) {
+            return;
+        }
+        if (paymentFromDocument
+                && (entries.hasPayment(weddingId, row.amount(), row.dueDate())
+                        || suggestions.otherPaymentProposed(weddingId, row.id(), row.amount(), row.dueDate()))) {
+            // The planner has this payment already, or somebody is to decide on it or has decided: a person decides, nothing is
+            // counted twice, and nothing that was rejected comes back by itself.
             return;
         }
         EntryToAdd entry = SuggestionEntries.entry(row.kind(), SuggestionEntries.asProposed(row), row.id());
@@ -194,7 +206,7 @@ class SuggestionIntake implements Suggestions {
                 UUID.randomUUID(), key, Kind.valueOf(p.kind().name()), State.WAITING, title, notes, p.startDate(), p.dueDate(),
                 p.amount(), p.paymentKind() == null ? null : PaymentKind.valueOf(p.paymentKind().name()), p.categoryId(),
                 p.vendorId(), vendorName, vendorEmail, vendorPhone, vendorWebsite, senderName, senderAddress, subject,
-                p.receivedAt(), p.inboxMemberId(), link, passage, p.confidence(), null, null, null, null, clock.instant());
+                p.receivedAt(), p.inboxMemberId(), link, passage, p.confidence(), null, null, null, null, clock.instant(), p.fromDocument());
     }
 
     /** An https address whose host is exactly mail.google.com: no user, no port, nothing that could lead elsewhere. */

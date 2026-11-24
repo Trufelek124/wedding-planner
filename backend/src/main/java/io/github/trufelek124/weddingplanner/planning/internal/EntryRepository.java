@@ -114,6 +114,18 @@ class EntryRepository {
                 .optional();
     }
 
+    /** Whether a task of the wedding, of any status, has exactly this amount and is due on exactly this day (both without a day: the same). */
+    boolean hasPayment(UUID weddingId, long amount, LocalDate dueDate) {
+        return jdbc.sql("""
+                SELECT EXISTS (
+                    SELECT 1 FROM entry
+                    WHERE wedding_id = ? AND amount = ? AND due_date IS NOT DISTINCT FROM CAST(? AS date))
+                """)
+                .params(weddingId, amount, dueDate)
+                .query(Boolean.class)
+                .single();
+    }
+
     /** Finds it and holds its row until the transaction ends: nobody saves it or hangs something on it meanwhile. */
     Optional<EntryRow> findForUpdate(UUID weddingId, UUID id) {
         return jdbc.sql(SELECT + " WHERE e.wedding_id = ? AND e.id = ? FOR UPDATE OF e")

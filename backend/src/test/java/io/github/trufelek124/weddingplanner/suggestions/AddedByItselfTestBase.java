@@ -100,6 +100,26 @@ abstract class AddedByItselfTestBase extends PostgresIntegrationTest {
                 p.mailLink(), p.passage(), p.confidence());
     }
 
+    /** The same proposal, its passage found in a document that came with the mail (D-014). */
+    static Proposal fromDocument(Proposal p) {
+        return new Proposal(p.weddingId(), p.sourceKey(), p.kind(), p.title(), p.notes(), p.startDate(), p.dueDate(), p.amount(),
+                p.paymentKind(), p.categoryId(), p.vendorId(), p.vendorName(), p.vendorEmail(), p.vendorPhone(), p.vendorWebsite(),
+                p.senderName(), p.senderAddress(), p.subject(), p.receivedAt(), p.inboxMemberId(), p.mailLink(), p.passage(),
+                p.confidence(), true);
+    }
+
+    static Proposal withVendor(Proposal p, UUID vendor) {
+        return new Proposal(p.weddingId(), p.sourceKey(), p.kind(), p.title(), p.notes(), p.startDate(), p.dueDate(), p.amount(),
+                p.paymentKind(), p.categoryId(), vendor, p.vendorName(), p.vendorEmail(), p.vendorPhone(), p.vendorWebsite(),
+                p.senderName(), p.senderAddress(), p.subject(), p.receivedAt(), p.inboxMemberId(), p.mailLink(), p.passage(),
+                p.confidence(), p.fromDocument());
+    }
+
+    /** A payment that a document names, sure to the given percent, of this amount and due on this day (null: no day). */
+    Proposal paymentFromADocument(String title, long amount, LocalDate day, int confidence) {
+        return fromDocument(due(money(proposal(Kind.PAYMENT, title, confidence), amount, PaymentKind.DEPOSIT), day));
+    }
+
     /** The same proposal as if it was found in Piotr's mailbox. */
     Proposal inPiotrsInbox(Proposal p) {
         return new Proposal(p.weddingId(), p.sourceKey(), p.kind(), p.title(), p.notes(), p.startDate(), p.dueDate(),

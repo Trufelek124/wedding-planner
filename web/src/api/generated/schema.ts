@@ -577,7 +577,7 @@ export interface paths {
         };
         /**
          * How sure the import has to be
-         * @description Whether the e-mail import adds tasks and steps of the plan by itself, and at what confidence. The same for both owners. Payments and vendors always wait.
+         * @description Whether the e-mail import adds tasks, steps of the plan and the payments that a document names by itself, and at what confidence. The same for both owners. Payments that only a mail's own words name, and vendors, always wait.
          */
         get: operations["settings"];
         /**
@@ -1702,6 +1702,8 @@ export interface components {
             decidedBy: string | null;
             /** Format: date */
             dueDate: string | null;
+            /** @description Whether the passage stands in a document (a PDF) that came with the e-mail: then the words are not in the mail that `mailLink` opens. Found by the server, never said by the model. */
+            fromDocument: boolean;
             /** Format: uuid */
             id: string;
             /**
@@ -1746,7 +1748,7 @@ export interface components {
              */
             startDate: string | null;
             /**
-             * @description WAITING for a person; ADDED when the import was sure enough and the task or step is already in the plan (nobody has decided it: keep or undo it; after thirty days it is answered as ACCEPTED, with nobody as decidedBy); ACCEPTED or REJECTED once decided.
+             * @description WAITING for a person; ADDED when the import was sure enough and the task, step or payment (from a document) is already in the plan (nobody has decided it: keep or undo it; after thirty days it is answered as ACCEPTED, with nobody as decidedBy); ACCEPTED or REJECTED once decided.
              * @enum {string}
              */
             state: "WAITING" | "ADDED" | "ACCEPTED" | "REJECTED";
@@ -1803,7 +1805,7 @@ export interface components {
             /** @description A vendor's website. */
             vendorWebsite: string | null;
         };
-        /** @description How sure the e-mail import has to be before it adds a task or a step of the plan by itself. One setting for the wedding: both owners see and change the same. Payments and vendors always wait. */
+        /** @description How sure the e-mail import has to be before it adds a task, a step of the plan or a payment that a document names by itself. One setting for the wedding: both owners see and change the same. Payments that only a mail's own words name, and vendors, always wait. */
         SuggestionSettings: {
             /** @description False: nothing is added by itself, everything waits. The threshold is kept for when it is switched on again. */
             addsByItself: boolean;

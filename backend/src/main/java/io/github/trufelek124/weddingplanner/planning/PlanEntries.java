@@ -37,6 +37,12 @@ public interface PlanEntries {
      */
     Removal removeIfUntouched(UUID weddingId, UUID entryId, UUID suggestionId);
 
+    /**
+     * Whether the wedding has a payment of exactly this amount, due on exactly this day (null: no day, and an entry with no day
+     * is the same day), as a task of any status, a dropped one too (D-014). The amount is in the smallest unit of the currency.
+     */
+    boolean hasPayment(UUID weddingId, long amount, java.time.LocalDate dueDate);
+
     enum Removal {
         /** It was untouched, and is gone now. */
         REMOVED,

@@ -226,6 +226,8 @@ enum class SuggestionState {
  * @param decidedAt when it was decided
  * @param decided what was decided on this phone and the server does not have yet; null while nobody decided
  * @param waiting where the decision stands: set with [decided]
+ * @param fromDocument the passage stands in a document that came with the mail, not in the mail itself; false for a copy made
+ *   before the app knew
  * @param needsLook a decision made on this phone cannot be sent as it is: the card says nothing of it and offers none
  *   until the notice has been dealt with
  */
@@ -259,6 +261,7 @@ class Suggestion(
     val decided: Decision? = null,
     val waiting: Waiting? = null,
     val needsLook: Boolean = false,
+    val fromDocument: Boolean = false,
 ) {
     override fun toString(): String = "Suggestion[id=$id]"
 }

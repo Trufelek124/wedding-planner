@@ -176,6 +176,12 @@ class WireAgreesWithTheContractTest {
             ),
         )
         assertEquals(Suggestion.Kind.VENDOR, proposedVendor.kind)
+        // Whether the passage stands in a document that came with the mail: always sent, and false unless the stand-in says so.
+        assertEquals(false, payment.fromDocument)
+        val fromAnOffer = strict.decodeFromString<Suggestion>(
+            StandIn.suggestion("s7", "Pay the deposit", kind = "PAYMENT", amount = 250000, dueDate = "2026-12-01", paymentKind = "DEPOSIT", fromDocument = true),
+        )
+        assertEquals(true, fromAnOffer.fromDocument)
         // What the import added by itself, and what a person accepted, with the entry each made.
         val added = strict.decodeFromString<Suggestion>(StandIn.added("a1", "Send the guest list", "e1"))
         assertEquals(Suggestion.State.ADDED, added.state)

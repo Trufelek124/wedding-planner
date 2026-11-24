@@ -54,8 +54,8 @@ final class SuggestionDtos {
             UUID id,
             @Schema(description = "What accepting makes: a task, a task with an amount, a step of the plan or a vendor.") Kind kind,
             @Schema(
-                            description = "WAITING for a person; ADDED when the import was sure enough and the task or step is "
-                                    + "already in the plan (nobody has decided it: keep or undo it; after thirty days it is "
+                            description = "WAITING for a person; ADDED when the import was sure enough and the task, step or payment "
+                                    + "(from a document) is already in the plan (nobody has decided it: keep or undo it; after thirty days it is "
                                     + "answered as ACCEPTED, with nobody as decidedBy); ACCEPTED or REJECTED once decided.")
                     State state,
             @Schema(description = "What is proposed; for a vendor, its name.") String title,
@@ -94,7 +94,11 @@ final class SuggestionDtos {
                             nullable = true)
                     UUID madeEntryId,
             @Schema(description = "The vendor that accepting made.", nullable = true) UUID madeVendorId,
-            Instant createdAt) {
+            Instant createdAt,
+            @Schema(
+                            description = "Whether the passage stands in a document (a PDF) that came with the e-mail: then the words "
+                                    + "are not in the mail that `mailLink` opens. Found by the server, never said by the model.")
+                    boolean fromDocument) {
 
         static SuggestionResponse of(SuggestionRow row) {
             return new SuggestionResponse(
@@ -102,7 +106,7 @@ final class SuggestionDtos {
                     row.paymentKind(), row.categoryId(), row.vendorId(), row.vendorName(), row.vendorEmail(), row.vendorPhone(),
                     row.vendorWebsite(), row.senderName(), row.senderAddress(), row.subject(), row.receivedAt(),
                     row.inboxMemberId(), row.mailLink(), row.passage(), row.confidence(), row.decidedBy(), row.decidedAt(),
-                    row.madeEntryId(), row.madeVendorId(), row.createdAt());
+                    row.madeEntryId(), row.madeVendorId(), row.createdAt(), row.fromDocument());
         }
 
         @Override
@@ -113,8 +117,9 @@ final class SuggestionDtos {
 
     @Schema(
             name = "SuggestionSettings",
-            description = "How sure the e-mail import has to be before it adds a task or a step of the plan by itself. "
-                    + "One setting for the wedding: both owners see and change the same. Payments and vendors always wait.")
+            description = "How sure the e-mail import has to be before it adds a task, a step of the plan or a payment that a "
+                    + "document names by itself. One setting for the wedding: both owners see and change the same. Payments that "
+                    + "only a mail's own words name, and vendors, always wait.")
     record SettingsResponse(
             @Schema(description = "False: nothing is added by itself, everything waits. The threshold is kept for when it is "
                             + "switched on again.")
@@ -132,7 +137,7 @@ final class SuggestionDtos {
             description = "The settings as they should be from now on. Applies to what is handed in from then on: nothing "
                     + "that waits is added and nothing that was added is undone.")
     record SettingsChange(
-            @NotNull(message = "Say whether tasks and steps are added by themselves.") Boolean addsByItself,
+            @NotNull(message = "Say whether tasks, steps and payments from documents are added by themselves.") Boolean addsByItself,
             @Schema(minimum = "50", maximum = "100")
                     @NotNull(message = THRESHOLD_MESSAGE)
                     @Min(value = 50, message = THRESHOLD_MESSAGE)

@@ -12,10 +12,12 @@ import java.util.UUID;
 public interface Suggestions {
 
     /**
-     * Keeps the proposal as one that waits for an owner, or, when the import is sure enough (S05, D-008), adds it
-     * at once. Only a task or a step of the plan can be added so, never anything that names an amount of money and
-     * never a vendor; only when its confidence reaches the wedding's threshold and adding by itself is not switched
-     * off; and only as the planner would take it as it is, in the name of the owner whose inbox it came from. A
+     * Keeps the proposal as one that waits for an owner, or, when the import is sure enough (S05, D-008, D-014), adds it
+     * at once. Only a task or a step of the plan without an amount can be added so, or a payment with an amount whose
+     * passage stands in a document ({@link Proposal#fromDocument()}) and that the planner does not have already (a task
+     * of that amount due that day, or another suggestion that waits or was added); never a vendor, never a payment
+     * that only the mail's own words name; only when its confidence reaches the wedding's threshold and adding by itself
+     * is not switched off; and only as the planner would take it as it is, in the name of the owner whose inbox it came from. A
      * proposal the planner would refuse waits, with nothing made. Handing in the same source key again keeps one
      * suggestion and answers with it, changing nothing.
      *

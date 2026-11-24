@@ -124,6 +124,7 @@
     <string name="suggestions_title">Suggestions</string>
     <string name="suggestions_empty">Nothing waits for you.</string>
     <string name="suggestion_quotation">From the e-mail</string>
+    <string name="suggestion_from_document">From a document that came with this e-mail</string>
     <string name="suggestion_open_email">Open the e-mail</string>
     <string name="source_title">From e-mail</string>
     <string name="source_open">see where it came from</string>

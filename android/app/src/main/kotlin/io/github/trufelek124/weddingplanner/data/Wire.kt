@@ -168,6 +168,7 @@ data class GuestCountsWire(val total: HeadCountWire, val byStatus: List<StatusCo
  * @param madeEntryId the task or step it made, or that was added by itself; null once undone, and for a vendor
  * @param decidedBy the member who decided it; null while it waits or is added, and when thirty days made it count as kept
  * @param decidedAt when that was
+ * @param fromDocument whether the passage stands in a document that came with the mail (D-014); false from a server that does not say
  */
 @Serializable
 class SuggestionWire(
@@ -197,6 +198,7 @@ class SuggestionWire(
     val madeEntryId: String? = null,
     val decidedBy: String? = null,
     val decidedAt: String? = null,
+    val fromDocument: Boolean = false,
 ) {
     override fun toString(): String = "SuggestionWire[id=$id]"
 }

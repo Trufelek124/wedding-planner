@@ -15,7 +15,6 @@ import io.github.trufelek124.weddingplanner.mailreading.MailExtraction;
 import io.github.trufelek124.weddingplanner.mailreading.MailTriage;
 import io.github.trufelek124.weddingplanner.mailreading.Outcome;
 import io.github.trufelek124.weddingplanner.mailreading.Used;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -126,10 +125,10 @@ final class AnthropicSteps implements ReadingSteps {
         if (raw != null && raw.proposals() != null && raw.proposals().size() > message.mostProposals()) {
             return ended("extraction", Outcome.Why.TOO_MANY_PROPOSALS, used);
         }
-        List<String> sent = new ArrayList<>();
-        sent.add(message.text());
-        fitted.kept().forEach(earlier -> sent.add(earlier.text()));
-        message.documents().forEach(document -> sent.add(document.text()));
+        Checking.Sent sent = new Checking.Sent(
+                message.text(),
+                fitted.kept().stream().map(earlier -> earlier.text()).toList(),
+                message.documents().stream().map(document -> document.text()).toList());
         Optional<MailExtraction.Extracted> checked = Checking.extracted(raw, sent, message.mostProposals());
         if (checked.isEmpty()) {
             return ended("extraction", Outcome.Why.CANNOT_BE_USED, used);

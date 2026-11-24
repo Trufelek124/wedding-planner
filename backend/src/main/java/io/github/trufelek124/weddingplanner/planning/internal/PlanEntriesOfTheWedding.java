@@ -54,6 +54,12 @@ class PlanEntriesOfTheWedding implements PlanEntries {
         return entries.removeIfUntouched(weddingId, entryId, suggestionId);
     }
 
+    @Override
+    @Transactional
+    public boolean hasPayment(UUID weddingId, long amount, java.time.LocalDate dueDate) {
+        return entries.hasPayment(weddingId, amount, dueDate);
+    }
+
     private UUID add(EntryToAdd entry, Function<NewEntry, EntryView> making) {
         NewEntry request = new NewEntry(
                 null,

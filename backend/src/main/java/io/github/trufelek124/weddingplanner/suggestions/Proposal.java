@@ -19,6 +19,8 @@ import java.util.UUID;
  * @param mailLink opens the message in Gmail: an https address at mail.google.com, made by the server
  * @param passage a short quotation of the message the proposal rests on, never the whole message
  * @param confidence the import's confidence as a whole percentage, 0 to 100
+ * @param fromDocument whether the passage stands in the text of a document that was read with the message; the server's own
+ *     finding (D-014). It is what lets a payment be added by itself
  */
 public record Proposal(
         UUID weddingId,
@@ -43,7 +45,38 @@ public record Proposal(
         UUID inboxMemberId,
         String mailLink,
         String passage,
-        int confidence) {
+        int confidence,
+        boolean fromDocument) {
+
+    /** A proposal whose passage stands in the message's own words. */
+    public Proposal(
+            UUID weddingId,
+            String sourceKey,
+            Kind kind,
+            String title,
+            String notes,
+            LocalDate startDate,
+            LocalDate dueDate,
+            Long amount,
+            PaymentKind paymentKind,
+            UUID categoryId,
+            UUID vendorId,
+            String vendorName,
+            String vendorEmail,
+            String vendorPhone,
+            String vendorWebsite,
+            String senderName,
+            String senderAddress,
+            String subject,
+            Instant receivedAt,
+            UUID inboxMemberId,
+            String mailLink,
+            String passage,
+            int confidence) {
+        this(weddingId, sourceKey, kind, title, notes, startDate, dueDate, amount, paymentKind, categoryId, vendorId, vendorName,
+                vendorEmail, vendorPhone, vendorWebsite, senderName, senderAddress, subject, receivedAt, inboxMemberId, mailLink,
+                passage, confidence, false);
+    }
 
     public enum Kind {
         TASK,

@@ -997,16 +997,17 @@ describe('how sure the import has to be before it adds by itself', () => {
     expect(screen.queryByRole('heading', { name: 'Adding by itself' })).not.toBeInTheDocument()
   })
 
-  it('shows the wedding’s setting, says that both see it, and what is never added by itself', async () => {
+  it('shows the wedding’s setting, what it adds by itself, that both see it, and what is never added by itself', async () => {
     settingsServer()
     open('/mail')
 
     const section = within(await screen.findByRole('region', { name: 'Adding by itself' }))
-    expect(await section.findByRole('radio', { name: 'Add tasks and steps by themselves when the import is at least this sure' })).toBeChecked()
+    expect(await section.findByRole('radio', { name: 'Add tasks, steps and the payments a document names by themselves when the import is at least this sure.' })).toBeChecked()
     expect(section.getByRole('radio', { name: /^Never/ })).not.toBeChecked()
     expect(section.getByLabelText('At least this sure, in percent (50 to 100)')).toHaveValue('85')
     expect(section.getByText(/you and Piotr see and change the same one/)).toBeInTheDocument()
-    expect(section.getByText(/A payment or a new vendor is never added by itself/)).toBeInTheDocument()
+    expect(section.getByText(/A payment that only an e-mail’s own words name, and a new vendor, are never added by themselves/)).toBeInTheDocument()
+    expect(section.queryByText(/A payment or a new vendor is never added by itself/)).not.toBeInTheDocument()
     expect(section.getByText(/it adds nothing that already waits and undoes nothing that was added/)).toBeInTheDocument()
   })
 

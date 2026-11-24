@@ -4,6 +4,7 @@ import io.github.trufelek124.weddingplanner.mailreading.MailExtraction;
 import io.github.trufelek124.weddingplanner.mailreading.MailExtraction.Amount;
 import io.github.trufelek124.weddingplanner.mailreading.MailExtraction.Kind;
 import io.github.trufelek124.weddingplanner.mailreading.MailExtraction.PaymentKind;
+import io.github.trufelek124.weddingplanner.mailreading.MailExtraction.Place;
 import io.github.trufelek124.weddingplanner.mailreading.MailExtraction.Proposed;
 import io.github.trufelek124.weddingplanner.mailreading.MailTriage;
 import java.text.Normalizer;
@@ -46,20 +47,60 @@ final class Checking {
     }
 
     /**
-     * @param sent every text that was sent: the message's, the thread's that were kept and the documents'. A passage is looked
-     *     for in these only.
+     * Every text that was sent, told apart by where it stood: a passage is looked for in these only, and where it is found
+     * is the server's own finding (D-014).
+     *
+     * @param message the message's own text
+     * @param earlier the earlier messages of the thread that were kept
+     * @param documents the text of the documents
+     */
+    record Sent(String message, List<String> earlier, List<String> documents) {
+
+        Sent {
+            earlier = List.copyOf(earlier);
+            documents = List.copyOf(documents);
+        }
+
+        @Override
+        public String toString() {
+            return "Sent[]";
+        }
+    }
+
+    /** The squeezed texts, by where they stood. */
+    record Haystacks(String message, List<String> earlier, List<String> documents) {
+
+        Place where(String wanted) {
+            if (documents.stream().anyMatch(text -> text.contains(wanted))) {
+                return Place.DOCUMENT;
+            }
+            if (message.contains(wanted)) {
+                return Place.MESSAGE;
+            }
+            if (earlier.stream().anyMatch(text -> text.contains(wanted))) {
+                return Place.EARLIER_MESSAGE;
+            }
+            return null;
+        }
+    }
+
+    /**
+     * @param sent every text that was sent. A passage is looked for in these only.
      * @return the checked proposals, or empty when the answer cannot be used at all (no list, a missing proposal, more than five)
      */
-    static Optional<MailExtraction.Extracted> extracted(RawExtraction raw, List<String> sent) {
+    static Optional<MailExtraction.Extracted> extracted(RawExtraction raw, Sent sent) {
         return extracted(raw, sent, MailExtraction.MOST_PROPOSALS);
     }
 
-    /** As {@link #extracted(RawExtraction, List)}; {@code most} is five, or eight where a document was sent. */
-    static Optional<MailExtraction.Extracted> extracted(RawExtraction raw, List<String> sent, int most) {
+    /** As {@link #extracted(RawExtraction, Sent)}; {@code most} is five, or eight where a document was sent. */
+    static Optional<MailExtraction.Extracted> extracted(RawExtraction raw, Sent sent, int most) {
         if (raw == null || raw.proposals() == null || raw.proposals().size() > most) {
             return Optional.empty();
         }
-        List<String> haystacks = sent.stream().map(Checking::squeezed).toList();
+        Haystacks haystacks = new Haystacks(
+                squeezed(sent.message()),
+                sent.earlier().stream().map(Checking::squeezed).toList(),
+                sent.documents().stream().map(Checking::squeezed).toList());
         List<Proposed> kept = new ArrayList<>();
         for (RawExtraction.Proposal proposal : raw.proposals()) {
             if (proposal == null) {
@@ -70,7 +111,7 @@ final class Checking {
         return Optional.of(new MailExtraction.Extracted(kept));
     }
 
-    static Optional<Proposed> proposed(RawExtraction.Proposal raw, List<String> squeezedTexts) {
+    static Optional<Proposed> proposed(RawExtraction.Proposal raw, Haystacks squeezedTexts) {
         Kind kind = kind(raw.kind());
         if (kind == null || raw.howSure() == null || raw.howSure() < 0 || raw.howSure() > 100) {
             return Optional.empty();
@@ -92,7 +133,8 @@ final class Checking {
         }
         // The passage must stand in what was sent, compared without regard to line breaks and runs of spaces.
         String wanted = squeezed(raw.passage());
-        if (wanted.isEmpty() || squeezed(passage).isEmpty() || squeezedTexts.stream().noneMatch(text -> text.contains(wanted))) {
+        Place place = wanted.isEmpty() || squeezed(passage).isEmpty() ? null : squeezedTexts.where(wanted);
+        if (place == null) {
             return Optional.empty();
         }
         LocalDate first = day(raw.firstDay());
@@ -125,7 +167,7 @@ final class Checking {
         }
         return Optional.of(new Proposed(
                 kind, title, notes, first, due, amount, paymentKind, none(category), none(vendorName), none(email), none(phone),
-                none(website), raw.howSure(), passage));
+                none(website), raw.howSure(), passage, place));
     }
 
     private static Kind kind(String text) {

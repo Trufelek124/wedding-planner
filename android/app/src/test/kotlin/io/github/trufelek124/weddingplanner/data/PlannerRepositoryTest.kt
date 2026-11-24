@@ -457,6 +457,25 @@ class PlannerRepositoryTest {
     }
 
     @Test
+    fun `a suggestion says whether its passage stands in a document, and one from a server that does not say is not from one`() = runBlocking {
+        val withoutTheField = StandIn.suggestion("s2", "Book the band").replace(",\"fromDocument\":false", "")
+        assertFalse(withoutTheField.contains("fromDocument"))
+        server.planner(
+            suggestions = listOf(
+                StandIn.suggestion("s1", "Pay the deposit", kind = "PAYMENT", amount = 250000, dueDate = "2026-12-01", fromDocument = true),
+                withoutTheField,
+                StandIn.suggestion("s3", "Send the guest list"),
+            ),
+        )
+
+        assertEquals(Load.LOADED, planner.load())
+
+        val held = planner.planner.first()!!.suggestions
+        assertEquals(listOf(true, false, false), held.map { it.fromDocument })
+        assertEquals(listOf(true, false, false), database.planner().stored()!!.suggestions.map { it.fromDocument })
+    }
+
+    @Test
     fun `a kind a newer server knows is OTHER, and a field it adds breaks nothing`() = runBlocking {
         server.planner(suggestions = listOf(StandIn.suggestion("s1", "Book the band", kind = "EVENT", more = """"colour":"red"""")))
 

@@ -309,6 +309,7 @@ class SuggestionRow(
     val madeEntryId: String? = null,
     val decidedBy: String? = null,
     val decidedAt: String? = null,
+    @ColumnInfo(defaultValue = "0") val fromDocument: Boolean = false,
 ) {
     override fun toString(): String = "SuggestionRow[id=$id]"
 }

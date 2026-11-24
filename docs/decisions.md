@@ -741,7 +741,7 @@ yes.
 | Which payments | **Those whose quoted passage stands in a document** that was read with the message | Every payment: a mail's own words are the cheapest thing to forge, and the owner asked for the documents. None: what the owner decided against |
 | How "from a document" is known | **The server finds the passage** in the document's text | The model says so: the one thing here that must not rest on a model's word |
 | How sure | **The wedding's threshold**, the same 85 as for tasks | A higher one for money: a second number to explain, for a list that can be undone with one press |
-| The same payment twice | **It waits when the plan or the inbox already has a payment of that amount on that day** | Adding it: the deposit that the mail asked for and the offer repeats would stand in the budget twice. Dropping it: the server cannot know that it is the same |
+| The same payment twice | **It waits when the plan has a payment of that amount on that day, or a suggestion ever proposed one** — waiting, added, accepted or rejected | Adding it: the deposit that the mail asked for and the offer repeats would stand in the budget twice. Dropping it: the server cannot know that it is the same |
 | A vendor the planner does not know | **The payment is added without a vendor**; the vendor's proposal waits as before | Adding the vendor too: a new party to pay, with contact details nobody checked — what D-008 guards most |
 | Taking it back | **Undo**, as for everything added by itself | A separate way for money: the entry is a task like any other |
 
@@ -750,8 +750,9 @@ yes.
 1. **A payment is added by itself when its passage stands in a document that was read with the message**, it
    has an amount in the wedding's currency, the import is at least as sure as the wedding's threshold, and the
    planner would take it as it is.
-2. **Not when the planner already has that payment** — the same amount on the same day, as a task or as a
-   suggestion that waits or was added: then it waits.
+2. **Not when the planner has, or had, that payment** — the same amount on the same day, as a task or as a
+   suggestion whatever became of it: then it waits. What somebody rejected or undid does not come back by
+   itself.
 3. **A payment that only a mail's own words name still waits, and so does every vendor.**
 4. The suggestion says that it comes from a document, wherever its passage is shown.
 

@@ -1083,3 +1083,82 @@ describe('the two numbers', () => {
     expect(await screen.findByRole('link', { name: 'Suggestions, 1 added by themselves' })).toBeInTheDocument()
   })
 })
+
+const FROM_A_DOCUMENT = 'From a document that came with this e-mail'
+
+describe('a suggestion whose passage stands in a document', () => {
+  it('says so beside the passage in the inbox, and says nothing of the kind for one whose words are in the mail', async () => {
+    const offer = suggestion({ kind: 'PAYMENT', title: 'Pay the deposit', amount: 250_000, passage: 'Deposit: 2500,00 PLN', fromDocument: true })
+    const plain = suggestion({ title: 'Reply to Jan', passage: 'Could you reply by Friday?', fromDocument: false })
+    inbox([offer, plain])
+    open('/suggestions')
+
+    await screen.findByRole('article', { name: 'Pay the deposit' })
+    const o = card('Pay the deposit')
+    expect(o.getByText(FROM_A_DOCUMENT)).toBeInTheDocument()
+    expect(o.getByText('Deposit: 2500,00 PLN').tagName).toBe('BLOCKQUOTE')
+    expect(card('Reply to Jan').queryByText(/From a document/)).not.toBeInTheDocument()
+  })
+
+  it('says so in the part “Added by itself”, with the amount and the day of the payment, Undo and Keep', async () => {
+    const paid = added({
+      kind: 'PAYMENT',
+      title: 'Pay the deposit',
+      amount: 250_000,
+      paymentKind: 'DEPOSIT',
+      dueDate: '2026-12-01',
+      fromDocument: true,
+      passage: 'Deposit: 2500,00 PLN by 1 December 2026',
+    })
+    inbox([paid])
+    open('/suggestions?state=ADDED')
+
+    await screen.findByRole('article', { name: 'Pay the deposit' })
+    const p = card('Pay the deposit')
+    expect(p.getByText('Payment')).toBeInTheDocument()
+    expect(p.getByText('Amount').nextSibling).toHaveTextContent('2,500.00 zł, deposit')
+    expect(p.getByText('Due').nextSibling).toHaveTextContent('1 Dec 2026')
+    expect(p.getByText(FROM_A_DOCUMENT)).toBeInTheDocument()
+    expect(p.getByText('Added by itself')).toBeInTheDocument()
+    expect(p.getByRole('button', { name: 'Undo' })).toBeEnabled()
+    expect(p.getByRole('button', { name: 'Keep' })).toBeEnabled()
+  })
+
+  it('says so in the form that changes and accepts one that waits', async () => {
+    const waiting = suggestion({ title: 'From the offer', fromDocument: true })
+    inbox([waiting])
+
+    open(`/suggestions/${waiting.id}`)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Change and accept' })).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Where it comes from' })).getByText(FROM_A_DOCUMENT)).toBeInTheDocument()
+  })
+
+  it('says so on the page of an accepted one and of an added one', async () => {
+    const kept = suggestion({ title: 'Taken from the offer', state: 'ACCEPTED', decidedBy: PIOTR_MEMBER, decidedAt: '2026-11-15T09:30:00Z', madeEntryId: MADE, fromDocument: true })
+    inbox([kept])
+    open(`/suggestions/${kept.id}`)
+
+    expect(await screen.findByRole('heading', { name: 'Taken from the offer' })).toBeInTheDocument()
+    expect(screen.getByText(FROM_A_DOCUMENT)).toBeInTheDocument()
+  })
+
+  it('says nothing of a document on the page of one whose words are in the mail', async () => {
+    const plain = suggestion({ title: 'From the mail', state: 'ACCEPTED', decidedBy: PIOTR_MEMBER, decidedAt: '2026-11-15T09:30:00Z', madeEntryId: MADE })
+    inbox([plain])
+    open(`/suggestions/${plain.id}`)
+
+    expect(await screen.findByRole('heading', { name: 'From the mail' })).toBeInTheDocument()
+    expect(screen.queryByText(/From a document/)).not.toBeInTheDocument()
+  })
+
+  it('keeps the words as plain text next to a passage that looks like markup', async () => {
+    const one = suggestion({ title: 'Marked up', passage: '<a href="https://evil.example">click</a>', fromDocument: true })
+    inbox([one])
+    open('/suggestions')
+
+    await screen.findByRole('article', { name: 'Marked up' })
+    expect(card('Marked up').getByText('<a href="https://evil.example">click</a>')).toBeInTheDocument()
+    expect(card('Marked up').getByText(FROM_A_DOCUMENT)).toBeInTheDocument()
+    expect(card('Marked up').queryByRole('link', { name: 'click' })).not.toBeInTheDocument()
+  })
+})

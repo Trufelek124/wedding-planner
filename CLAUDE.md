@@ -99,6 +99,8 @@ closing comment quotes its summary lines and its exit code.
   a mail is plain text, never markup or a link made from it; "Open the e-mail" is drawn only for an `https`
   address, and only on a suggestion from your own inbox (the other owner's mail cannot be opened by you). A decision is sent once; `already-decided` overwrites nothing and says what was decided and by whom.
   "Change and accept" sends every value of the proposal, because the server makes what is sent and nothing else.
+  A suggestion with `fromDocument` says "From a document that came with this e-mail" beside its passage
+  (`Source` in `parts.tsx`): the words are then not in the mail that "Open the e-mail" shows.
   How many wait is asked once in `Shell` and shared with Home and the pages (`WaitingContext`).
 - What the import added by itself (S05) is a part of the same inbox, "Added by itself", with **Undo** and **Keep**:
   `decide()` (`src/suggestions/decisions.ts`) sends one request per press and answers with a notice or a trouble.
@@ -226,7 +228,8 @@ first uses it, at the version D-005 names.
   taking it back then only changes the phone, and the next load shows what the server has.
 - What the import added by itself (S05) is part of the copy too: the load asks for every state and keeps those
   that wait, those added by themselves, and of the accepted ones only those an entry of the copy points to — never
-  a rejected one, never a state the app does not know. **Keep** and **Undo** are decisions like the other two: the
+  a rejected one, never a state the app does not know. A suggestion from a document says so beside its
+  quotation (`fromDocument`, false for a server or a copy that does not say). **Keep** and **Undo** are decisions like the other two: the
   same table, the same place in `sync()`, the same strictness about what is on its way. An undo takes the entry
   from every list of the phone at once and gives it back when it is taken back or not taken; an undo of an entry
   the phone itself has changed is refused on the phone, with the server's words. `entry-changed` from the server
@@ -301,8 +304,12 @@ uses another only through the types in that module's own package, and never in a
   other one is `already-decided`, and a refused acceptance leaves nothing behind. A suggestion holds parts of
   someone's mail: nothing of it is logged, tests use made-up mail, and its link can only be an `https` address at
   `mail.google.com` (checked in the code and by the table).
-- A proposal the import is sure enough of is **added by itself** (S05, D-008): at hand-in, only a task or a step of
-  the plan — **never a payment, never a vendor**; the table refuses anything else — at the wedding's threshold
+- A proposal the import is sure enough of is **added by itself** (S05, D-008, D-014): at hand-in, only a task or a
+  step of the plan, or **a payment whose passage stands in a document** (`fromDocument`: the server found the
+  passage in a document's text, never the model's word) — **never a payment that only a mail's words name,
+  never a vendor**; the table refuses anything else. A payment is not added when the plan has a task of that
+  amount on that day (`PlanEntries.hasPayment`) or a suggestion ever proposed one, whatever became of it: it
+  then waits. All of it at the wedding's threshold
   (`suggestion_setting`, to begin with on at 85), and only as the planner takes it: the entry is made by
   `PlanEntries.addEntryFor` in the name of the inbox's owner behind a savepoint, so a proposal the planner refuses
   simply waits. The suggestion is `ADDED` until a person keeps it (accepted) or undoes it (the entry removed,
@@ -388,8 +395,8 @@ uses another only through the types in that module's own package, and never in a
     the machine is looked up, the library's own loggers are off, and the limits are the code's — three documents,
     fifty pages and ten seconds each, 40,000 characters in all, one document in work at a time. A document's text
     is somebody else's words: between the request's markers like the mail's, and a passage from it is checked
-    against it. With documents an answer may hold eight proposals; what a document names is still only a
-    suggestion that waits. `mail_message.documents` says whether a message's documents are still to be looked
+    against it. With documents an answer may hold eight proposals. `Checking` says where a passage stands
+    (message, earlier message, document), and a payment from a document may be added by itself (D-014). `mail_message.documents` says whether a message's documents are still to be looked
     at, in work, or done with: **a file that stops the server is not opened a second time**, while a busy service
     or a mailbox that cannot be asked leaves them to be read again. A message that was about the wedding and was
     read before its documents were looked at gets a second look (a few each round, keys

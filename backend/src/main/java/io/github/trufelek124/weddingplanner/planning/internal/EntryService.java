@@ -226,6 +226,12 @@ class EntryService {
         return Removal.REMOVED;
     }
 
+    /** Whether the wedding has a payment of this amount due on this day, whatever its status (D-014). */
+    @Transactional
+    boolean hasPayment(UUID weddingId, long amount, LocalDate dueDate) {
+        return entries.hasPayment(weddingId, amount, dueDate);
+    }
+
     // ------------------------------------------------------------ dependencies
 
     /** "This plan item can only start when that one is finished." Saying it twice changes nothing. */

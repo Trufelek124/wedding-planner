@@ -424,7 +424,7 @@ class SuggestionsIntegrationTest extends PostgresIntegrationTest {
                 "id", "kind", "state", "title", "notes", "startDate", "dueDate", "amount", "paymentKind", "categoryId",
                 "vendorId", "vendorName", "vendorEmail", "vendorPhone", "vendorWebsite", "senderName", "senderAddress",
                 "subject", "receivedAt", "inboxMemberId", "mailLink", "passage", "confidence", "decidedBy", "decidedAt",
-                "madeEntryId", "madeVendorId", "createdAt");
+                "madeEntryId", "madeVendorId", "createdAt", "fromDocument");
         assertThat(shown)
                 .containsEntry("state", "WAITING")
                 .containsEntry("senderName", "Jan from Palace on the Hill")
@@ -435,7 +435,8 @@ class SuggestionsIntegrationTest extends PostgresIntegrationTest {
                 .containsEntry("confidence", 80)
                 .containsEntry("inboxMemberId", annaId)
                 .containsEntry("decidedBy", null)
-                .containsEntry("decidedAt", null);
+                .containsEntry("decidedAt", null)
+                .containsEntry("fromDocument", false);
     }
 
     @Test

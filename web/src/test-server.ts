@@ -384,6 +384,7 @@ export function suggestion(overrides: Partial<Schemas['Suggestion']> = {}): Sche
     madeEntryId: null,
     madeVendorId: null,
     createdAt: '2026-11-12T13:06:00Z',
+    fromDocument: false,
     ...overrides,
   }
 }

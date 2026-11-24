@@ -55,6 +55,21 @@ class AddedByItselfLeavesNothingInTheLogIntegrationTest extends PostgresIntegrat
                 UUID.fromString(wedding.annaId), "https://mail.google.com/mail/u/0/#inbox/18c0ffee00000002",
                 "Quoted passage about marzipan", 99));
 
+        // D-014: a payment that a document names is added by itself too; its words stay out of the log like the others'.
+        UUID payment = suggestions.handIn(new Proposal(weddingId, "k-6", Kind.PAYMENT, "Lilac Meadow deposit", "Marzipan notes",
+                null, LocalDate.of(2026, 12, 1), 250_000L, Proposal.PaymentKind.DEPOSIT, null, null, null, null, null, null,
+                "Oskar Quillfeather", "oskar@lilac-meadow.example", "Quill subject", Instant.parse("2026-11-12T09:30:00Z"),
+                UUID.fromString(wedding.annaId), "https://mail.google.com/mail/u/0/#inbox/18c0ffee00000002",
+                "Quoted passage about marzipan from the offer", 95, true));
+        assertThat(jdbc.queryForObject("SELECT state FROM suggestion WHERE id = ?", String.class, payment)).isEqualTo("ADDED");
+        assertThat(http.postJsonAs(wedding.piotr, "/api/suggestions/" + payment + "/keep", "").statusCode()).isEqualTo(200);
+        UUID second = suggestions.handIn(new Proposal(weddingId, "k-7", Kind.PAYMENT, "Lilac Meadow second deposit", "Marzipan notes",
+                null, LocalDate.of(2026, 12, 1), 250_000L, Proposal.PaymentKind.DEPOSIT, null, null, null, null, null, null,
+                "Oskar Quillfeather", "oskar@lilac-meadow.example", "Quill subject", Instant.parse("2026-11-12T09:30:00Z"),
+                UUID.fromString(wedding.annaId), "https://mail.google.com/mail/u/0/#inbox/18c0ffee00000002",
+                "Quoted passage about marzipan from the offer", 95, true));
+        assertThat(jdbc.queryForObject("SELECT state FROM suggestion WHERE id = ?", String.class, second)).as("the same payment waits").isEqualTo("WAITING");
+
         assertThat(http.getAs(wedding.anna, "/api/suggestions?state=ALL").statusCode()).isEqualTo(200);
         assertThat(http.getAs(wedding.piotr, "/api/suggestions/" + kept).statusCode()).isEqualTo(200);
         assertThat(http.postJsonAs(wedding.piotr, "/api/suggestions/" + kept + "/keep", "").statusCode()).isEqualTo(200);
@@ -71,6 +86,7 @@ class AddedByItselfLeavesNothingInTheLogIntegrationTest extends PostgresIntegrat
         assertThat(log).as("the log was captured, and says that something was added by itself, for whom, and what kind")
                 .contains("was added by itself for the inbox of member " + wedding.annaId)
                 .contains("(TASK)")
+                .contains("(PAYMENT)")
                 .contains("/api/suggestions");
         assertThat(log)
                 .doesNotContain("Quillfeather")

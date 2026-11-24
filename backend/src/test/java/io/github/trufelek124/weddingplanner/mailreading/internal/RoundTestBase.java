@@ -256,6 +256,11 @@ abstract class RoundTestBase extends MailTestBase {
         return TestHttp.jsonList(http.getAs(wedding.anna, "/api/suggestions"));
     }
 
+    /** What waits, what was added by itself and what was decided: every suggestion of the wedding. */
+    List<Map<String, Object>> allSuggestions() throws Exception {
+        return TestHttp.jsonList(http.getAs(wedding.anna, "/api/suggestions?state=ALL"));
+    }
+
     int suggestionRows() {
         return jdbc.queryForObject("SELECT count(*) FROM suggestion", Integer.class);
     }

@@ -256,6 +256,28 @@ class SuggestionsScreenTest : SignedInPhoneTest() {
         assertTrue(statement.contains("Quotation from the e-mail: “Please pay the deposit by 1 December.”"))
     }
 
+    // ---------------------------------------------------------------- a passage that stands in a document
+
+    private val fromADocument = "From a document that came with this e-mail"
+
+    @Test
+    fun `a suggestion whose passage stands in a document says so beside the passage, and one whose words are in the mail says nothing of it`() {
+        val offer = StandIn.suggestion(
+            "s8", "Pay the second instalment", kind = "PAYMENT", dueDate = "2027-01-15", amount = 500000, paymentKind = "INSTALMENT",
+            passage = "Second instalment: 5000,00 PLN", confidence = 70, fromDocument = true, mailLink = "https://mail.google.com/mail/u/0/#all/18c0fff3",
+        )
+        server.planner(suggestions = listOf(offer, task))
+        open()
+        openSuggestions()
+
+        compose.onNode(line("Payment", "Pay the second instalment", "Second instalment: 5000,00 PLN", fromADocument)).assertIsDisplayed()
+        val said = statements()
+        assertEquals(2, said.size)
+        assertTrue(said[0].contains("Quotation from the e-mail: \u201cSecond instalment: 5000,00 PLN\u201d. $fromADocument. 70% sure"))
+        assertFalse(said[1].contains("document"))
+        assertEquals(1, compose.onAllNodes(hasText(fromADocument, substring = true)).fetchSemanticsNodes().size)
+    }
+
     // ---------------------------------------------------------------- what came out of a mail is plain text
 
     @Test

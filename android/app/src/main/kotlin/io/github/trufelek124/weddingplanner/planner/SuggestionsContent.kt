@@ -126,6 +126,7 @@ internal fun SuggestionCard(
     val shape = MaterialTheme.shapes.medium
     // A message in the other owner's mailbox cannot be opened from here.
     val link = mailLinkIntent(suggestion.mailLink).takeIf { planner.inYourInbox(suggestion) }
+    val fromDocument = stringResource(R.string.suggestion_from_document)
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
@@ -136,7 +137,7 @@ internal fun SuggestionCard(
         // The words of the card are one statement for a screen reader; the buttons under it stay buttons of their own.
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = suggestionInWords(suggestion, planner, zone, standing) },
+            modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = suggestionInWords(suggestion, planner, zone, standing, fromDocument) },
         ) {
             Text(
                 suggestionKindLabel(suggestion.kind),
@@ -161,6 +162,10 @@ internal fun SuggestionCard(
             }
             if (suggestion.passage.isNotBlank()) {
                 Quotation(suggestion.passage)
+            }
+            if (suggestion.fromDocument) {
+                // The words are not in the mail that "Open the e-mail" shows: said beside the passage, as plain text.
+                Text(fromDocument, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(confidenceInWords(suggestion.confidence), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
         }

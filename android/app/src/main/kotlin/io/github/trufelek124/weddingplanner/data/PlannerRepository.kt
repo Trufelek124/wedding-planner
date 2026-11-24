@@ -820,6 +820,7 @@ private fun storedOf(
             senderAddress = one.senderAddress, subject = one.subject, receivedAt = one.receivedAt, inboxMemberId = one.inboxMemberId,
             mailLink = one.mailLink, passage = one.passage, confidence = one.confidence,
             state = one.state, madeEntryId = one.madeEntryId, decidedBy = one.decidedBy, decidedAt = one.decidedAt,
+            fromDocument = one.fromDocument,
         )
     },
 )
@@ -973,6 +974,7 @@ private fun suggestionOf(row: SuggestionRow, waiting: SuggestionDecisionRow?): S
     decided = Decision.entries.firstOrNull { it.name == waiting?.decision }.takeIf { waiting?.trouble == null },
     waiting = if (waiting != null && waiting.trouble == null) Waiting.TO_BE_SENT else null,
     needsLook = waiting?.trouble != null,
+    fromDocument = row.fromDocument,
 )
 
 private fun instantOf(text: String): Instant? =

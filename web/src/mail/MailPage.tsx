@@ -576,7 +576,7 @@ function Partner({ partner }: { partner: PartnersMailConnection }) {
 
 const THRESHOLD_MESSAGE = 'Choose a number from 50 to 100.'
 
-/** How sure the import has to be before it adds a task or a step by itself: the wedding's setting, the same for both owners. */
+/** How sure the import has to be before it adds a task, a step or a payment from a document by itself: the wedding's setting, the same for both owners. */
 function AddsByItself({ say }: { say: (tone: Notice['tone'], text: string) => void }) {
   const settings = useLoaded('suggestion-settings', getSettings)
   const { members } = useCurrentWedding()
@@ -591,8 +591,8 @@ function AddsByItself({ say }: { say: (tone: Notice['tone'], text: string) => vo
       ) : (
         <>
           <p>
-            This is the wedding’s setting: you and {partner} see and change the same one. A payment or a new vendor is never added by itself; it always
-            waits for one of you.
+            This is the wedding’s setting: you and {partner} see and change the same one. A payment that only an e-mail’s own words name, and a new
+            vendor, are never added by themselves; they always wait for one of you.
           </p>
           <ThresholdForm key={`${settings.state.data.addsByItself}-${settings.state.data.threshold}`} saved={settings.state.data} onSaved={settings.set} say={say} />
           <p className="muted">
@@ -658,7 +658,7 @@ function ThresholdForm({
         <legend>When should the import add by itself?</legend>
         <label>
           <input type="radio" name="adds" checked={adds} onChange={() => setAdds(true)} />
-          Add tasks and steps by themselves when the import is at least this sure
+          Add tasks, steps and the payments a document names by themselves when the import is at least this sure.
         </label>
         <label>
           <input type="radio" name="adds" checked={!adds} onChange={() => setAdds(false)} />

@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The text of a wedding mail's PDF documents is read and sent with it (S04 sections 3 and 5, D-011): when, which, how much,
- * what is checked, what happens when it cannot be used, and that a payment found in one still waits for a person. All made-up,
+ * what is checked, what happens when it cannot be used, and that a payment found in one is added by itself (D-014). All made-up,
  * all against the stand-ins; the documents are made by the test with the library the server reads them with.
  */
 class ReadingDocumentsIntegrationTest extends RoundTestBase {
@@ -71,7 +71,7 @@ class ReadingDocumentsIntegrationTest extends RoundTestBase {
     // ---------------------------------------------------------------- the owner's case
 
     @Test
-    void aDepositInTheMailAndThreePaymentsInTheOfferAreAllProposedWithTheirDaysAndStillWaitForAPerson() throws Exception {
+    void aDepositInTheMailAndThreePaymentsInTheOfferAreAllProposedWithTheirDaysAndAddedByThemselves() throws Exception {
         annaGetsWithFiles("m-offer", "Rezerwacja sali", MAIL,
                 Attached.pdf("oferta.pdf", TestPdfs.withPages(OFFER)),
                 Attached.other("regulamin.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "NOT-A-PDF-SECRET".getBytes()));
@@ -80,9 +80,12 @@ class ReadingDocumentsIntegrationTest extends RoundTestBase {
 
         assertThat(round.round()).isEqualTo(1);
 
-        List<Map<String, Object>> shown = waitingSuggestions();
+        // D-014: a payment whose passage stands in the document is added by itself, so it is not among those that wait.
+        assertThat(waitingSuggestions()).isEmpty();
+        List<Map<String, Object>> shown = allSuggestions();
         assertThat(shown).extracting(suggestion -> suggestion.get("title")).containsExactlyInAnyOrder("Wpłacić zaliczkę", "Wpłacić drugą ratę", "Wpłacić płatność końcową");
-        assertThat(shown).allSatisfy(suggestion -> assertThat(suggestion).containsEntry("kind", "PAYMENT").containsEntry("state", "WAITING"));
+        assertThat(shown).allSatisfy(suggestion -> assertThat(suggestion).containsEntry("kind", "PAYMENT").containsEntry("state", "ADDED")
+                .containsEntry("fromDocument", true));
         Map<String, Map<String, Object>> byTitle = new java.util.HashMap<>();
         shown.forEach(suggestion -> byTitle.put((String) suggestion.get("title"), suggestion));
         assertThat(byTitle.get("Wpłacić zaliczkę")).containsEntry("amount", 250_000).containsEntry("dueDate", "2026-12-01")
@@ -106,15 +109,15 @@ class ReadingDocumentsIntegrationTest extends RoundTestBase {
     }
 
     @Test
-    void nothingAboutAddingByItselfChangesAPaymentFromADocumentWaitsHoweverSureTheModelIs() throws Exception {
+    void aPaymentFromADocumentIsAddedToThePlanWithItsAmountAndDayHoweverManyThereAre() throws Exception {
         annaGetsWithFiles("m-offer", "Rezerwacja sali", MAIL, Attached.pdf("oferta.pdf", TestPdfs.withPages(OFFER)));
         note();
         service.answerNextCallsWith(triageSays(true, 99), Reply.says(threePayments()));
 
         round.round();
 
-        assertThat(jdbc.queryForList("SELECT state FROM suggestion", String.class)).containsExactly("WAITING", "WAITING", "WAITING");
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM entry", Integer.class)).as("nothing was added to the plan").isZero();
+        assertThat(jdbc.queryForList("SELECT state FROM suggestion", String.class)).containsExactly("ADDED", "ADDED", "ADDED");
+        assertThat(jdbc.queryForList("SELECT amount FROM entry ORDER BY amount", Long.class)).containsExactly(250_000L, 500_000L, 750_000L);
     }
 
     private String documentsOf(String id) {
@@ -418,7 +421,7 @@ class ReadingDocumentsIntegrationTest extends RoundTestBase {
 
         round.round();
 
-        assertThat(waitingSuggestions()).extracting(suggestion -> suggestion.get("title")).containsExactly("Wpłacić zaliczkę");
+        assertThat(allSuggestions()).extracting(suggestion -> suggestion.get("title")).containsExactly("Wpłacić zaliczkę");
         assertThat(verdictOf("m-1")).containsEntry("proposals", 1);
     }
 
@@ -549,7 +552,7 @@ class ReadingDocumentsIntegrationTest extends RoundTestBase {
 
         assertThat(documentTextsOf(lastTurn())).hasSize(1);
         assertThat(lastTurn()).contains("document 1 of 1").doesNotContain("LOCKED-WORDS");
-        assertThat(waitingSuggestions()).hasSize(3);
+        assertThat(allSuggestions()).hasSize(3);
     }
 
     @Test

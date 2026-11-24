@@ -178,13 +178,14 @@ fun suggestionStanding(suggestion: Suggestion, planner: Planner, zone: ZoneId): 
 }
 
 /** The card as one statement for a screen reader: what is proposed, where it comes from, the passage as a quotation, how sure. */
-fun suggestionInWords(suggestion: Suggestion, planner: Planner, zone: ZoneId, standing: String? = null): String {
+fun suggestionInWords(suggestion: Suggestion, planner: Planner, zone: ZoneId, standing: String? = null, fromDocument: String? = null): String {
     val parts = mutableListOf("${suggestionKindLabel(suggestion.kind)}: ${suggestionName(suggestion)}")
     if (standing != null) parts += standing
     parts += suggestionFacts(suggestion, planner)
     if (suggestion.notes.isNotBlank()) parts += "Notes: ${suggestion.notes.trim()}"
     parts += suggestionSource(suggestion, planner, zone)
     if (suggestion.passage.isNotBlank()) parts += "$QUOTATION_LEAD: “${suggestion.passage.trim()}”"
+    if (suggestion.fromDocument && fromDocument != null) parts += fromDocument
     parts += confidenceInWords(suggestion.confidence)
     return parts.joinToString(". ")
 }

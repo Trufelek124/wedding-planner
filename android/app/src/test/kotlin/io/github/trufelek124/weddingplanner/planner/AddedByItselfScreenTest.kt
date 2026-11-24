@@ -172,6 +172,31 @@ class AddedByItselfScreenTest : SignedInPhoneTest() {
     }
 
     @Test
+    fun `a payment that a document names and was added by itself shows its amount and day, says where its words stand, and has Undo and Keep`() {
+        val words = "From a document that came with this e-mail"
+        theirs = LivingPlanner(
+            server,
+            entries = listOf(StandIn.entry("e9", "Pay the deposit", dueDate = "2026-12-01", amount = 250000, paymentKind = "DEPOSIT", fromSuggestionId = "a9")),
+            suggestions = listOf(
+                StandIn.suggestion(
+                    "a9", "Pay the deposit", kind = "PAYMENT", state = "ADDED", madeEntryId = "e9", dueDate = "2026-12-01", amount = 250000, paymentKind = "DEPOSIT",
+                    senderName = "Jan from Palace on the Hill", senderAddress = "jan@palace.example", subject = "Offer", passage = "Deposit: 2500,00 PLN by 1 December 2026",
+                    confidence = 92, fromDocument = true, mailLink = link,
+                ),
+            ),
+        )
+        open()
+        openSuggestions()
+
+        compose.onNode(hasText("Added by itself") and isHeading()).assertExists()
+        compose.onNode(
+            line("Payment", "Pay the deposit", "due 1 Dec 2026", "2,500.00\u00a0zł, deposit", "Deposit: 2500,00 PLN by 1 December 2026", words, "92% sure"),
+        ).assertIsDisplayed()
+        shown("Undo \u201cPay the deposit\u201d").assertIsDisplayed()
+        shown("Keep \u201cPay the deposit\u201d").assertIsDisplayed()
+    }
+
+    @Test
     fun `where nothing was added the part is not drawn, and what waits has no title of its own`() {
         theirs = LivingPlanner(server, entries = emptyList(), suggestions = listOf(StandIn.suggestion("w1", "Pay the deposit")))
         open()

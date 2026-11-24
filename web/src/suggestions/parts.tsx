@@ -59,6 +59,9 @@ export function Proposal({ suggestion, names }: { suggestion: Suggestion; names:
   )
 }
 
+/** Said beside the passage of a suggestion whose words stand in a document, not in the mail that "Open the e-mail" shows (D-014). */
+export const FROM_A_DOCUMENT = 'From a document that came with this e-mail'
+
 /** Where it comes from, the passage it rests on, how sure the import is, and the way to the mail itself. */
 export function Source({ suggestion }: { suggestion: Suggestion }) {
   const wedding = useCurrentWedding()
@@ -90,6 +93,7 @@ export function Source({ suggestion }: { suggestion: Suggestion }) {
         </div>
       </dl>
       {suggestion.passage !== '' && <blockquote className="passage as-written">{suggestion.passage}</blockquote>}
+      {suggestion.fromDocument && <p className="suggestion-document">{FROM_A_DOCUMENT}</p>}
       <p className="suggestion-sure">
         <span>{suggestion.confidence}% sure</span>
         {link !== null && (

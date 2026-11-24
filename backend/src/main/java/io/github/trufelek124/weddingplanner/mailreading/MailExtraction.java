@@ -163,6 +163,16 @@ public interface MailExtraction {
     }
 
     /**
+     * Where the server found a proposal's passage (D-014). {@code DOCUMENT} when it stands in the text of a document that was
+     * sent, whatever else it also stands in; then {@code MESSAGE}, the message's own text; then {@code EARLIER_MESSAGE}.
+     */
+    enum Place {
+        MESSAGE,
+        EARLIER_MESSAGE,
+        DOCUMENT
+    }
+
+    /**
      * An amount as the mail writes it. The model does no arithmetic on money: turning this into whole numbers of the
      * smallest unit, and deciding what to do with another currency, is the caller's.
      *
@@ -183,6 +193,7 @@ public interface MailExtraction {
      * @param paymentKind only for a payment, and only where the mail says which kind
      * @param category a category by name; matching it with the planner's is not done here
      * @param sure how sure the model is, 0 to 100
+     * @param place where the passage was found in what was sent: the server's finding, never the model's word (D-014)
      */
     record Proposed(
             Kind kind,
@@ -198,7 +209,32 @@ public interface MailExtraction {
             String vendorPhone,
             String vendorWebsite,
             int sure,
-            String passage) {
+            String passage,
+            Place place) {
+
+        public Proposed {
+            Objects.requireNonNull(place, "place");
+        }
+
+        /** A proposal whose passage stands in the message itself. */
+        public Proposed(
+                Kind kind,
+                String title,
+                String notes,
+                LocalDate startDate,
+                LocalDate dueDate,
+                Amount amount,
+                PaymentKind paymentKind,
+                String category,
+                String vendorName,
+                String vendorEmail,
+                String vendorPhone,
+                String vendorWebsite,
+                int sure,
+                String passage) {
+            this(kind, title, notes, startDate, dueDate, amount, paymentKind, category, vendorName, vendorEmail, vendorPhone,
+                    vendorWebsite, sure, passage, Place.MESSAGE);
+        }
 
         /** Holds parts of somebody's mail: nothing of it is printed. */
         @Override

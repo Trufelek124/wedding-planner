@@ -527,4 +527,53 @@ class DatabaseCarriesOverTest {
             database.close()
         }
     }
+
+    @Test
+    fun `what version 9 held is still there, a suggestion in it comes from no document, and one that does can be written and read`() = runBlocking {
+        val file = folder.root.resolve("planner.db")
+        aDatabaseOfVersion(9, file) { old ->
+            old.execSQL(
+                """INSERT INTO planner (id, loadedAt, weddingDate, currency, timeZone, daysLeft, today, budgetTotal, budgetPlanned, budgetCommitted,
+                   budgetPaid, overdueIds, nextIds, nextPaymentIds)
+                   VALUES (1, 1795093500000, '2027-06-19', 'PLN', 'Europe/Warsaw', 213, '2026-11-18', NULL, 0, 0, 0, '', '', '')""",
+            )
+            old.execSQL("INSERT INTO member (id, position, displayName, you) VALUES ('m1', 0, 'Anna', 1)")
+            old.execSQL(
+                """INSERT INTO suggestion (id, position, kind, title, notes, startDate, dueDate, amount, paymentKind, categoryId, vendorId, vendorName,
+                   vendorEmail, vendorPhone, vendorWebsite, senderName, senderAddress, subject, receivedAt, inboxMemberId, mailLink, passage, confidence,
+                   state, madeEntryId, decidedBy, decidedAt)
+                   VALUES ('s1', 0, 'PAYMENT', 'Pay the deposit', '', NULL, '2026-12-01', 250000, 'DEPOSIT', NULL, NULL, NULL, NULL, NULL, NULL,
+                   'Ewa from the Registry Office', 'ewa@registry.example', 'Offer', '2026-11-17T09:30:00Z', 'm1',
+                   'https://mail.google.com/mail/u/0/#all/18c0ffef', 'Deposit: 2500,00 PLN', 80, 'WAITING', NULL, NULL, NULL)""",
+            )
+        }
+
+        val database = Room.databaseBuilder(context, PlannerDatabase::class.java, file.path).build()
+        try {
+            val stored = database.planner().stored()!!
+            val shown = plannerOf(stored)
+
+            // What was there, is there, and says nothing of a document: a copy made before the app knew cannot know.
+            assertEquals(listOf("s1"), shown.suggestions.map { it.id })
+            assertEquals(250000L, shown.suggestions.single().amount)
+            assertEquals(false, stored.suggestions.single().fromDocument)
+            assertEquals(false, shown.suggestions.single().fromDocument)
+
+            // The new column can be written and read.
+            database.planner().putSuggestions(
+                listOf(
+                    SuggestionRow(
+                        "s2", 1, "PAYMENT", "Pay the second instalment", "", null, "2027-01-15", 500000, "INSTALMENT", null, null, null, null, null, null,
+                        "Ewa from the Registry Office", "ewa@registry.example", "Offer", "2026-11-17T09:30:00Z", "m1",
+                        "https://mail.google.com/mail/u/0/#all/18c0ffef", "Second: 5000,00 PLN", 90, "ADDED", "t1", null, null, fromDocument = true,
+                    ),
+                ),
+            )
+            val after = plannerOf(database.planner().stored()!!)
+            assertEquals(true, after.added.first { it.id == "s2" }.fromDocument)
+            assertEquals(false, after.suggestions.first { it.id == "s1" }.fromDocument)
+        } finally {
+            database.close()
+        }
+    }
 }

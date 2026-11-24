@@ -2,6 +2,7 @@ package io.github.trufelek124.weddingplanner.mailreading.internal;
 
 import io.github.trufelek124.weddingplanner.mailreading.MailExtraction.Kind;
 import io.github.trufelek124.weddingplanner.mailreading.MailExtraction.PaymentKind;
+import io.github.trufelek124.weddingplanner.mailreading.MailExtraction.Place;
 import io.github.trufelek124.weddingplanner.mailreading.MailExtraction.Proposed;
 import io.github.trufelek124.weddingplanner.planning.PlanCategories;
 import io.github.trufelek124.weddingplanner.suggestions.Proposal;
@@ -139,7 +140,8 @@ class ProposalMaker {
                 origin.memberId(),
                 origin.link(),
                 cut(proposed.passage(), PASSAGE),
-                proposed.sure()));
+                proposed.sure(),
+                proposed.place() == Place.DOCUMENT));
     }
 
     private Optional<UUID> known(UUID wedding, String address) {

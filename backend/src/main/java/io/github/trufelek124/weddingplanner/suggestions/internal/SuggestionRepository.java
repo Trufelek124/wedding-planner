@@ -53,14 +53,15 @@ class SuggestionRepository {
             Instant decidedAt,
             UUID madeEntryId,
             UUID madeVendorId,
-            Instant createdAt) {
+            Instant createdAt,
+            boolean fromDocument) {
 
         /** The same suggestion with another link to its message. */
         SuggestionRow withMailLink(String link) {
             return new SuggestionRow(
                     id, sourceKey, kind, state, title, notes, startDate, dueDate, amount, paymentKind, categoryId, vendorId,
                     vendorName, vendorEmail, vendorPhone, vendorWebsite, senderName, senderAddress, subject, receivedAt,
-                    inboxMemberId, link, passage, confidence, decidedBy, decidedAt, madeEntryId, madeVendorId, createdAt);
+                    inboxMemberId, link, passage, confidence, decidedBy, decidedAt, madeEntryId, madeVendorId, createdAt, fromDocument);
         }
 
         /** The same suggestion as it stands in this state, decided by this member (or by nobody) at this moment. */
@@ -68,7 +69,7 @@ class SuggestionRepository {
             return new SuggestionRow(
                     id, sourceKey, kind, to, title, notes, startDate, dueDate, amount, paymentKind, categoryId, vendorId,
                     vendorName, vendorEmail, vendorPhone, vendorWebsite, senderName, senderAddress, subject, receivedAt,
-                    inboxMemberId, mailLink, passage, confidence, by, at, madeEntryId, madeVendorId, createdAt);
+                    inboxMemberId, mailLink, passage, confidence, by, at, madeEntryId, madeVendorId, createdAt, fromDocument);
         }
 
         @Override
@@ -81,7 +82,7 @@ class SuggestionRepository {
             SELECT id, source_key, kind, state, title, notes, start_date, due_date, amount, payment_kind, category_id,
                    vendor_id, vendor_name, vendor_email, vendor_phone, vendor_website, sender_name, sender_address,
                    subject, received_at, inbox_member_id, mail_link, passage, confidence, decided_by, decided_at,
-                   made_entry_id, made_vendor_id, created_at
+                   made_entry_id, made_vendor_id, created_at, from_document
             FROM suggestion
             """;
 
@@ -180,11 +181,11 @@ class SuggestionRepository {
                 INSERT INTO suggestion (id, wedding_id, source_key, kind, state, title, notes, start_date, due_date, amount,
                                         payment_kind, category_id, vendor_id, vendor_name, vendor_email, vendor_phone,
                                         vendor_website, sender_name, sender_address, subject, received_at, inbox_member_id,
-                                        mail_link, passage, confidence, created_at)
+                                        mail_link, passage, confidence, created_at, from_document)
                 VALUES (:id, :wedding, :sourceKey, :kind, 'WAITING', :title, :notes, :startDate, :dueDate, :amount,
                         :paymentKind, :category, :vendor, :vendorName, :vendorEmail, :vendorPhone, :vendorWebsite,
                         :senderName, :senderAddress, :subject, :receivedAt, :inbox, :mailLink, :passage, :confidence,
-                        :createdAt)
+                        :createdAt, :fromDocument)
                 ON CONFLICT (wedding_id, source_key) DO NOTHING
                 """)
                         .param("id", s.id())
@@ -212,8 +213,27 @@ class SuggestionRepository {
                         .param("passage", s.passage())
                         .param("confidence", s.confidence())
                         .param("createdAt", at(s.createdAt()))
+                        .param("fromDocument", s.fromDocument())
                         .update()
                 == 1;
+    }
+
+    /**
+     * Whether another suggestion of the wedding proposes, or once proposed, a payment of this amount due on this day (D-014):
+     * one that waits, one that was added, and also one that a person accepted or rejected - what somebody said no to is not
+     * put into the plan behind their back. Both without a day count as the same day. The suggestion {@code except} is not
+     * counted: it is the one asking.
+     */
+    boolean otherPaymentProposed(UUID weddingId, UUID except, long amount, LocalDate dueDate) {
+        return jdbc.sql("""
+                SELECT EXISTS (
+                    SELECT 1 FROM suggestion
+                    WHERE wedding_id = ? AND id <> ? AND kind = 'PAYMENT'
+                      AND amount = ? AND due_date IS NOT DISTINCT FROM CAST(? AS date))
+                """)
+                .params(weddingId, except, amount, dueDate)
+                .query(Boolean.class)
+                .single();
     }
 
     /** Records the decision; only a suggestion that still waits can have one. */
@@ -299,7 +319,8 @@ class SuggestionRepository {
                 instant(row, "decided_at"),
                 row.getObject("made_entry_id", UUID.class),
                 row.getObject("made_vendor_id", UUID.class),
-                instant(row, "created_at"));
+                instant(row, "created_at"),
+                row.getBoolean("from_document"));
     }
 
     private static Instant instant(ResultSet row, String column) throws SQLException {

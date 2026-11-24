@@ -26,10 +26,11 @@ A proposal is added by itself when **all** of these hold:
 3. What would be made is valid as it is proposed. A proposal that the planner would refuse (S02 section 3)
    simply waits.
 4. Adding by itself is not switched off (section 6).
-5. For a payment: **the planner does not have that payment already**. A payment of the same amount due on the
-   same day (or both without a day) that is in the plan as a task, or among the suggestions that wait or were
-   added by themselves, is taken for the same one — an offer repeats the deposit the mail asked for — and the
-   new proposal waits, so that a person decides and nothing is counted twice in the budget.
+5. For a payment: **the planner does not have that payment already, and never had it**. A payment of the same
+   amount due on the same day (or both without a day) that is in the plan as a task, or among the suggestions —
+   waiting, added by itself, or decided by a person either way — is taken for the same one: an offer repeats the
+   deposit the mail asked for. The new proposal then waits, so that a person decides, nothing is counted twice
+   in the budget, and what somebody rejected does not come back behind their back.
 
 Everything else waits in the inbox as before.
 
@@ -142,4 +143,4 @@ one and never asks for what was added.
 | What | Where |
 |---|---|
 | A later message of a thread changing the entry an earlier one produced | WP-US-22, a task of its own |
-| Payments added by themselves | Decided against in D-008; to be opened again only by the owner |
+| Payments that only a mail's own words name, added by themselves | Decided against in D-008 and kept so in D-014; to be opened again only by the owner |

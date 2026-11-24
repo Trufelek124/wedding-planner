@@ -49,8 +49,9 @@ class SuggestionController {
 
     @Operation(
             summary = "How sure the import has to be",
-            description = "Whether the e-mail import adds tasks and steps of the plan by itself, and at what confidence. The "
-                    + "same for both owners. Payments and vendors always wait.")
+            description = "Whether the e-mail import adds tasks, steps of the plan and the payments that a document names by "
+                    + "itself, and at what confidence. The same for both owners. Payments that only a mail's own words name, "
+                    + "and vendors, always wait.")
     @GetMapping("/settings")
     SettingsResponse settings(UserId user) {
         return SettingsResponse.of(suggestions.settings(user));

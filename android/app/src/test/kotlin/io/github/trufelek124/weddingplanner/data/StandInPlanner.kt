@@ -145,6 +145,7 @@ object StandIn {
         madeEntryId: String? = null,
         decidedBy: String? = null,
         decidedAt: String? = null,
+        fromDocument: Boolean = false,
         more: String = "",
     ): String =
         """{"id":"$id","kind":"$kind","state":"$state","title":"$title","notes":"$notes","startDate":${text(startDate)},"dueDate":${text(dueDate)},""" +
@@ -153,6 +154,7 @@ object StandIn {
             """"senderName":"$senderName","senderAddress":"$senderAddress","subject":"$subject","receivedAt":"$receivedAt",""" +
             """"inboxMemberId":"$inboxMemberId","mailLink":"$mailLink","passage":"$passage","confidence":$confidence,""" +
             """"decidedBy":${text(decidedBy)},"decidedAt":${text(decidedAt)},"madeEntryId":${text(madeEntryId)},"madeVendorId":null,"createdAt":"2026-11-18T13:06:00Z"""" +
+            ""","fromDocument":$fromDocument""" +
             (if (more.isEmpty()) "" else ",$more") + "}"
 
     /**
