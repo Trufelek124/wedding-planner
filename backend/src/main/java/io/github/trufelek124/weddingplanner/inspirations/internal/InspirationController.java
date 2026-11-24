@@ -4,6 +4,7 @@ import io.github.trufelek124.weddingplanner.identity.UserId;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationDtos.InspirationChange;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationDtos.InspirationResponse;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationDtos.NewInspiration;
+import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationDtos.PlaceRequest;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationDtos.TagResponse;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
@@ -68,6 +69,12 @@ class InspirationController {
     @PutMapping(path = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     InspirationResponse change(UserId user, @PathVariable UUID id, @Valid @RequestBody InspirationChange request) {
         return InspirationResponse.of(inspirations.change(user, id, request));
+    }
+
+    /** Moves the card on the canvas; either owner may, the later move wins, the idea's version stays. */
+    @PutMapping(path = "/{id}/place", consumes = MediaType.APPLICATION_JSON_VALUE)
+    InspirationResponse place(UserId user, @PathVariable UUID id, @RequestBody PlaceRequest request) {
+        return InspirationResponse.of(inspirations.place(user, id, request));
     }
 
     @DeleteMapping("/{id}")

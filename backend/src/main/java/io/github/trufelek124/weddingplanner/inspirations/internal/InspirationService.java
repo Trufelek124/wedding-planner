@@ -7,6 +7,7 @@ import io.github.trufelek124.weddingplanner.identity.UserId;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationDtos.InspirationChange;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationDtos.InspirationFields;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationDtos.NewInspiration;
+import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationDtos.PlaceRequest;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRepository.Filter;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRepository.InspirationRow;
 import io.github.trufelek124.weddingplanner.inspirations.internal.InspirationRepository.TagCount;
@@ -17,6 +18,7 @@ import io.github.trufelek124.weddingplanner.planning.PlanItems;
 import io.github.trufelek124.weddingplanner.vendors.Vendors;
 import io.github.trufelek124.weddingplanner.wedding.Membership;
 import io.github.trufelek124.weddingplanner.wedding.Weddings;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
@@ -104,12 +106,21 @@ class InspirationService {
         }
         Optional<URI> link = checked(membership, request);
         Instant now = clock.instant();
+        // The canvas is held from here to the end, so that two arrivals at once do not choose the same place.
+        inspirations.holdCanvas(membership.weddingId());
+        if (request.id() != null) {
+            Optional<InspirationRow> arrivedMeanwhile = inspirations.find(membership.weddingId(), request.id());
+            if (arrivedMeanwhile.isPresent()) {
+                return shown(arrivedMeanwhile.get());
+            }
+        }
+        CanvasPlacement.Place place = CanvasPlacement.next(inspirations.places(membership.weddingId()));
         InspirationRow inspiration = new InspirationRow(
                 request.id() != null ? request.id() : UUID.randomUUID(), link.map(URI::toString).orElse(null),
                 link.map(Links::sourceOf).orElse(Source.PHOTO),
                 request.title().strip(), request.note().strip(), tagsAsKept(request.tags()), request.boardId(),
                 request.planItemId(), request.vendorId(), membership.memberId(),
-                link.isPresent() ? PreviewStatus.PENDING : PreviewStatus.NONE, "", 0, now, now);
+                link.isPresent() ? PreviewStatus.PENDING : PreviewStatus.NONE, "", 0, now, now, place.x(), place.y(), now);
         inspirations.insert(membership.weddingId(), inspiration);
         if (link.isPresent()) {
             previews.wakeOnceSaved();
@@ -128,7 +139,7 @@ class InspirationService {
                 request.title().strip(), request.note().strip(), tagsAsKept(request.tags()), request.boardId(),
                 request.planItemId(), request.vendorId(), before.addedBy(), before.previewStatus(), before.previewTitle(),
                 before.version(),
-                before.createdAt(), now);
+                before.createdAt(), now, before.x(), before.y(), before.placedAt());
         if (!inspirations.update(membership.weddingId(), after, request.version(), now)) {
             throw new ApiException(
                     ProblemCode.CHANGED_MEANWHILE, "Someone else changed this in the meantime. Load it again, then make your change.");
@@ -142,6 +153,39 @@ class InspirationService {
             }
         }
         return shown(existing(membership, id));
+    }
+
+    /** Moves the card. Not a change of the idea; the later move wins, and nothing is compared with a version. */
+    @Transactional
+    InspirationView place(UserId user, UUID id, PlaceRequest request) {
+        Membership membership = weddings.membershipOf(user);
+        existing(membership, id);
+        List<FieldProblem> problems = new ArrayList<>();
+        int x = whole(request.x(), "x", problems);
+        int y = whole(request.y(), "y", problems);
+        if (!problems.isEmpty()) {
+            throw new ApiException(ProblemCode.BAD_REQUEST, "The request is not valid.", problems);
+        }
+        if (!inspirations.place(membership.weddingId(), id, x, y, clock.instant())) {
+            throw noSuchInspiration();
+        }
+        return shown(existing(membership, id));
+    }
+
+    private static int whole(BigDecimal value, String field, List<FieldProblem> problems) {
+        if (value == null) {
+            problems.add(new FieldProblem(field, "Enter a place for " + field + "."));
+            return 0;
+        }
+        if (value.signum() != 0 && value.stripTrailingZeros().scale() > 0) {
+            problems.add(new FieldProblem(field, "Use a whole number for " + field + "."));
+            return 0;
+        }
+        if (value.abs().compareTo(BigDecimal.valueOf(CanvasPlacement.LIMIT)) > 0) {
+            problems.add(new FieldProblem(field, "Use a number from -100,000 to 100,000 for " + field + "."));
+            return 0;
+        }
+        return value.intValueExact();
     }
 
     /** Its pictures go with it, from the disk too. */

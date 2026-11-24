@@ -218,7 +218,7 @@ class InspirationsIntegrationTest extends PostgresIntegrationTest {
         // Every field is there, also the empty ones.
         assertThat(saved).containsOnlyKeys(
                 "id", "url", "source", "title", "note", "tags", "boardId", "planItemId", "vendorId", "addedById", "previewStatus",
-                "previewTitle", "pictures", "version", "createdAt", "updatedAt");
+                "previewTitle", "pictures", "version", "createdAt", "updatedAt", "x", "y", "placedAt");
         assertThat(saved.get("pictures")).isEqualTo(List.of());
         // Without a link there is nothing to fetch a preview from.
         assertThat(saved).containsEntry("previewStatus", "NONE").containsEntry("previewTitle", "");

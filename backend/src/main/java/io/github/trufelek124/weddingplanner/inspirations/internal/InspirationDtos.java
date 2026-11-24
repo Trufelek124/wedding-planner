@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -81,6 +82,11 @@ final class InspirationDtos {
             @Schema(nullable = true) UUID vendorId)
             implements InspirationFields {}
 
+    @Schema(name = "InspirationPlace", description = "Where a card is put on the canvas. The later move wins; there is no version.")
+    record PlaceRequest(
+            @Schema(description = "The left edge, a whole number from -100,000 to 100,000.", implementation = Integer.class) BigDecimal x,
+            @Schema(description = "The top edge, a whole number from -100,000 to 100,000.", implementation = Integer.class) BigDecimal y) {}
+
     @Schema(name = "Inspiration", description = "An idea the couple kept: a link or pictures, on a board, with a note and tags.")
     record InspirationResponse(
             UUID id,
@@ -100,14 +106,19 @@ final class InspirationDtos {
             @Schema(description = "Its pictures, in their order; the first is the one a card shows.") List<PictureResponse> pictures,
             @Schema(description = "Send this back with a change; it tells whether someone else saved in between.") int version,
             Instant createdAt,
-            Instant updatedAt) {
+            Instant updatedAt,
+            @Schema(description = "Where its card lies on the canvas: the left edge, from -100,000 to 100,000.") int x,
+            @Schema(description = "The top edge, from -100,000 to 100,000; grows downwards.") int y,
+            @Schema(description = "When it was put there: when it was saved, or when it was last moved. Moving it changes neither version nor updatedAt.")
+                    Instant placedAt) {
 
         static InspirationResponse of(InspirationView view) {
             InspirationRow row = view.inspiration();
             return new InspirationResponse(
                     row.id(), row.url(), row.source(), row.title(), row.note(), row.tags(), row.boardId(), row.planItemId(),
                     row.vendorId(), row.addedBy(), row.previewStatus(), row.previewTitle(),
-                    view.pictures().stream().map(PictureResponse::of).toList(), row.version(), row.createdAt(), row.updatedAt());
+                    view.pictures().stream().map(PictureResponse::of).toList(), row.version(), row.createdAt(), row.updatedAt(), row.x(), row.y(),
+                    row.placedAt());
         }
     }
 

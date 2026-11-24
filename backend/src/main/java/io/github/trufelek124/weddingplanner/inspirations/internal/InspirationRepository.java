@@ -27,6 +27,9 @@ class InspirationRepository {
      * @param vendorId the vendor the idea concerns, if any
      * @param addedBy the member who saved it; null once that member is gone
      * @param previewTitle the title the linked page gives itself; empty when none was fetched
+     * @param x where its card lies on the canvas: the left edge
+     * @param y the top edge
+     * @param placedAt when it was put there; a move changes neither the version nor updatedAt
      */
     record InspirationRow(
             UUID id,
@@ -43,7 +46,10 @@ class InspirationRepository {
             String previewTitle,
             int version,
             Instant createdAt,
-            Instant updatedAt) {}
+            Instant updatedAt,
+            int x,
+            int y,
+            Instant placedAt) {}
 
     /** A link whose preview is still to be fetched. */
     record PendingPreview(UUID id, String url, int attempts) {}
@@ -55,7 +61,7 @@ class InspirationRepository {
 
     private static final String SELECT = """
             SELECT i.id, i.url, i.source, i.title, i.note, i.board_id, i.entry_id, i.vendor_id, i.added_by, i.preview_status,
-                   i.preview_title, i.version, i.created_at, i.updated_at,
+                   i.preview_title, i.version, i.created_at, i.updated_at, i.x, i.y, i.placed_at,
                    ARRAY(SELECT t.tag FROM inspiration_tag t WHERE t.inspiration_id = i.id ORDER BY t.tag) AS tags
             FROM inspiration i
             """;
@@ -122,9 +128,9 @@ class InspirationRepository {
     void insert(UUID weddingId, InspirationRow inspiration) {
         jdbc.sql("""
                 INSERT INTO inspiration (id, wedding_id, url, source, title, note, board_id, entry_id, vendor_id, version,
-                                         added_by, preview_status, preview_next_at, created_at, updated_at)
+                                         added_by, preview_status, preview_next_at, created_at, updated_at, x, y, placed_at)
                 VALUES (:id, :wedding, :url, :source, :title, :note, :board, :planItem, :vendor, 0, :addedBy,
-                        :preview, CASE WHEN :preview = 'PENDING' THEN :now END, :now, :now)
+                        :preview, CASE WHEN :preview = 'PENDING' THEN :now END, :now, :now, :x, :y, :now)
                 """)
                 .params(fields(inspiration))
                 .param("id", inspiration.id())
@@ -132,8 +138,37 @@ class InspirationRepository {
                 .param("addedBy", inspiration.addedBy())
                 .param("preview", inspiration.previewStatus().name())
                 .param("now", at(inspiration.createdAt()))
+                .param("x", inspiration.x())
+                .param("y", inspiration.y())
                 .update();
         replaceTags(inspiration.id(), inspiration.tags());
+    }
+
+    /**
+     * Holds the wedding's canvas until the end of the transaction, so that two ideas that arrive at the same moment
+     * each see the place the other took.
+     */
+    void holdCanvas(UUID weddingId) {
+        jdbc.sql("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))")
+                .param("inspiration-canvas:" + weddingId)
+                .query()
+                .listOfRows();
+    }
+
+    /** Where every idea of the wedding lies. */
+    List<CanvasPlacement.Place> places(UUID weddingId) {
+        return jdbc.sql("SELECT x, y FROM inspiration WHERE wedding_id = ?")
+                .param(weddingId)
+                .query((row, number) -> new CanvasPlacement.Place(row.getInt("x"), row.getInt("y")))
+                .list();
+    }
+
+    /** Puts the card somewhere else. Not a change of the idea: its version and updated_at stay. */
+    boolean place(UUID weddingId, UUID id, int x, int y, Instant now) {
+        return jdbc.sql("UPDATE inspiration SET x = ?, y = ?, placed_at = ? WHERE wedding_id = ? AND id = ?")
+                .params(x, y, at(now), weddingId, id)
+                .update()
+                == 1;
     }
 
     /** Saves the inspiration if it still has the version the change was based on. */
@@ -281,7 +316,10 @@ class InspirationRepository {
                 row.getString("preview_title"),
                 row.getInt("version"),
                 row.getObject("created_at", OffsetDateTime.class).toInstant(),
-                row.getObject("updated_at", OffsetDateTime.class).toInstant());
+                row.getObject("updated_at", OffsetDateTime.class).toInstant(),
+                row.getInt("x"),
+                row.getInt("y"),
+                row.getObject("placed_at", OffsetDateTime.class).toInstant());
     }
 
     private static OffsetDateTime at(Instant instant) {

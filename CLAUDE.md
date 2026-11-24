@@ -284,6 +284,12 @@ uses another only through the types in that module's own package, and never in a
   and what its payments come to) and `VendorCategories`. A new kind of record that can point to a vendor implements
   `VendorUse` in its own module.
 - `inspirations` uses `planning` (`PlanItems.exists`).
+- Every inspiration has **a place on the wedding's one canvas** (S08, D-015): `x`, `y` and `placed_at`. The
+  server places a new one (`CanvasPlacement`, arithmetic without a database: beside the lowest card, six to a
+  row, never within a slot of another; the adds of one wedding go one after the other behind an advisory lock);
+  a place cannot be chosen when adding, and changing an idea does not move it.
+  `PUT /api/inspirations/{id}/place` moves it for either owner: the later move wins, and **the idea's version
+  and "changed at" are not touched**.
 - **A file of tasks** (S06, D-013) is checked and applied by `planning` itself (`TaskFileService`):
   `POST /api/tasks/file/check` changes nothing and answers what the file would do, row by row;
   `POST /api/tasks/file` applies it in one transaction or answers `task-file-refused`. The body is the file's

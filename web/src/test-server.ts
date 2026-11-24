@@ -213,6 +213,10 @@ export function inspiration(overrides: Partial<Inspiration> = {}): Inspiration {
     version: 0,
     createdAt: '2026-11-18T10:00:00Z',
     updatedAt: '2026-11-18T10:00:00Z',
+    // Where the server's rule puts a new one: rows of six, 220 across and 260 down.
+    x: ((inspirationNumber - 1) % 6) * 220,
+    y: Math.floor((inspirationNumber - 1) / 6) * 260,
+    placedAt: '2026-11-18T10:00:00Z',
     ...overrides,
   }
 }

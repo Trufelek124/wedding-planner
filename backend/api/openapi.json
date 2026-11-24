@@ -821,6 +821,11 @@
             },
             "type" : "array"
           },
+          "placedAt" : {
+            "description" : "When it was put there: when it was saved, or when it was last moved. Moving it changes neither version nor updatedAt.",
+            "format" : "date-time",
+            "type" : "string"
+          },
           "planItemId" : {
             "description" : "The plan item the idea belongs to.",
             "format" : "uuid",
@@ -868,9 +873,19 @@
             "description" : "Send this back with a change; it tells whether someone else saved in between.",
             "format" : "int32",
             "type" : "integer"
+          },
+          "x" : {
+            "description" : "Where its card lies on the canvas: the left edge, from -100,000 to 100,000.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "y" : {
+            "description" : "The top edge, from -100,000 to 100,000; grows downwards.",
+            "format" : "int32",
+            "type" : "integer"
           }
         },
-        "required" : [ "addedById", "boardId", "createdAt", "id", "note", "pictures", "planItemId", "previewStatus", "previewTitle", "source", "tags", "title", "updatedAt", "url", "vendorId", "version" ],
+        "required" : [ "addedById", "boardId", "createdAt", "id", "note", "pictures", "placedAt", "planItemId", "previewStatus", "previewTitle", "source", "tags", "title", "updatedAt", "url", "vendorId", "version", "x", "y" ],
         "type" : "object"
       },
       "InspirationChange" : {
@@ -920,6 +935,23 @@
           }
         },
         "required" : [ "boardId", "note", "planItemId", "tags", "title", "url", "vendorId", "version" ],
+        "type" : "object"
+      },
+      "InspirationPlace" : {
+        "description" : "Where a card is put on the canvas. The later move wins; there is no version.",
+        "properties" : {
+          "x" : {
+            "description" : "The left edge, a whole number from -100,000 to 100,000.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "y" : {
+            "description" : "The top edge, a whole number from -100,000 to 100,000.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "x", "y" ],
         "type" : "object"
       },
       "MailConnection" : {
@@ -3918,6 +3950,53 @@
             "application/json" : {
               "schema" : {
                 "$ref" : "#/components/schemas/InspirationChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Inspiration"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "default" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description" : "Any error."
+          }
+        },
+        "tags" : [ "inspiration-controller" ]
+      }
+    },
+    "/api/inspirations/{id}/place" : {
+      "put" : {
+        "operationId" : "place",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InspirationPlace"
               }
             }
           },

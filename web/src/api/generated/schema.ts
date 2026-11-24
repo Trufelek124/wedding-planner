@@ -420,6 +420,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/inspirations/{id}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["place"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/inspirations/{inspirationId}/pictures": {
         parameters: {
             query?: never;
@@ -1257,6 +1273,11 @@ export interface components {
             /** @description Its pictures, in their order; the first is the one a card shows. */
             pictures: components["schemas"]["Picture"][];
             /**
+             * Format: date-time
+             * @description When it was put there: when it was saved, or when it was last moved. Moving it changes neither version nor updatedAt.
+             */
+            placedAt: string;
+            /**
              * Format: uuid
              * @description The plan item the idea belongs to.
              */
@@ -1291,6 +1312,16 @@ export interface components {
              * @description Send this back with a change; it tells whether someone else saved in between.
              */
             version: number;
+            /**
+             * Format: int32
+             * @description Where its card lies on the canvas: the left edge, from -100,000 to 100,000.
+             */
+            x: number;
+            /**
+             * Format: int32
+             * @description The top edge, from -100,000 to 100,000; grows downwards.
+             */
+            y: number;
         };
         /** @description All fields of an inspiration as they should be from now on. */
         InspirationChange: {
@@ -1309,6 +1340,19 @@ export interface components {
              * @description The version of the inspiration this change is based on.
              */
             version: number;
+        };
+        /** @description Where a card is put on the canvas. The later move wins; there is no version. */
+        InspirationPlace: {
+            /**
+             * Format: int32
+             * @description The left edge, a whole number from -100,000 to 100,000.
+             */
+            x: number;
+            /**
+             * Format: int32
+             * @description The top edge, a whole number from -100,000 to 100,000.
+             */
+            y: number;
         };
         /** @description The caller's own connection to their mailbox. */
         MailConnection: {
@@ -3446,6 +3490,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Any error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    place: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InspirationPlace"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Inspiration"];
+                };
             };
             /** @description Any error. */
             default: {

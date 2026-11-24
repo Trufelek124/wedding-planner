@@ -29,9 +29,9 @@ sizes; several canvases; two people seeing each other move things while they do.
 - **A place changes only when an owner moves the card.** Changing an idea's name, board, tags or pictures does
   not move it; removing an idea frees its place.
 - **What is saved newly arrives at the end of the lowest row**: one slot to the right of the card that lies
-  lowest (of several equally low, the right-most) — unless that would be more than six slots from the left edge
-  of everything on the canvas, or would lie on another card's slot; then it begins a new row below everything,
-  at the left edge. The first idea of all lies at 0, 0. So new things collect in one place, in the order they
+  lowest (of several equally low, the right-most) — unless that would be the seventh slot counted from the left
+  edge of everything on the canvas, or would lie within a slot of another card; then it begins a new row below
+  everything, at the left edge. The first idea of all lies at 0, 0. So new things collect in one place, in the order they
   came, and never cover anything — whether they were added on the web or shared on the phone.
 - **The ideas that exist** when the canvas arrives are laid out by the same rule, in the order they were saved.
 - **The card that was moved last lies on top** of the ones it overlaps.

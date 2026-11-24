@@ -104,7 +104,8 @@ object StandIn {
         return """{"id":"$id","url":${text(url)},"source":"${source ?: if (url == null) "PHOTO" else "INSTAGRAM"}","title":"$title","note":"$note","tags":${list(tags)},""" +
             """"boardId":${text(boardId)},"planItemId":${text(planItemId)},"vendorId":${text(vendorId)},"addedById":${text(addedById)},""" +
             """"previewStatus":"${previewStatus ?: if (url == null) "NONE" else "PENDING"}","previewTitle":"$previewTitle",""" +
-            """"pictures":[${held.joinToString(",")}],"version":$version,"createdAt":"2026-11-18T13:05:00Z","updatedAt":"2026-11-18T13:05:00Z"}"""
+            """"pictures":[${held.joinToString(",")}],"version":$version,"createdAt":"2026-11-18T13:05:00Z","updatedAt":"2026-11-18T13:05:00Z",""" +
+            """"x":0,"y":0,"placedAt":"2026-11-18T13:05:00Z"}"""
     }
 
     /**

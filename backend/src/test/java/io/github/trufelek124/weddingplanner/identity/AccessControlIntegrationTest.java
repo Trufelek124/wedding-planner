@@ -64,6 +64,8 @@ class AccessControlIntegrationTest extends PostgresIntegrationTest {
         assertThat(checked).contains("POST /api/mail/gmail/look-back");
         // A file of tasks (S06) is an owner's: checking it and applying it both need a sign-in.
         assertThat(checked).contains("POST /api/tasks/file/check", "POST /api/tasks/file");
+        // Moving a card on the inspirations canvas (S08) is an owner's.
+        assertThat(checked).contains("PUT /api/inspirations/{id}/place");
     }
 
     @Test
