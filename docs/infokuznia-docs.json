@@ -177,6 +177,12 @@
    "id": "91ef2ff6-6c99-4061-aaf4-ceafb8e4a340",
    "sha256": "04ae81b03e5fbd3cce2783be53ef501a0cb5db9bfde84cdf9f30b0d33ef9abf9",
    "commit": "f2acc29"
+  },
+  "docs/specs/S07-tasks-on-the-gantt-chart.md": {
+   "publicId": "WP-DOC-22",
+   "id": "49bbaf2d-8356-4f74-8be9-e667a724c0f7",
+   "sha256": "4379cba4a33ed1819269e87486e82fdd574ae1996755059dd79738e3abf4a8b7",
+   "commit": "e2d4ee2"
   }
  }
 }
