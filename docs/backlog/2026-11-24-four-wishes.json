@@ -1,0 +1,176 @@
+{
+ "projectCode": "WP",
+ "stories": [
+  {
+   "key": "EP5-S3",
+   "epic": "EP5",
+   "title": "Inspirations on a canvas",
+   "description": "The saved ideas - what was shared from Instagram or elsewhere, links and pictures - lie on one large surface on which an owner moves them freely, so that what belongs together lies together without having to be given a name. The arrangement is kept by the planner and is the same for both owners.",
+   "goal": "Arrange the collected ideas by eye, in loose groups, the way one would on a table.",
+   "rationale": "Boards and tags ask for a decision at the moment something is saved, and most ideas do not have a name for where they belong yet. Moving things next to each other is the decision people make without effort.",
+   "expectedBehavior": "The inspirations page has a second view, Canvas, beside the grid. Every idea is a card with its picture and name at a place of its own; a card is moved with the pointer or with the keys and stays where it was put, for both owners. The surface can be moved and made larger and smaller. What is saved newly arrives in one place at the edge of what is there, so that it is found. The grid, the boards and the tags stay as they are.",
+   "priority": "NORMAL",
+   "rank": 62,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "react"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "Every inspiration has a place on the canvas; moving a card keeps its new place on the server, and the other owner sees it there.",
+     "source": "S08 sections 2 and 3"
+    },
+    {
+     "text": "A newly saved inspiration, from the web or from the phone's share sheet, arrives at a place where it is found, without lying on top of another.",
+     "source": "S08 section 2"
+    },
+    {
+     "text": "Whatever the pointer can do on the canvas, the keyboard can do too, and a screen reader is told what each card is.",
+     "source": "S08 section 4"
+    },
+    {
+     "text": "The grid view, the boards and the tags work as before.",
+     "source": "S08 section 1"
+    }
+   ]
+  }
+ ],
+ "tasks": [
+  {
+   "key": "EP4-S2-T4",
+   "story": "EP4-S2",
+   "title": "Android: a task's priority is found on its form, and says what the planner worked out",
+   "description": "The owner found no way to change a task's priority on the phone and saw every task as low. The form has the control, but it is called How urgent, its first choice Worked out, and it stands below the vendor. It is called Priority as everywhere else in the planner, stands with the day and the status, offers Set by the planner and the four levels, and says in words what the planner works out and why (for example: Low - due in more than 60 days), so that it is clear why a task is low and that it can be set by hand. Done when the screen's tests cover it, its picture was looked at, and the gate passes.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  },
+  {
+   "key": "EP2-S3-T4",
+   "story": "EP2-S3",
+   "title": "Spec: tasks on the Gantt chart",
+   "description": "The chart of the plan shows the steps of the plan that have dates, and of the tasks only those that belong to such a step. A planner whose work is mostly tasks - from e-mail, from a file - shows an empty chart. S07 says how a task with a due day stands on the chart in a row of its own, how it is moved, what the filters do to it, and that the view is called Gantt. Done when the document is committed and mirrored.",
+   "dependsOn": [],
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "documentation"
+   ]
+  },
+  {
+   "key": "EP2-S3-T5",
+   "story": "EP2-S3",
+   "title": "Web: tasks with a due day stand on the Gantt chart",
+   "description": "As S07 says. Below the steps of the plan the chart has a row for every task with a due day that is not already marked on a step's bar, with a marker on its day; a payment says its amount, a done or overdue task says so in words and not by colour alone. A marker is moved along its row with the pointer or the keys to change the day, shown at once and saved one after the other like a bar. The filters apply, the tasks can be hidden, and the chart is there as soon as anything has a day. The view is called Gantt. Done when the chart's tests and its arithmetic cover it, it was looked at as rendered pictures wide and narrow in light and dark, and the gate passes.",
+   "dependsOn": [
+    "EP2-S3-T4"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ]
+  },
+  {
+   "key": "EP7-S3-T12",
+   "story": "EP7-S3",
+   "title": "Spec and decision: a payment that a document names is added by itself",
+   "description": "D-008 lets every payment wait for a person, and D-011 kept that for payments found in a PDF. The owner now asks for the payments from documents to go straight to the task list. S05 and S04 say which payments are added by themselves (those whose quoted passage stands in a document that was read, with an amount in the wedding's currency, at the wedding's threshold), that they can be undone like everything added by itself, and what still waits. D-014 records the change and what it costs. Done when the documents are committed and mirrored.",
+   "dependsOn": [],
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "documentation"
+   ]
+  },
+  {
+   "key": "EP7-S3-T13",
+   "story": "EP7-S3",
+   "title": "Backend, web and Android: a payment from a document is added by itself",
+   "description": "As S05, S04 and D-014 say. The reading knows whether a proposal's passage stands in a document and says so when it hands the proposal in; a payment that does, with an amount, is added by itself at the wedding's threshold as a task with its amount, its day and its kind, marked as coming from e-mail, and can be kept or undone. A payment named only in a mail's own words, and every vendor, still wait. The table allows exactly that. The words of the web's and the phone's pages that say what is added by itself follow. Done when the backend's tests cover it against the stand-ins, the clients' tests cover the changed words, and the gate passes.",
+   "dependsOn": [
+    "EP7-S3-T12"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "react",
+    "kotlin"
+   ]
+  },
+  {
+   "key": "EP5-S3-T1",
+   "story": "EP5-S3",
+   "title": "Spec and decision: the inspirations canvas",
+   "description": "S08 says what the canvas is: one surface for the wedding on which every inspiration has a place, how a card is moved and its place kept, where newly saved ones arrive, how the surface is moved and scaled, what the keyboard and a screen reader get, and what stays as it is (the grid, boards, tags, the phone's board). D-015 records what was compared. Done when the documents are committed and mirrored.",
+   "dependsOn": [],
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "documentation"
+   ]
+  },
+  {
+   "key": "EP5-S3-T2",
+   "story": "EP5-S3",
+   "title": "Backend: an inspiration has a place on the canvas",
+   "description": "As S08 says. Every inspiration has a place (two whole numbers) and a moment it was put there; the ones that exist get places in rows by a migration; a new one arrives at the edge of what is there without lying on another. One call moves an inspiration, for either owner, without touching its version; the place is part of what the inspirations answer. The contract and the web's generated types move together; the phone's app keeps working unchanged. Done when the backend's tests cover it and the gate passes.",
+   "dependsOn": [
+    "EP5-S3-T1"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java"
+   ]
+  },
+  {
+   "key": "EP5-S3-T3",
+   "story": "EP5-S3",
+   "title": "Web: the canvas view of the inspirations",
+   "description": "As S08 says. A second view of the inspirations page: every idea a card at its place on a surface that can be moved and scaled; a card is dragged or moved with the keys and its place saved, shown at once; the filters by board and tag apply; a card opens the idea. Where a card lies is arithmetic that tests can check without a screen. Done when the page's tests and the arithmetic's cover it, it was looked at as rendered pictures wide and narrow in light and dark, and the gate passes.",
+   "dependsOn": [
+    "EP5-S3-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ]
+  }
+ ]
+}

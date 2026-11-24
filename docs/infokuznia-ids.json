@@ -780,6 +780,60 @@
    "publicId": "WP-TS-98",
    "id": "bc0a532c-6521-4599-9cdb-3e0baf1c5a80",
    "title": "Web: Upload tasks at the bottom of the task list"
+  },
+  "EP5-S3": {
+   "type": "story",
+   "publicId": "WP-US-26",
+   "id": "12c231fc-d062-4dc4-853c-3baa99fac4a5",
+   "title": "Inspirations on a canvas"
+  },
+  "EP4-S2-T4": {
+   "type": "task",
+   "publicId": "WP-TS-99",
+   "id": "dc64af56-68be-49b6-98bd-3bc6e80184ab",
+   "title": "Android: a task's priority is found on its form, and says what the planner worked out"
+  },
+  "EP2-S3-T4": {
+   "type": "task",
+   "publicId": "WP-TS-100",
+   "id": "4ed641cc-e2b1-471e-902f-38b8e8d7704f",
+   "title": "Spec: tasks on the Gantt chart"
+  },
+  "EP2-S3-T5": {
+   "type": "task",
+   "publicId": "WP-TS-101",
+   "id": "7d25b603-fa58-430d-9687-2d2d499117dd",
+   "title": "Web: tasks with a due day stand on the Gantt chart"
+  },
+  "EP7-S3-T12": {
+   "type": "task",
+   "publicId": "WP-TS-102",
+   "id": "18083f1e-05cb-4dc1-a416-ce7759979ea4",
+   "title": "Spec and decision: a payment that a document names is added by itself"
+  },
+  "EP7-S3-T13": {
+   "type": "task",
+   "publicId": "WP-TS-103",
+   "id": "f43e2df1-1a87-416b-a754-2870d5a86965",
+   "title": "Backend, web and Android: a payment from a document is added by itself"
+  },
+  "EP5-S3-T1": {
+   "type": "task",
+   "publicId": "WP-TS-104",
+   "id": "180eaf61-1673-4e46-b5cc-64a4feedc182",
+   "title": "Spec and decision: the inspirations canvas"
+  },
+  "EP5-S3-T2": {
+   "type": "task",
+   "publicId": "WP-TS-105",
+   "id": "f798cafa-0fac-47b2-b60d-d04c7a6d08a6",
+   "title": "Backend: an inspiration has a place on the canvas"
+  },
+  "EP5-S3-T3": {
+   "type": "task",
+   "publicId": "WP-TS-106",
+   "id": "e73ef635-9397-41d3-9cf1-118f5729730b",
+   "title": "Web: the canvas view of the inspirations"
   }
  }
 }
