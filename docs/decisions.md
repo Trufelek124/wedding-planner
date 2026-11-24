@@ -766,3 +766,46 @@ yes.
   the second waits. That errs on the side the owner can see.
 - A payment whose amount the offer changes is a new payment: the old one stays until somebody removes it
   (WP-US-22 is what would update it).
+
+## D-015 — The inspirations canvas: one surface, a place per idea kept by the server, drawn by us
+
+**Date:** 2026-11-24 · **Task:** WP-TS-104 · **Decided by:** the owner asked for the canvas; the rest is ours · **Applies to:** the inspirations canvas (S08)
+
+### Context
+
+The owner wants the saved ideas on a canvas, to move them freely and arrange them into informal groups. The
+planner has a grid with boards and tags. What "a canvas" is had to be decided: how many, whose arrangement, where
+new things land, and what draws it.
+
+### What was compared
+
+| Question | Chosen | The alternative, and why not |
+|---|---|---|
+| How many canvases | **One for the wedding** | One per board: the point is to arrange before anything has a name; boards would bring the names back in |
+| Whose arrangement | **Kept by the server, the same for both** | Kept in each browser: the arrangement is the work, and it would be gone on the next device and unseen by the partner |
+| Where a new idea lands | **At the end of the lowest row**, by a rule of the server's | A tray of unplaced ideas: a second place to look, and every share from the phone would wait there. On top of the middle: it would cover what was arranged |
+| Two people moving one card | **The later one wins**, without a version | Refusing like a form does: a card that jumps back because the partner touched another field of the idea would make moving feel broken |
+| What a move is | **Not a change of the idea**: its version stays | A change: every drag would make an open form of that idea stale |
+| The old view | **The grid stays**, beside the canvas | Replacing it: a plain list is what a screen reader and a small phone read best, and boards and tags are in use |
+| What draws it | **Our own elements and arithmetic**, as the chart of the plan (D-001) | A canvas library: a large dependency (some under licences that ask for a mark or a fee) for cards that are moved and a surface that is moved and scaled; and its pictures would have to be fed around the token an image needs here |
+| Names for the groups | **None yet** | Words and frames on the canvas: asked for by nobody yet, and each is a new kind of thing to keep, move and remove |
+
+### Decision
+
+1. **One canvas per wedding; every inspiration has a place on it**, two whole numbers, kept by the server.
+2. **A new idea is placed by the server** at the end of the lowest row, never on another; the existing ones are
+   laid out the same way once.
+3. **Moving is one call of its own**, the later move wins, and the idea's version is not touched.
+4. **The canvas is a second view on the web**; the grid, boards and tags stay. The phone keeps its board.
+5. **We draw it ourselves**; where a card lies is arithmetic that is tested without a screen.
+
+### What it costs, and what would change the decision
+
+- Nothing is pushed: the partner's moves show at the next reading. If the two arrange at the same time often,
+  that is the thing to add.
+- The phone, where most ideas are shared, cannot arrange. Moving cards with a finger on a small screen is its
+  own piece of work, and is the next step if the canvas is used.
+- Loose groups have no names. If they are missed, a word that can be put on the canvas is the smallest
+  addition.
+- With some hundreds of ideas the surface holds as many pictures at once; drawing only what is in view is the
+  step that would then follow.
