@@ -603,7 +603,8 @@ asked for attachments to be read — and only where the planner is quite sure th
    checked against that text like one from the mail.
 3. **Limits**: three documents, 10 MB and fifty pages each, 40,000 characters in all, a few seconds each; what
    does not fit or cannot be read is left out and the message is read without it.
-4. **Up to eight proposals** from a message with documents; payments still wait for a person.
+4. **Up to eight proposals** from a message with documents; payments still wait for a person. *(Changed on
+   2026-11-24 by D-014: a payment that a document names is added by itself.)*
 5. **Fetching a message's documents and taking their text out is tried once**: a file that stops the server
    is not opened a second time. What goes wrong afterwards or elsewhere — the AI service busy, Gmail not to be
    asked for the moment — is no such try, and the documents are read again when the message is.
@@ -720,3 +721,48 @@ new ones; and nothing is to be deleted by a file.
   each needs a way to name something of the planner from outside. They are not touched by an upload.
 - Strictness about unknown fields means that a file written for a later version is refused by an older server.
   The version number is what such a file changes first.
+
+## D-014 — A payment that a document names is added by itself
+
+**Date:** 2026-11-24 · **Task:** WP-TS-102 · **Decided by:** the owner · **Applies to:** suggestions added by themselves (S05), reading the mail (S04) · **Changes:** D-008 point 1, D-011 point 4
+
+### Context
+
+D-008 lets only tasks and steps of the plan be added without a person, and D-011 kept that for what a PDF names:
+"money in the plan that nobody looked at, now from a file anybody can attach". With real mail the owner saw what
+that means in practice: a venue's offer names three payments with their days, and each of them waited in the
+inbox to be accepted by hand. Asked whether such payments should go straight to the task list, the owner said
+yes.
+
+### What was compared
+
+| Question | Chosen | The alternative, and why not |
+|---|---|---|
+| Which payments | **Those whose quoted passage stands in a document** that was read with the message | Every payment: a mail's own words are the cheapest thing to forge, and the owner asked for the documents. None: what the owner decided against |
+| How "from a document" is known | **The server finds the passage** in the document's text | The model says so: the one thing here that must not rest on a model's word |
+| How sure | **The wedding's threshold**, the same 85 as for tasks | A higher one for money: a second number to explain, for a list that can be undone with one press |
+| The same payment twice | **It waits when the plan or the inbox already has a payment of that amount on that day** | Adding it: the deposit that the mail asked for and the offer repeats would stand in the budget twice. Dropping it: the server cannot know that it is the same |
+| A vendor the planner does not know | **The payment is added without a vendor**; the vendor's proposal waits as before | Adding the vendor too: a new party to pay, with contact details nobody checked — what D-008 guards most |
+| Taking it back | **Undo**, as for everything added by itself | A separate way for money: the entry is a task like any other |
+
+### Decision
+
+1. **A payment is added by itself when its passage stands in a document that was read with the message**, it
+   has an amount in the wedding's currency, the import is at least as sure as the wedding's threshold, and the
+   planner would take it as it is.
+2. **Not when the planner already has that payment** — the same amount on the same day, as a task or as a
+   suggestion that waits or was added: then it waits.
+3. **A payment that only a mail's own words name still waits, and so does every vendor.**
+4. The suggestion says that it comes from a document, wherever its passage is shown.
+
+### What it costs, and what would change the decision
+
+- **Money now enters the plan and the budget's sums unseen.** Anybody can attach a PDF to a mail; what protects
+  the plan is that triage must be at least 80 in 100 sure the mail concerns the wedding before a document is
+  read at all, the threshold, the list "Added by itself" with Undo, and "never" in the settings. If a payment
+  that nobody owes ever lands in the plan this way, the first thing to change is to add by itself only what
+  comes from a sender who is one of the planner's vendors.
+- Two payments of the same amount on the same day — two instalments, or two vendors — are taken for one, and
+  the second waits. That errs on the side the owner can see.
+- A payment whose amount the offer changes is a new payment: the old one stays until somebody removes it
+  (WP-US-22 is what would update it).

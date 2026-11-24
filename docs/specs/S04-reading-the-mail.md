@@ -11,7 +11,8 @@ a small AI model decides whether it concerns the wedding, a larger one reads the
 entries, and what it proposes becomes **suggestions** (S02) that wait for one of the two owners.
 
 Left for later: adding an entry by itself when the import is sure enough (S05), and a later message updating
-the entry an earlier one produced (WP-US-22). Everything this step proposes waits for a person.
+the entry an earlier one produced (WP-US-22). What this step proposes waits for a person, unless S05 adds it
+by itself.
 
 ## 2. The way of one message
 
@@ -127,7 +128,11 @@ A message is written by anybody, and the models read it. So:
   server turns it into the planner's whole numbers when the currency is the wedding's; an amount in another
   currency, or with no currency named, is left out of the proposal and said in its notes. Only a payment carries
   an amount.
-- What becomes of a proposal is S02's: it is shown as plain text with the sender and the passage, and it waits.
+- **The server says where a passage stands**: in the message, in an earlier message of its thread, or in a
+  document that was read with it. It is the server that looked, not the model that says so. A proposal whose
+  passage stands in a document is handed in as coming from a document (S05 section 2 rests on that).
+- What becomes of a proposal is S02's and S05's: it is shown as plain text with the sender and the passage, and
+  it waits or is added by itself.
 
 ## 6. What is kept
 

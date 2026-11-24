@@ -1,6 +1,7 @@
 # S05 — Suggestions that are added by themselves, and undo
 
-**Status:** written on 2026-11-19 at the owner's request. **Builds on:** S01 section 6 ("Route"), S02
+**Status:** written on 2026-11-19 at the owner's request; on 2026-11-24 the owner asked for the payments
+that a document names to be added by themselves too (D-014). **Builds on:** S01 section 6 ("Route"), S02
 (suggestions), S04 (reading the mail), D-008. **Story:** WP-US-22.
 
 ## 1. What this covers
@@ -17,14 +18,24 @@ earlier one produced.
 
 A proposal is added by itself when **all** of these hold:
 
-1. Its kind is a **task** or a **step of the plan**. A **payment** and a **vendor** always wait for a person
-   (D-008): nothing that names an amount of money or a new party to pay comes into the planner unseen.
+1. Its kind is a **task** or a **step of the plan** — or it is **a payment that a document names** (D-014,
+   at the owner's request): a payment whose quoted passage stands in the text of a PDF document that was read
+   with the message (S04 section 3), with an amount in the wedding's currency. A payment that only the mail's
+   own words name, and every **vendor**, wait for a person as before (D-008).
 2. How sure the import is reaches **the threshold** — 85 out of 100 to begin with.
 3. What would be made is valid as it is proposed. A proposal that the planner would refuse (S02 section 3)
    simply waits.
 4. Adding by itself is not switched off (section 6).
+5. For a payment: **the planner does not have that payment already**. A payment of the same amount due on the
+   same day (or both without a day) that is in the plan as a task, or among the suggestions that wait or were
+   added by themselves, is taken for the same one — an offer repeats the deposit the mail asked for — and the
+   new proposal waits, so that a person decides and nothing is counted twice in the budget.
 
 Everything else waits in the inbox as before.
+
+A payment that is added by itself is a task with its amount, its day and its kind, linked to the vendor when
+the planner knows the vendor (S04 section 5) and to none when it does not. It counts in the budget from that
+moment, says "From e-mail" like every entry a suggestion made, and can be undone (section 4).
 
 ## 3. What "added by itself" means
 
@@ -40,9 +51,9 @@ Everything else waits in the inbox as before.
                       ┌─ accept ─▶ accepted
 waiting ──────────────┤
    ▲                  └─ reject ─▶ rejected
-   │ (not sure enough, a payment, a vendor)
+   │ (not sure enough, a payment the mail only mentions, a vendor)
 proposal
-   │ (sure enough, a task or a step)
+   │ (sure enough: a task, a step, or a payment a document names)
    ▼
 added by itself ──────┬─ keep ───▶ accepted
                       └─ undo ───▶ rejected   (the entry is removed)
@@ -70,7 +81,9 @@ other one is refused as already decided.
 ## 5. Where the owners see it
 
 - **The inbox** gets a part "Added by itself" beside what waits: each with what was added, where it comes from,
-  the passage, and **Undo** and **Keep**. The newest first. It is not a list to work through: after thirty days
+  the passage, and **Undo** and **Keep**. A suggestion whose passage stands in a document says so — "From a
+  document that came with this e-mail" — wherever its passage is shown, waiting or added: the words are then not
+  in the mail that "Open the e-mail" shows. The newest first. It is not a list to work through: after thirty days
   an entry that nobody undid counts as kept and leaves the list — it is then shown as accepted, by nobody, and
   can no longer be undone; nothing has to run for that.
 - **Home and the navigation** say how many were added by themselves and have not been looked at, next to how
@@ -86,8 +99,8 @@ other one is refused as already decided.
 
 On the e-mail import page, for the wedding (both owners see and change the same setting):
 
-- **The threshold**, 50 to 100, to begin with 85: "Add tasks and steps by themselves when the import is at
-  least this sure."
+- **The threshold**, 50 to 100, to begin with 85: "Add tasks, steps and the payments a document names by
+  themselves when the import is at least this sure."
 - **Never**: nothing is added by itself; everything waits. The number is kept for when it is switched on again.
 
 A change applies to what is proposed from then on. It does not add what already waits, and it does not undo
@@ -116,6 +129,9 @@ propose (S04), and a mark on the entry that cannot be missed.
 A suggestion's `state` gains `ADDED`; while it is, nobody has decided (`decidedBy` and `decidedAt` are empty), and
 `madeEntryId` is the entry that was added. After thirty days it is answered as `ACCEPTED` with nobody as the one
 who decided.
+
+A suggestion's answer gains `fromDocument`: whether its passage stands in a document that was read with the
+message. It is what lets a payment be added by itself (section 2), and what the pages say beside the passage.
 
 An entry's answer gains `fromSuggestionId`: nothing, or the suggestion that made it — added by itself, or
 accepted by a person. No request can set it. Every field is always present; an older phone app ignores the new
