@@ -198,8 +198,8 @@
   "docs/specs/S08-inspirations-canvas.md": {
    "publicId": "WP-DOC-24",
    "id": "d0c35679-aca7-44c2-aa10-da3ce7ce766b",
-   "sha256": "94eaf3590dd90c13a4cffd5570262f52cde5a0bc8100a0ccc2a614e7247efb38",
-   "commit": "9c5a9d0"
+   "sha256": "08102e71023d0e5c58b03d74c66b0c19bf1d619e3d7d157cf99de1495f56a0ab",
+   "commit": "f5f0b91"
   },
   "docs/decisions.md#D-015": {
    "publicId": "WP-DOC-25",
