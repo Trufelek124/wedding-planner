@@ -169,6 +169,8 @@ fun TaskForm(
             }
         }
 
+        PriorityGroup(task, byHand) { byHand = it }
+
         Group(stringResource(R.string.task_who)) {
             for (member in planner.members) {
                 FilterChip(
@@ -203,13 +205,6 @@ fun TaskForm(
             onChoose = { vendor = it },
             problem = refused["vendorId"],
         )
-
-        Group(stringResource(R.string.task_urgency)) {
-            FilterChip(selected = byHand == null, onClick = { byHand = null }, label = { Text(stringResource(R.string.task_urgency_worked_out)) })
-            for (level in Priority.entries) {
-                FilterChip(selected = byHand == level, onClick = { byHand = level }, label = { Text(priorityLabel(level)) })
-            }
-        }
 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
             Text(stringResource(R.string.task_is_payment), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
@@ -328,5 +323,33 @@ private fun DayField(label: String, typed: String, onTyped: (String) -> Unit, pr
         ) {
             DatePicker(state = shown)
         }
+    }
+}
+
+/**
+ * The task's priority: left to the planner or set by hand. The sentence under the choices says which, and for a task the
+ * server has already worked out, what that came to and why.
+ */
+@Composable
+private fun PriorityGroup(task: Entry?, byHand: Priority?, onChoose: (Priority?) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Group(stringResource(R.string.task_priority)) {
+            FilterChip(selected = byHand == null, onClick = { onChoose(null) }, label = { Text(stringResource(R.string.task_priority_by_planner)) })
+            for (level in Priority.entries) {
+                FilterChip(selected = byHand == level, onClick = { onChoose(level) }, label = { Text(priorityLabel(level)) })
+            }
+        }
+        val workedOut = task?.takeIf { !it.byHand && it.waiting == null && it.priorityReason != Entry.NOT_WORKED_OUT }
+        Text(
+            text = if (byHand != null) {
+                stringResource(R.string.task_priority_by_hand)
+            } else if (workedOut != null) {
+                stringResource(R.string.task_priority_by_planner_rule) + " " + stringResource(R.string.task_priority_now, priorityInWords(workedOut))
+            } else {
+                stringResource(R.string.task_priority_by_planner_rule)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

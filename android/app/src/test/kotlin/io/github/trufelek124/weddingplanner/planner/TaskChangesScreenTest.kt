@@ -334,7 +334,7 @@ class TaskChangesScreenTest : SignedInPhoneTest() {
         field("Title").assertTextContains("Choose the rings")
         compose.onNodeWithText("Not started").assertIsSelected()
         compose.onNodeWithText("Anna").assertIsSelected()
-        compose.onNodeWithText("Worked out").performScrollTo().assertIsSelected()
+        compose.onNodeWithText("Set by the planner").performScrollTo().assertIsSelected()
 
         field("Title").performTextReplacement("Choose and order the rings")
         compose.onNodeWithText("In progress").performScrollTo().performClick()

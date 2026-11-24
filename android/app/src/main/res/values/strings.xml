@@ -189,8 +189,11 @@
     <string name="task_no_category">No category</string>
     <string name="task_vendor">Vendor</string>
     <string name="task_no_vendor">No vendor</string>
-    <string name="task_urgency">How urgent</string>
-    <string name="task_urgency_worked_out">Worked out</string>
+    <string name="task_priority">Priority</string>
+    <string name="task_priority_by_planner">Set by the planner</string>
+    <string name="task_priority_by_planner_rule">The planner sets it from the due day: critical within 3 days, high within 14, normal within 60, low when later or with no day.</string>
+    <string name="task_priority_now">Now: %1$s.</string>
+    <string name="task_priority_by_hand">You set this by hand. It stays until you change it here.</string>
     <string name="task_is_payment">This is a payment</string>
     <string name="task_amount">Amount in %1$s</string>
     <string name="task_amount_hint">Like 2500 or 2500.50.</string>
