@@ -138,8 +138,8 @@
   "docs/specs/S05-added-by-itself.md": {
    "publicId": "WP-DOC-14",
    "id": "9ab35bf5-cc64-4bf9-92ed-818922ab00f0",
-   "sha256": "142f303f8b8968581de928892df66f987c1076b660c31fb49f1a391580ab3976",
-   "commit": "206d410"
+   "sha256": "32e40d5a3ef771eb6e053c959866c1cbaddc9373df3c2030fe774e8b618e45aa",
+   "commit": "ca730a1"
   },
   "docs/decisions.md#D-008": {
    "publicId": "WP-DOC-15",
@@ -192,8 +192,8 @@
   "docs/decisions.md#D-014": {
    "publicId": "WP-DOC-23",
    "id": "7aefd5ea-33e9-44df-bcca-9f985ff93186",
-   "sha256": "b3f6f69f5898821fb234044d90af198b83b6e5d2072b00647617889b71b2c001",
-   "commit": "206d410"
+   "sha256": "aa88c54c9cafaa20f9cea800a94a421ee732e38059017b13ef15d45eabf7b27b",
+   "commit": "ca730a1"
   },
   "docs/specs/S08-inspirations-canvas.md": {
    "publicId": "WP-DOC-24",
