@@ -80,7 +80,11 @@ closing comment quotes its summary lines and its exit code.
 - The chart of the plan (`src/planning/chart/`) is our own SVG, with no charting library (D-001). A bar's place is
   arithmetic on its dates (`layout.ts`); nothing is measured on the page, which is why tests can drag by a known
   distance. New dates go through `useDateChanges`: shown at once, saved one after the other. Whatever a pointer
-  can do on the chart also has a key there or a control on the entry's form.
+  can do on the chart also has a key there or a control on the entry's form. The view is called **Gantt** (S07):
+  under the steps, every task with a due day that is not marked on a step's bar has a row of its own with a
+  marker on its day, moved along the row like a bar; its words (`chart/taskWords.ts`) say done and overdue, never
+  colour alone. The plan's filters are asked of the server for those rows; `tasks=hidden` in the address hides
+  them.
 - "Today" is the date where the wedding takes place. The home page takes the days left from the server
   (`GET /api/home`) and never counts them from the device's clock.
 - A picture of an inspiration is only handed out with the access token, which an `<img>` cannot send. The page

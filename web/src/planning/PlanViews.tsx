@@ -13,7 +13,7 @@ export function PlanViews() {
           </NavLink>
         </li>
         <li>
-          <NavLink to={{ pathname: '/plan/chart', search }}>Chart</NavLink>
+          <NavLink to={{ pathname: '/plan/chart', search }}>Gantt</NavLink>
         </li>
       </ul>
     </nav>

@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../App.tsx'
 import { entry, planningServer, problem } from '../../test-server.ts'
 import type { Entry } from '../planningApi.ts'
-import { ROW_HEIGHT } from './layout.ts'
+import { dayNumber } from './days.ts'
+import { HEADING_HEIGHT, ROW_HEIGHT } from './layout.ts'
 
 // A Tuesday. The test wedding is on 19 June 2027, so by week the chart starts on Monday 9 November 2026.
 const TODAY = '2026-11-17T10:00:00Z'
@@ -106,7 +107,8 @@ describe('the chart of the plan', () => {
     expect(mark).toHaveAttribute('d', expect.stringMatching(new RegExp(`^M ${26 * DAY + DAY / 2} `)))
     expect(mark).not.toHaveAttribute('data-done')
     expect(within(venueBar).getByText('Sign the contract, due 2 Dec 2026, done').parentElement).toHaveAttribute('data-done')
-    expect(screen.queryByText(/Not of this plan item/)).not.toBeInTheDocument()
+    // A task of no plan item is not on a bar; it has a row of its own (see the Gantt tests below).
+    expect(within(venueBar).queryByText(/Not of this plan item/)).not.toBeInTheDocument()
 
     // Each marked day has a line and a name; the lines stand in the middle of their day.
     expect(screen.getByText('Today')).toHaveAttribute('x', String(8 * DAY + DAY / 2))
@@ -153,7 +155,7 @@ describe('the chart of the plan', () => {
     const server = planningServer([planItem('Choose a photographer', null, null)])
     open('/plan/chart')
 
-    expect(await screen.findByText(/No plan item here has dates yet/)).toBeInTheDocument()
+    expect(await screen.findByText(/No plan item here has dates yet, and no task has a due date/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Choose a photographer' })).toBeInTheDocument()
 
     server.answer('GET /api/entries', Response.json([]))
@@ -165,10 +167,10 @@ describe('the chart of the plan', () => {
     planningServer([planItem('Book the venue', '2026-12-01', '2026-12-10')])
     open('/plan?status=all&priority=HIGH')
 
-    await userEvent.click(await screen.findByRole('link', { name: 'Chart' }))
+    await userEvent.click(await screen.findByRole('link', { name: 'Gantt' }))
     await bar('Book the venue')
     expect(window.location.pathname + window.location.search).toBe('/plan/chart?status=all&priority=HIGH')
-    expect(screen.getByRole('link', { name: 'Chart' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Gantt' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Plan' })).toHaveAttribute('aria-current', 'page')
     expect(screen.queryByLabelText('Order')).not.toBeInTheDocument()
 
@@ -535,5 +537,383 @@ describe('what a plan item waits for, on its form', () => {
 
     expect(await screen.findByRole('heading', { name: 'Change this task' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Waits for' })).not.toBeInTheDocument()
+  })
+})
+
+const DEPOSIT_AMOUNT = 250000
+
+function task(title: string, dueDate: string | null, more: Partial<Entry> = {}): Entry {
+  return entry({ kind: 'TASK', title, dueDate, ...more })
+}
+
+/** The marker of a task on its own row; its name starts with the title. */
+async function marker(title: string): Promise<HTMLElement> {
+  return screen.findByRole('button', { name: new RegExp(`^${title}(,|$)`) })
+}
+
+function tasksRows(): HTMLElement[] {
+  const heading = screen.getByRole('heading', { name: 'Tasks' })
+  return within(heading.nextElementSibling as HTMLElement).getAllByRole('listitem')
+}
+
+/** The query a request for entries was made with. */
+function asked(request: Request): Record<string, string[]> {
+  const found: Record<string, string[]> = {}
+  for (const [name, value] of new URL(request.url).searchParams) {
+    found[name] = [...(found[name] ?? []), value]
+  }
+  return found
+}
+
+function taskRequests(server: ReturnType<typeof planningServer>): Record<string, string[]>[] {
+  return server.requests('GET /api/entries').map(asked).filter((query) => query.kind?.[0] === 'TASK')
+}
+
+describe('tasks on the Gantt chart', () => {
+  it('calls the view Gantt', async () => {
+    planningServer([task('Order the cake', '2026-12-20')])
+    open('/plan')
+
+    expect(await screen.findByRole('link', { name: 'Gantt' })).toHaveAttribute('href', '/plan/chart')
+    expect(screen.queryByRole('link', { name: 'Chart' })).not.toBeInTheDocument()
+  })
+
+  it('gives a row to every task with a due day that no bar marks, by due day and then by title', async () => {
+    const venue = planItem('Book the venue', '2026-12-01', '2026-12-10')
+    const undatedStep = planItem('Choose a photographer', null, null)
+    planningServer([
+      venue,
+      undatedStep,
+      task('Pay the deposit', '2026-12-05', { parentId: venue.id }),
+      task('Order the cake', '2026-12-20'),
+      task('Book the band', '2026-12-05'),
+      task('Ask about parking', '2026-12-05'),
+      task('Meet the photographer', '2026-12-12', { parentId: undatedStep.id }),
+      task('Think about the honeymoon', null),
+    ])
+    open('/plan/chart')
+
+    await bar('Book the venue')
+    expect(tasksRows().map((row) => row.textContent)).toEqual([
+      'Ask about parkingdue 5 Dec 2026',
+      'Book the banddue 5 Dec 2026',
+      'Meet the photographerdue 12 Dec 2026',
+      'Order the cakedue 20 Dec 2026',
+    ])
+    // A task of a dated step is a mark on its bar and has no row; a task without a due day is nowhere.
+    expect(within(await bar('Book the venue')).getByText('Pay the deposit, due 5 Dec 2026')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Pay the deposit/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('Think about the honeymoon')).not.toBeInTheDocument()
+  })
+
+  it('puts a marker, a diamond, on the day of each task, under the bars and the heading', async () => {
+    planningServer([planItem('Book the venue', '2026-12-01', '2026-12-10'), task('Book the band', '2026-12-05')])
+    open('/plan/chart')
+
+    const shape = part(await marker('Book the band'), '.gantt-marker-shape')
+    // 24 pixels a day from Monday 9 November: the middle of 5 December; one step above, so the row is under it and the heading.
+    const middleY = ROW_HEIGHT + HEADING_HEIGHT + ROW_HEIGHT / 2
+    expect(shape).toHaveAttribute('d', `M ${26 * DAY + DAY / 2} ${middleY - 9} l 9 9 l -9 9 l -9 -9 z`)
+    expect(screen.getByRole('heading', { name: 'Tasks' })).toBeInTheDocument()
+  })
+
+  it('says done, overdue, in progress and the amount of a payment in words, not by colour alone', async () => {
+    planningServer([
+      task('Send the save-the-dates', '2026-11-10', { status: 'DONE' }),
+      task('Pay the deposit', '2026-11-12', { amount: DEPOSIT_AMOUNT, paymentKind: 'DEPOSIT' }),
+      task('Taste the menu', '2026-11-20', { status: 'IN_PROGRESS' }),
+      task('Order the cake', '2026-11-17'),
+      task('Choose the band', '2026-11-30', { status: 'DROPPED' }),
+    ])
+    open('/plan/chart')
+
+    // What a screen reader hears.
+    expect(await marker('Send the save-the-dates')).toHaveAccessibleName('Send the save-the-dates, due 10 Nov 2026, done')
+    expect(await marker('Pay the deposit')).toHaveAccessibleName('Pay the deposit, 2,500.00\u00a0zł, due 12 Nov 2026, overdue')
+    expect(await marker('Taste the menu')).toHaveAccessibleName('Taste the menu, due 20 Nov 2026, in progress')
+    // Due today is not overdue yet.
+    expect(await marker('Order the cake')).toHaveAccessibleName('Order the cake, due 17 Nov 2026')
+    expect(await marker('Choose the band')).toHaveAccessibleName('Choose the band, due 30 Nov 2026, dropped')
+
+    // What a person sees beside the row.
+    expect(tasksRows().map((row) => row.textContent)).toEqual([
+      'Send the save-the-datesdone · due 10 Nov 2026',
+      'Pay the depositoverdue · 2,500.00\u00a0zł · due 12 Nov 2026',
+      'Order the cakedue 17 Nov 2026',
+      'Taste the menuin progress · due 20 Nov 2026',
+      'Choose the banddropped · due 30 Nov 2026',
+    ])
+    expect(within(tasksRows()[1] as HTMLElement).getByText('overdue')).toHaveClass('gantt-warning')
+    expect(await marker('Pay the deposit')).toHaveAttribute('data-overdue')
+    expect(await marker('Send the save-the-dates')).toHaveAttribute('data-done')
+    expect(await marker('Send the save-the-dates')).not.toHaveAttribute('data-overdue')
+  })
+
+  it('draws the chart for tasks alone and reaches from the first to the last day of anything on it', async () => {
+    planningServer([task('Order the cake', '2026-09-01'), task('Send the thank-you cards', '2027-08-30')])
+    open('/plan/chart')
+
+    // Tuesday 1 September 2026: the frame starts on the Monday a week before it, 24 August.
+    expect(part(await marker('Order the cake'), '.gantt-marker-shape')).toHaveAttribute('d', expect.stringMatching(/^M 204 /))
+    const last = part(await marker('Send the thank-you cards'), '.gantt-marker-shape')
+    const lastX = Number(/^M (\d+) /.exec(last.getAttribute('d') ?? '')?.[1])
+    expect(lastX).toBe((dayNumber('2027-08-30') - dayNumber('2026-08-24')) * DAY + DAY / 2)
+    expect(document.querySelector('.gantt-body')).toHaveAttribute('width', expect.stringMatching(/^\d+$/))
+    expect(Number(document.querySelector('.gantt-body')?.getAttribute('width'))).toBeGreaterThan(lastX)
+    expect(screen.queryByText(/No plan item here has dates yet/)).not.toBeInTheDocument()
+  })
+
+  it('says what would put something on the chart when nothing has a day, and that nothing matches when filters are set', async () => {
+    const server = planningServer([planItem('Choose a photographer', null, null)])
+    open('/plan/chart')
+
+    expect(await screen.findByText(/No plan item here has dates yet, and no task has a due date/)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Tasks' })).not.toBeInTheDocument()
+
+    server.answer('GET /api/entries', Response.json([]))
+    await userEvent.selectOptions(screen.getByLabelText('Who'), 'Anna')
+    expect(await screen.findByText('Nothing matches these filters.')).toBeInTheDocument()
+  })
+
+  it('says there is nothing yet when the plan is empty', async () => {
+    planningServer([])
+    open('/plan/chart')
+
+    expect(await screen.findByText('Nothing in the plan yet. Add a step, or a task with a due date.')).toBeInTheDocument()
+  })
+
+  it('hides the tasks with one control beside the scale, remembers it in the address, and keeps the marks on the bars', async () => {
+    const venue = planItem('Book the venue', '2026-12-01', '2026-12-10')
+    planningServer([venue, task('Pay the deposit', '2026-12-05', { parentId: venue.id }), task('Book the band', '2026-12-05')])
+    open('/plan/chart?scale=week')
+
+    await marker('Book the band')
+    await userEvent.selectOptions(screen.getByLabelText('Tasks'), 'Hidden')
+
+    await waitFor(() => expect(window.location.search).toBe('?scale=week&tasks=hidden'))
+    expect(screen.queryByRole('heading', { name: 'Tasks' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Book the band/ })).not.toBeInTheDocument()
+    expect(within(await bar('Book the venue')).getByText('Pay the deposit, due 5 Dec 2026')).toBeInTheDocument()
+
+    // Shown is the usual: it is not written into the address.
+    await userEvent.selectOptions(screen.getByLabelText('Tasks'), 'Shown')
+    await waitFor(() => expect(window.location.search).toBe('?scale=week'))
+    await marker('Book the band')
+  })
+
+  it('starts hidden when the address says so, and says so when the tasks are all there is', async () => {
+    planningServer([task('Book the band', '2026-12-05')])
+    open('/plan/chart?tasks=hidden')
+
+    expect(await screen.findByText('The tasks are hidden. Show them to see them on the chart.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Tasks')).toHaveValue('hidden')
+    await userEvent.selectOptions(screen.getByLabelText('Tasks'), 'Shown')
+    await marker('Book the band')
+  })
+
+  it('asks the server for the rows of the tasks with the filters of the plan, and for the marks without them', async () => {
+    const venue = planItem('Book the venue', '2026-12-01', '2026-12-10')
+    const server = planningServer([venue, task('Pay the deposit', '2026-12-05', { parentId: venue.id })])
+    open('/plan/chart')
+    await bar('Book the venue')
+
+    await userEvent.selectOptions(screen.getByLabelText('Who'), 'Piotr')
+    await userEvent.selectOptions(screen.getByLabelText('Category'), 'Venue')
+    await userEvent.selectOptions(screen.getByLabelText('Priority'), 'High')
+    await userEvent.selectOptions(screen.getByLabelText('Show'), 'Done')
+
+    await waitFor(() => {
+      const rows = taskRequests(server).filter((query) => query.assigneeId !== undefined && query.categoryId !== undefined && query.priority !== undefined && query.status?.[0] === 'DONE')
+      expect(rows.length).toBeGreaterThan(0)
+      expect(rows.at(-1)).toMatchObject({ kind: ['TASK'], scheduled: ['true'], sort: ['DUE_DATE'], priority: ['HIGH'] })
+    })
+    // The plan items were asked the same way; the marks on the bars are all of the tasks, as before.
+    const plain = taskRequests(server).filter((query) => query.status === undefined && query.assigneeId === undefined)
+    expect(plain.length).toBeGreaterThan(0)
+    expect(plain[0]).toEqual({ kind: ['TASK'], scheduled: ['true'], sort: ['DUE_DATE'] })
+  })
+
+  it('asks for the open tasks to begin with, as it does for the plan items', async () => {
+    const server = planningServer([task('Book the band', '2026-12-05')])
+    open('/plan/chart')
+    await marker('Book the band')
+
+    expect(taskRequests(server).some((query) => query.status?.join() === 'NOT_STARTED,IN_PROGRESS')).toBe(true)
+  })
+})
+
+/** A task as the chart shows it moves with `saving`: the server answers with the day it was sent, one version on. */
+describe('moving a task on the chart', () => {
+  it('moves the marker along its row by pointer and saves the new day with the version it was based on', async () => {
+    const band = task('Book the band', '2026-12-05', { version: 3, notes: 'Ask for the demo.' })
+    const server = planningServer([band], { [`PUT /api/entries/${band.id}`]: saving(band) })
+    open('/plan/chart')
+
+    drag(await marker('Book the band'), 3)
+
+    await waitFor(() => expect(server.requests(`PUT /api/entries/${band.id}`)).toHaveLength(1))
+    await expect(server.requests(`PUT /api/entries/${band.id}`)[0]?.json()).resolves.toMatchObject({
+      title: 'Book the band', notes: 'Ask for the demo.', startDate: null, dueDate: '2026-12-08', version: 3,
+    })
+    expect(await screen.findByRole('button', { name: 'Book the band, due 8 Dec 2026' })).toBeInTheDocument()
+  })
+
+  it('shows the new day at once while the marker is held, and saves nothing when it is put back', async () => {
+    const band = task('Book the band', '2026-12-05')
+    const server = planningServer([band])
+    open('/plan/chart')
+
+    const mark = await marker('Book the band')
+    fireEvent.pointerDown(mark, { clientX: 400, clientY: 120, button: 0, pointerId: 1 })
+    fireEvent.pointerMove(window, { clientX: 400 + 2 * DAY + 5, clientY: 120, pointerId: 1 })
+    expect(await screen.findByRole('button', { name: 'Book the band, due 7 Dec 2026' })).toBeInTheDocument()
+    fireEvent.pointerMove(window, { clientX: 404, clientY: 120, pointerId: 1 })
+    fireEvent.pointerUp(window, { clientX: 404, clientY: 120, pointerId: 1 })
+
+    expect(await screen.findByRole('button', { name: 'Book the band, due 5 Dec 2026' })).toBeInTheDocument()
+    expect(server.calls.filter((call) => call.startsWith('PUT'))).toEqual([])
+    // Held and put back is not a click: the form stays closed.
+    expect(window.location.pathname).toBe('/plan/chart')
+  })
+
+  it('moves a task with the arrow keys, a day at a time and a week with Shift, saving them one after the other', async () => {
+    const band = task('Book the band', '2026-12-05', { version: 7 })
+    let answerFirst: () => void = () => undefined
+    let calls = 0
+    const server = planningServer([band], {
+      [`PUT /api/entries/${band.id}`]: async (request) => {
+        calls += 1
+        if (calls === 1) {
+          await new Promise<void>((resolve) => (answerFirst = resolve))
+        }
+        return saving(band)(request)
+      },
+    })
+    open('/plan/chart')
+
+    ;(await marker('Book the band')).focus()
+    await userEvent.keyboard('{ArrowRight}')
+    await waitFor(() => expect(server.requests(`PUT /api/entries/${band.id}`)).toHaveLength(1))
+    await userEvent.keyboard('{ArrowLeft}{Shift>}{ArrowRight}{/Shift}')
+    expect(screen.getByRole('button', { name: 'Book the band, due 12 Dec 2026' })).toHaveFocus()
+    expect(server.requests(`PUT /api/entries/${band.id}`)).toHaveLength(1)
+
+    answerFirst()
+    await waitFor(() => expect(server.requests(`PUT /api/entries/${band.id}`)).toHaveLength(2))
+    const sent = await Promise.all(server.requests(`PUT /api/entries/${band.id}`).map((request) => request.json()))
+    expect(sent[0]).toMatchObject({ dueDate: '2026-12-06', version: 7 })
+    // The two that waited go together, on the version the first one returned.
+    expect(sent[1]).toMatchObject({ dueDate: '2026-12-12', version: 8 })
+
+    await userEvent.keyboard('{Shift>}{ArrowLeft}{/Shift}')
+    await waitFor(() => expect(server.requests(`PUT /api/entries/${band.id}`)).toHaveLength(3))
+    await expect(server.requests(`PUT /api/entries/${band.id}`)[2]?.json()).resolves.toMatchObject({ dueDate: '2026-12-05', version: 9 })
+  })
+
+  it('keeps the keyboard on the marker when the move puts the task in another row', async () => {
+    const band = task('Book the band', '2026-12-05')
+    const cake = task('Order the cake', '2026-12-06')
+    const server = planningServer([band, cake], { [`PUT /api/entries/${band.id}`]: saving(band) })
+    open('/plan/chart')
+
+    ;(await marker('Book the band')).focus()
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}')
+    await waitFor(() => expect(server.requests(`PUT /api/entries/${band.id}`).length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Book the band, due 7 Dec 2026/ })).toHaveFocus())
+  })
+
+  it('goes from row to row with the up and down arrows, from the bars to the tasks, as one stop for the Tab key', async () => {
+    const venue = planItem('Book the venue', '2026-12-01', '2026-12-10')
+    planningServer([venue, task('Book the band', '2026-12-05'), task('Order the cake', '2026-12-20')])
+    open('/plan/chart')
+
+    const first = await bar('Book the venue')
+    const band = await marker('Book the band')
+    const cake = await marker('Order the cake')
+    expect(first).toHaveAttribute('tabindex', '0')
+    expect(band).toHaveAttribute('tabindex', '-1')
+    expect(screen.getByRole('link', { name: 'Book the band' })).toHaveAttribute('tabindex', '-1')
+
+    first.focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(band).toHaveFocus()
+    expect(band).toHaveAttribute('tabindex', '0')
+    await userEvent.keyboard('{ArrowDown}')
+    expect(cake).toHaveFocus()
+    await userEvent.keyboard('{ArrowDown}{ArrowUp}{ArrowUp}{ArrowUp}')
+    expect(first).toHaveFocus()
+  })
+
+  it('puts the marker back and says so when someone else changed the task in the meantime', async () => {
+    const band = task('Book the band', '2026-12-05')
+    const server = planningServer([band], { [`PUT /api/entries/${band.id}`]: () => problem(409, 'changed-meanwhile') })
+    open('/plan/chart')
+
+    drag(await marker('Book the band'), 3)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Someone else changed that task in the meantime, so your change was not saved/)
+    expect(screen.getByRole('button', { name: 'Book the band, due 5 Dec 2026' })).toBeInTheDocument()
+    await waitFor(() => expect(server.calls.filter((call) => call === 'GET /api/entries').length).toBeGreaterThan(4))
+  })
+
+  it('says that the day could not be saved when the server fails otherwise', async () => {
+    const band = task('Book the band', '2026-12-05')
+    planningServer([band], { [`PUT /api/entries/${band.id}`]: () => problem(500, 'server-error') })
+    open('/plan/chart')
+
+    drag(await marker('Book the band'), 3)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The new day could not be saved. Try again.')
+  })
+
+  it('opens the form of the task with Enter or with a click that moves nothing, and the form returns to the chart', async () => {
+    const band = task('Book the band', '2026-12-05')
+    const cake = task('Order the cake', '2026-12-20')
+    planningServer([band, cake], {
+      [`GET /api/entries/${band.id}`]: Response.json(band),
+      [`GET /api/entries/${cake.id}`]: Response.json(cake),
+    })
+    open('/plan/chart?scale=month&tasks=shown')
+
+    ;(await marker('Book the band')).focus()
+    await userEvent.keyboard('{Enter}')
+    expect(await screen.findByRole('heading', { name: 'Change this task' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Title')).toHaveValue('Book the band')
+    await userEvent.click(screen.getByRole('link', { name: 'Cancel' }))
+    expect(await marker('Order the cake')).toBeInTheDocument()
+    expect(window.location.pathname + window.location.search).toBe('/plan/chart?scale=month&tasks=shown')
+
+    drag(await marker('Order the cake'), 0)
+    expect(await screen.findByRole('heading', { name: 'Change this task' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Title')).toHaveValue('Order the cake')
+  })
+
+  it('lets a finger choose a marker first and drag it only then', async () => {
+    const band = task('Book the band', '2026-12-05')
+    const cake = task('Order the cake', '2026-12-20')
+    const server = planningServer([band, cake], { [`PUT /api/entries/${cake.id}`]: saving(cake) })
+    open('/plan/chart')
+
+    await marker('Book the band')
+    const mark = await marker('Order the cake')
+    drag(mark, 3, null, 'touch')
+    expect(mark).toHaveFocus()
+    expect(server.calls.filter((call) => call.startsWith('PUT'))).toEqual([])
+
+    drag(mark, 3, null, 'touch')
+    await waitFor(() => expect(server.requests(`PUT /api/entries/${cake.id}`)).toHaveLength(1))
+  })
+
+  it('does not move a task that is marked on a bar', async () => {
+    const venue = planItem('Book the venue', '2026-12-01', '2026-12-10')
+    const deposit = task('Pay the deposit', '2026-12-05', { parentId: venue.id })
+    const server = planningServer([venue, deposit], { [`PUT /api/entries/${venue.id}`]: saving(venue) })
+    open('/plan/chart')
+
+    // Taking hold of its mark takes hold of the bar, as before: the task itself is not sent.
+    const mark = within(await bar('Book the venue')).getByText('Pay the deposit, due 5 Dec 2026').parentElement as Element
+    drag(mark, 2)
+    await waitFor(() => expect(server.requests(`PUT /api/entries/${venue.id}`)).toHaveLength(1))
+    expect(server.requests(`PUT /api/entries/${deposit.id}`)).toHaveLength(0)
   })
 })

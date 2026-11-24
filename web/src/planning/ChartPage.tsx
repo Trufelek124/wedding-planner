@@ -33,10 +33,13 @@ export function ChartPage() {
   const { filters, set, query, key } = useFilters()
   // A phone shows nine days by week: there the chart opens by month unless the address says otherwise.
   const usual: Scale = narrowScreen() ? 'month' : 'week'
+  const tasksShown = params.get('tasks') !== 'hidden'
   const asked = params.get('scale')
   const scale: Scale = asked === 'week' || asked === 'month' ? asked : usual
 
   const items = useLoaded(key, (signal) => listEntries({ ...query, kind: 'PLAN_ITEM', sort: 'DUE_DATE' }, signal))
+  // The rows of the tasks are narrowed down as the plan items are; the marks on the bars are all of the tasks.
+  const taskRows = useLoaded(`task-rows:${key}`, (signal) => listEntries({ ...query, kind: 'TASK', scheduled: true, sort: 'DUE_DATE' }, signal))
   const tasks = useLoaded('tasks', (signal) => listEntries({ kind: 'TASK', scheduled: true, sort: 'DUE_DATE' }, signal))
   const categories = useLoaded('categories', listCategories)
 
@@ -50,25 +53,42 @@ export function ChartPage() {
     setParams(next, { replace: true })
   }
 
-  if (items.state.status === 'failed' || tasks.state.status === 'failed' || categories.state.status === 'failed') {
+  function setTasks(value: string) {
+    const next = new URLSearchParams(params)
+    if (value === 'hidden') {
+      next.set('tasks', 'hidden')
+    } else {
+      next.delete('tasks')
+    }
+    setParams(next, { replace: true })
+  }
+
+  if (items.state.status === 'failed' || tasks.state.status === 'failed' || taskRows.state.status === 'failed' || categories.state.status === 'failed') {
     return (
       <PageRetry
         message="The plan could not be loaded. Try again."
         onRetry={() => {
           items.retry()
+          taskRows.retry()
           tasks.retry()
           categories.retry()
         }}
       />
     )
   }
-  if (items.state.status === 'loading' || tasks.state.status === 'loading' || categories.state.status === 'loading') {
+  if (items.state.status === 'loading' || tasks.state.status === 'loading' || taskRows.state.status === 'loading' || categories.state.status === 'loading') {
     return <PageWaiting what="Loading…" />
   }
 
   const all = items.state.data
   const dated = all.filter(hasDates).sort(byStart)
   const undated = all.filter((item) => !hasDates(item))
+  // A task with a due day that no bar marks has a row of its own: it belongs to no step, or its step is not on the chart.
+  const onBars = new Set(dated.map((item) => item.id))
+  const loose = taskRows.state.data
+    .filter((task) => task.dueDate !== null && !(task.parentId !== null && onBars.has(task.parentId)))
+    .sort((a, b) => dayNumber(a.dueDate ?? '') - dayNumber(b.dueDate ?? '') || a.title.localeCompare(b.title))
+  const rowsOfTasks = tasksShown ? loose : []
   const back = `/plan/chart${search}`
   const narrowed = filters.status !== 'open' || filters.who !== '' || filters.category !== '' || filters.priority !== ''
 
@@ -89,26 +109,38 @@ export function ChartPage() {
             <option value="month">Months</option>
           </select>
         </div>
+        <div className="filter">
+          <label htmlFor="chart-tasks">Tasks</label>
+          <select id="chart-tasks" value={tasksShown ? 'shown' : 'hidden'} onChange={(event) => setTasks(event.target.value)}>
+            <option value="shown">Shown</option>
+            <option value="hidden">Hidden</option>
+          </select>
+        </div>
       </FilterBar>
 
-      {dated.length === 0 ? (
+      {dated.length === 0 && rowsOfTasks.length === 0 ? (
         <p className="empty">
-          {all.length === 0
+          {all.length === 0 && loose.length === 0
             ? narrowed
               ? 'Nothing matches these filters.'
-              : 'Nothing in the plan yet. Add the first step.'
-            : 'No plan item here has dates yet. Give one an end date and it becomes a bar on the chart.'}
+              : 'Nothing in the plan yet. Add a step, or a task with a due date.'
+            : loose.length > 0
+              ? 'The tasks are hidden. Show them to see them on the chart.'
+              : 'No plan item here has dates yet, and no task has a due date. Give a plan item an end date or a task a due date and it appears on the chart.'}
         </p>
       ) : (
         <Chart
           items={dated}
           tasks={tasks.state.data}
+          taskRows={rowsOfTasks}
+          currency={wedding.currency}
           scale={scale}
           today={todayIn(wedding.timeZone)}
           weddingDay={wedding.date}
           back={back}
           onChanged={() => {
             items.reload()
+            taskRows.reload()
             tasks.reload()
           }}
         />

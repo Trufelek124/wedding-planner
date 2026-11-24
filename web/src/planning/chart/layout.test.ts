@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { addDays, dateOfDay, dayNumber, firstOfMonth, firstOfNextMonth, mondayOf } from './days.ts'
-import { barOf, frameOf, linkPath, rowAt, ROW_HEIGHT, scaleOf, shifted, spanOf, xOf } from './layout.ts'
+import {
+  barOf,
+  diamondAt,
+  frameOf,
+  HEADING_HEIGHT,
+  heightOf,
+  linkPath,
+  markerOf,
+  rowAt,
+  ROW_HEIGHT,
+  scaleOf,
+  shifted,
+  spanOf,
+  taskTop,
+  xOf,
+} from './layout.ts'
 
 const day = dayNumber
 
@@ -116,5 +131,40 @@ describe('the line of a dependency', () => {
   it('goes around between the rows when the second bar starts before the first one ends', () => {
     expect(linkPath({ x: 300, y: 26 }, { x: 200, y: 78 })).toBe('M 300 26 H 310 V 52 H 190 V 78 H 200')
     expect(linkPath({ x: 300, y: 78 }, { x: 200, y: 26 })).toBe('M 300 78 H 310 V 52 H 190 V 26 H 200')
+  })
+})
+
+describe("where a task's marker lies", () => {
+  it('is the middle of its day, in the middle of its row, under the rows of the plan items and the heading', () => {
+    const week = frameOf('week', [day('2026-11-17'), day('2027-06-19')]) // starts Monday 9 November, 24 pixels a day
+    expect(markerOf(week, day('2026-11-09'), 0, 0)).toEqual({ x: 12, y: HEADING_HEIGHT + ROW_HEIGHT / 2 })
+    expect(markerOf(week, day('2026-11-17'), 3, 0)).toEqual({ x: 8 * 24 + 12, y: 3 * ROW_HEIGHT + HEADING_HEIGHT + ROW_HEIGHT / 2 })
+    expect(markerOf(week, day('2026-12-05'), 2, 4)).toEqual({ x: 26 * 24 + 12, y: taskTop(2, 4) + ROW_HEIGHT / 2 })
+
+    const month = frameOf('month', [day('2026-11-17'), day('2027-06-19')]) // starts 1 November, 6 pixels a day
+    expect(markerOf(month, day('2026-11-01'), 1, 0).x).toBe(3)
+    expect(markerOf(month, day('2026-12-01'), 1, 1)).toEqual({ x: 30 * 6 + 3, y: taskTop(1, 1) + ROW_HEIGHT / 2 })
+  })
+
+  it('stays inside the frame at both of its edges, whichever scale', () => {
+    for (const scale of ['week', 'month'] as const) {
+      const frame = frameOf(scale, [day('2026-11-17'), day('2027-06-19')])
+      const first = markerOf(frame, frame.first, 0, 0)
+      const last = markerOf(frame, frame.first + frame.days - 1, 0, 0)
+      expect(first.x).toBe(frame.dayWidth / 2)
+      expect(last.x).toBe(frame.width - frame.dayWidth / 2)
+    }
+  })
+
+  it('has a row of the same height as a step, and the chart is as high as all of its rows and the heading', () => {
+    expect(taskTop(0, 0)).toBe(HEADING_HEIGHT)
+    expect(taskTop(2, 3) - taskTop(2, 2)).toBe(ROW_HEIGHT)
+    expect(heightOf(3, 0)).toBe(3 * ROW_HEIGHT)
+    expect(heightOf(0, 2)).toBe(HEADING_HEIGHT + 2 * ROW_HEIGHT)
+    expect(heightOf(3, 2)).toBe(3 * ROW_HEIGHT + HEADING_HEIGHT + 2 * ROW_HEIGHT)
+  })
+
+  it('is a diamond around the point', () => {
+    expect(diamondAt({ x: 100, y: 50 }, 9)).toBe('M 100 41 l 9 9 l -9 9 l -9 -9 z')
   })
 })

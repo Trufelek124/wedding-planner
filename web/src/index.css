@@ -794,11 +794,38 @@ a.button {
   position: sticky;
   left: 0;
   z-index: 1;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.gantt-labels ul {
   margin: 0;
   padding: 0;
   list-style: none;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
+}
+
+/* The strip between the plan items and the tasks. Its height is HEADING_HEIGHT in chart/layout.ts. */
+.gantt-heading {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+
+.gantt-heading-band {
+  fill: var(--background);
+}
+
+.gantt-labels li[data-done] .gantt-title {
+  font-weight: 400;
+  color: var(--text-muted);
 }
 
 .gantt-labels li {
@@ -979,6 +1006,51 @@ a.button {
 .gantt-task[data-done] {
   fill: var(--surface);
   stroke: var(--text);
+}
+
+/* A task's marker on its own row. Done is hollow and quiet, overdue is drawn in the warning colour with a heavy edge;
+   the words "done" and "overdue" stand beside the row and in the marker's name, so colour never says it alone. */
+.gantt-marker {
+  outline: none;
+}
+
+.gantt-marker-reach {
+  fill: transparent;
+  cursor: grab;
+}
+
+.gantt-marker[data-current] .gantt-marker-reach {
+  touch-action: none;
+}
+
+.gantt-marker-shape {
+  fill: var(--text);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.gantt-marker[data-done] .gantt-marker-shape,
+.gantt-marker[data-status='DROPPED'] .gantt-marker-shape {
+  fill: var(--surface);
+  stroke: var(--text-muted);
+  stroke-width: 2;
+}
+
+.gantt-marker[data-status='DROPPED'] .gantt-marker-shape {
+  stroke-dasharray: 3 2;
+}
+
+.gantt-marker[data-overdue] .gantt-marker-shape {
+  fill: var(--danger);
+  stroke: var(--danger);
+  stroke-width: 3;
+  paint-order: stroke;
+}
+
+.gantt-marker:focus-visible .gantt-marker-shape {
+  stroke: var(--focus);
+  stroke-width: 3;
 }
 
 .gantt-link {

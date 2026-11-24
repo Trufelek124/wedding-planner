@@ -79,6 +79,31 @@ export function barOf(frame: Frame, span: Span, row: number): Box {
   }
 }
 
+/** The strip with the heading "Tasks" between the rows of the plan items and the rows of the tasks. */
+export const HEADING_HEIGHT = 32
+/** How far a task's marker reaches from its middle: a diamond, the sign charts use for a single day. */
+export const MARKER_RADIUS = 9
+
+/** The top of a task's row. The rows of the tasks start under the rows of the plan items and the heading. */
+export function taskTop(steps: number, index: number): number {
+  return steps * ROW_HEIGHT + HEADING_HEIGHT + index * ROW_HEIGHT
+}
+
+/** The height of the whole chart: the plan items' rows, and, when there are tasks, the heading and their rows. */
+export function heightOf(steps: number, tasks: number): number {
+  return tasks === 0 ? steps * ROW_HEIGHT : taskTop(steps, tasks)
+}
+
+/** The middle of a task's marker: the middle of its day, in the middle of its row. */
+export function markerOf(frame: Frame, day: number, steps: number, index: number): Point {
+  return { x: xOf(frame, day) + frame.dayWidth / 2, y: taskTop(steps, index) + ROW_HEIGHT / 2 }
+}
+
+/** The path of a diamond around a point. */
+export function diamondAt(point: Point, radius: number = MARKER_RADIUS): string {
+  return `M ${point.x} ${point.y - radius} l ${radius} ${radius} l ${-radius} ${radius} l ${-radius} ${-radius} z`
+}
+
 export interface Tick {
   x: number
   width: number

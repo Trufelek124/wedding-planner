@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useId,
   useLayoutEffect,
@@ -10,12 +11,17 @@ import {
 import { Link, useNavigate } from 'react-router'
 import { ApiError } from '../../api/client.ts'
 import { shortDate, STATUS_LABEL, when } from '../labels.ts'
+import { rowFacts, markerName } from './taskWords.ts'
 import { addDependency, removeDependency, type Entry } from '../planningApi.ts'
 import { dayNumber } from './days.ts'
 import {
   barOf,
+  diamondAt,
   frameOf,
   HEAD_HEIGHT,
+  HEADING_HEIGHT,
+  heightOf,
+  markerOf,
   linkPath,
   LOWER_HEIGHT,
   rowAt,
@@ -41,6 +47,10 @@ interface ChartProps {
   items: DatedEntry[]
   /** Tasks with a due date. Those that belong to a plan item are marked on its bar. */
   tasks: Entry[]
+  /** The tasks that have a row of their own, in the order of the rows: each has a due date and none is marked on a bar. */
+  taskRows: Entry[]
+  /** The wedding's currency, for the amount of a payment. */
+  currency: string
   scale: Scale
   /** Today's date where the wedding takes place. */
   today: string
@@ -70,9 +80,10 @@ const MARK = 7
  * Everything a pointer can do here, the keyboard can do too: the arrow keys move a bar, with Shift its end and
  * with Alt its start; L and Enter link two bars. A bar's place comes from its dates alone (see `layout.ts`).
  */
-export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged }: ChartProps) {
+export function Chart({ items, tasks, taskRows, currency, scale, today, weddingDay, back, onChanged }: ChartProps) {
   const navigate = useNavigate()
   const hint = useId()
+  const markerHint = useId()
   const [problem, setProblem] = useState<string | null>(null)
   const [current, setCurrent] = useState<string | null>(null)
   const [linkFrom, setLinkFrom] = useState<string | null>(null)
@@ -84,6 +95,8 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
   const bars = useRef(new Map<string, SVGGElement>())
   const stopTracking = useRef<(() => void) | null>(null)
   const opened = useRef<{ scale: Scale; first: number } | null>(null)
+  /** The stop of the keyboard that has to keep it while the rows are put in their new order. */
+  const keep = useRef<string | null>(null)
 
   const changes = useDateChanges(items, {
     saved: onChanged,
@@ -97,6 +110,18 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
     },
   })
 
+  const taskChanges = useDateChanges(taskRows, {
+    saved: onChanged,
+    failed: (error) => {
+      setProblem(
+        error instanceof ApiError && error.is(CHANGED_MEANWHILE)
+          ? 'Someone else changed that task in the meantime, so your change was not saved. The chart shows the latest version now.'
+          : 'The new day could not be saved. Try again.',
+      )
+      onChanged()
+    },
+  })
+
   // The frame follows what is saved, not what is being dragged: it must not move under the pointer.
   const marked = tasks.filter((task) => task.dueDate !== null && items.some((item) => item.id === task.parentId))
   const frame = frameOf(scale, [
@@ -104,6 +129,7 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
     ...(weddingDay === null ? [] : [dayNumber(weddingDay)]),
     ...items.flatMap((item) => [spanOf(item).start, spanOf(item).end]),
     ...marked.map((task) => dayNumber(task.dueDate ?? today)),
+    ...taskRows.map((task) => dayNumber(task.dueDate ?? today)),
   ])
   const { upper, lower } = scaleOf(frame, scale)
 
@@ -117,9 +143,12 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
       .map((dependsOnId) => ({ id: row.id, dependsOnId, conflict: row.conflictsWithIds.includes(dependsOnId) })),
   )
   const chosenLink = links.find((link) => link.id === chosen?.id && link.dependsOnId === chosen.dependsOnId) ?? null
-  const currentId = rows.some((row) => row.id === current) ? current : (rows[0]?.id ?? null)
+  // The tasks' rows keep the order of what is saved, so that a marker does not change rows under the pointer.
+  const placed = taskRows.map((task) => taskChanges.shown(task))
+  const stops = [...rows.map((row) => row.id), ...placed.map((task) => task.id)]
+  const currentId = stops.includes(current ?? '') ? current : (stops[0] ?? null)
   const linkingFrom = rows.some((row) => row.id === linkFrom) ? linkFrom : null
-  const height = rows.length * ROW_HEIGHT
+  const height = heightOf(rows.length, placed.length)
   const todayX = xOf(frame, dayNumber(today)) + frame.dayWidth / 2
   const weddingX = weddingDay === null ? null : xOf(frame, dayNumber(weddingDay)) + frame.dayWidth / 2
 
@@ -138,7 +167,23 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
     opened.current = { scale, first: frame.first }
   }, [scale, today, frame.first, frame.dayWidth])
 
-  useEffect(() => () => stopTracking.current?.(), [])
+  // A row that is put in its new place is taken out and put back: the keyboard must not be lost on the way.
+  useLayoutEffect(() => {
+    if (keep.current !== null && document.activeElement === document.body) {
+      bars.current.get(keep.current)?.focus({ preventScroll: true })
+    }
+  })
+
+  useEffect(() => {
+    const letGo = () => {
+      keep.current = null
+    }
+    window.addEventListener('pointerdown', letGo)
+    return () => {
+      window.removeEventListener('pointerdown', letGo)
+      stopTracking.current?.()
+    }
+  }, [])
 
   function conflictOf(row: Entry): string | null {
     if (row.conflictsWithIds.length === 0) {
@@ -295,9 +340,9 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
       case 'ArrowUp':
       case 'ArrowDown': {
         event.preventDefault()
-        const next = rows[index + (event.key === 'ArrowDown' ? 1 : -1)]
+        const next = stops[index + (event.key === 'ArrowDown' ? 1 : -1)]
         if (next !== undefined) {
-          bars.current.get(next.id)?.focus()
+          bars.current.get(next)?.focus()
         }
         break
       }
@@ -318,6 +363,84 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
         if (!event.altKey) {
           event.preventDefault()
           setLinkFrom(row.id)
+        }
+        break
+      case 'Escape':
+        if (linkingFrom !== null) {
+          event.preventDefault()
+          setLinkFrom(null)
+        }
+        break
+    }
+  }
+
+  /** A task's marker was taken hold of: it moves along its row, and a click that moves nothing opens the task. */
+  function grabMarker(event: ReactPointerEvent, task: Entry & { dueDate: string }) {
+    if (event.button !== 0) {
+      return
+    }
+    if (event.pointerType === 'touch' && currentId !== task.id) {
+      focusBar(task.id)
+      return
+    }
+    event.preventDefault()
+    focusBar(task.id)
+    setProblem(null)
+    const origin = pointOf(event).x
+    const original: Dates = { startDate: task.startDate, dueDate: task.dueDate }
+    let latest = original
+    let moved = false
+    track(
+      (point) => {
+        const next = shifted(original, 'move', Math.round((point.x - origin) / frame.dayWidth))
+        if (next.startDate !== latest.startDate || next.dueDate !== latest.dueDate) {
+          latest = next
+          moved = true
+          taskChanges.show(task.id, next)
+        }
+      },
+      (point) => {
+        if (point === null || (latest.startDate === original.startDate && latest.dueDate === original.dueDate)) {
+          taskChanges.forget(task.id)
+          if (point !== null && !moved) {
+            open(task.id)
+          }
+        } else {
+          void taskChanges.save(task.id)
+        }
+      },
+    )
+  }
+
+  function markerKey(event: KeyboardEvent, task: Entry & { dueDate: string }, index: number) {
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return
+    }
+    switch (event.key) {
+      case 'ArrowLeft':
+      case 'ArrowRight': {
+        event.preventDefault()
+        setProblem(null)
+        keep.current = task.id
+        const days = (event.shiftKey ? 7 : 1) * (event.key === 'ArrowRight' ? 1 : -1)
+        taskChanges.show(task.id, shifted(task, 'move', days))
+        void taskChanges.save(task.id)
+        break
+      }
+      case 'ArrowUp':
+      case 'ArrowDown': {
+        event.preventDefault()
+        const next = stops[rows.length + index + (event.key === 'ArrowDown' ? 1 : -1)]
+        if (next !== undefined) {
+          bars.current.get(next)?.focus()
+        }
+        break
+      }
+      case 'Enter':
+      case ' ':
+        event.preventDefault()
+        if (linkingFrom === null) {
+          open(task.id)
         }
         break
       case 'Escape':
@@ -368,10 +491,16 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
         next plan item. Enter opens it. L, then Enter on another plan item, makes that one wait for this one.
       </p>
 
+      {placed.length > 0 && (
+        <p id={markerHint} hidden>
+          Left and right arrows move it by a day, with Shift by a week. Up and down go to the next row. Enter opens it.
+        </p>
+      )}
+
       <div className="gantt-scroll" ref={scroller} role="group" aria-label="The plan on a timeline">
         <div className="gantt" style={{ width: `calc(var(--gantt-label) + ${frame.width}px)` }}>
           <div className="gantt-corner" style={{ height: HEAD_HEIGHT }}>
-            Plan item
+            {placed.length === 0 ? 'Plan item' : 'Plan item or task'}
           </div>
 
           <div className="gantt-scale" style={{ width: frame.width, height: HEAD_HEIGHT }} aria-hidden="true">
@@ -404,7 +533,8 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
             </svg>
           </div>
 
-          <ul className="gantt-labels">
+          <div className="gantt-labels">
+            <ul>
             {rows.map((row) => {
               const conflict = conflictOf(row)
               return (
@@ -426,7 +556,35 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
                 </li>
               )
             })}
-          </ul>
+            </ul>
+            {placed.length > 0 && (
+              <>
+                <h2 className="gantt-heading" style={{ height: HEADING_HEIGHT }}>
+                  Tasks
+                </h2>
+                <ul>
+                  {placed.map((task) => {
+                    const facts = rowFacts(task, today, currency)
+                    return (
+                      <li key={task.id} style={{ height: ROW_HEIGHT }} data-current={task.id === currentId || undefined} data-done={task.status === 'DONE' || undefined}>
+                        <Link className="gantt-title" to={`/entries/${task.id}`} state={{ back }} tabIndex={-1} title={task.title}>
+                          {task.title}
+                        </Link>
+                        <span className="gantt-meta">
+                          {facts.map((fact, at) => (
+                            <Fragment key={fact.text}>
+                              {at > 0 && ' · '}
+                              {fact.warning ? <span className="gantt-warning">{fact.text}</span> : fact.text}
+                            </Fragment>
+                          ))}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
+            )}
+          </div>
 
           <svg className="gantt-body" ref={body} width={frame.width} height={height} role="group" aria-label="Bars">
             {lower.map((tick) => (
@@ -435,6 +593,15 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
             {rows.map((row, index) => (
               <line key={row.id} className="gantt-line" x1={0} x2={frame.width} y1={(index + 1) * ROW_HEIGHT} y2={(index + 1) * ROW_HEIGHT} />
             ))}
+            {placed.length > 0 && (
+              <>
+                <rect className="gantt-heading-band" x={0} y={rows.length * ROW_HEIGHT} width={frame.width} height={HEADING_HEIGHT} />
+                {placed.map((task, index) => {
+                  const y = markerOf(frame, 0, rows.length, index).y + ROW_HEIGHT / 2
+                  return <line key={task.id} className="gantt-line" x1={0} x2={frame.width} y1={y} y2={y} />
+                })}
+              </>
+            )}
             <line className="gantt-today" x1={todayX} x2={todayX} y1={0} y2={height} />
             {weddingX !== null && <line className="gantt-wedding" x1={weddingX} x2={weddingX} y1={0} y2={height} />}
 
@@ -550,6 +717,46 @@ export function Chart({ items, tasks, scale, today, weddingDay, back, onChanged 
                       !
                     </text>
                   )}
+                </g>
+              )
+            })}
+            {placed.map((task, index) => {
+              if (task.dueDate === null) {
+                return null
+              }
+              const dated = { ...task, dueDate: task.dueDate }
+              const at = markerOf(frame, dayNumber(task.dueDate), rows.length, index)
+              const states = markerName(task, today, currency)
+              return (
+                <g
+                  key={task.id}
+                  ref={(node) => {
+                    if (node === null) {
+                      bars.current.delete(task.id)
+                    } else {
+                      bars.current.set(task.id, node)
+                    }
+                  }}
+                  className="gantt-marker"
+                  role="button"
+                  tabIndex={task.id === currentId ? 0 : -1}
+                  aria-label={states}
+                  aria-describedby={markerHint}
+                  data-status={task.status}
+                  data-done={task.status === 'DONE' || undefined}
+                  data-overdue={(task.status !== 'DONE' && task.status !== 'DROPPED' && task.dueDate < today) || undefined}
+                  data-current={task.id === currentId || undefined}
+                  onFocus={() => setCurrent(task.id)}
+                  onBlur={(event) => {
+                    if (event.relatedTarget !== null) {
+                      keep.current = null
+                    }
+                  }}
+                  onKeyDown={(event) => markerKey(event, dated, index)}
+                  onPointerDown={(event) => grabMarker(event, dated)}
+                >
+                  <rect className="gantt-marker-reach" x={at.x - 14} y={at.y - 14} width={28} height={28} />
+                  <path className="gantt-marker-shape" d={diamondAt(at)} />
                 </g>
               )
             })}
