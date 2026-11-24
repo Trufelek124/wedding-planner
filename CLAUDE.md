@@ -90,6 +90,13 @@ closing comment quotes its summary lines and its exit code.
 - A picture of an inspiration is only handed out with the access token, which an `<img>` cannot send. The page
   fetches it through `pictureAddress` (`src/inspirations/pictures.ts`) and shows the browser's own `blob:` address;
   never put an `/api/…` address into `src`. Signing out lets go of all of them.
+- The inspirations have two views, **Grid** and **Canvas** (`/inspirations/canvas`, S08): on the canvas every
+  idea is a card at its place, dragged or moved with the arrow keys, and the place is saved with one request
+  for one move (`placeInspiration`); a failed save puts the card back and says so. Like the chart, it is our own
+  drawing (D-015): where a card lies on the screen is arithmetic in `src/inspirations/canvas/layout.ts` — from
+  its place, how far the surface was moved and how large it is shown — and only the surface's own size is read
+  from the page. How it is moved and scaled lasts for the visit and is saved nowhere. The filters hide cards
+  without moving them; a card is a plain-text link to the idea.
 - Money is shown with `money()` and read from what a person typed with `moneyTyped()` (`src/money/money.ts`), both
   on whole numbers of the currency's smallest unit; nothing divides by 100 on its own. Over a limit is said in
   words, with the colour and the sign (`src/ui/Warning.tsx`) only beside them. A bar of money is `Meter`

@@ -64,6 +64,11 @@ export async function changeInspiration(id: string, change: InspirationChange): 
   return unwrap(await api.PUT('/api/inspirations/{id}', { params: { path: { id } }, body: change }))
 }
 
+/** Puts an idea's card somewhere else on the canvas. The later move wins; the idea's version is not touched. */
+export async function placeInspiration(id: string, place: { x: number; y: number }): Promise<Inspiration> {
+  return unwrap(await api.PUT('/api/inspirations/{id}/place', { params: { path: { id } }, body: place }))
+}
+
 export async function deleteInspiration(id: string): Promise<void> {
   const { error } = await api.DELETE('/api/inspirations/{id}', { params: { path: { id } } })
   if (error !== undefined) {

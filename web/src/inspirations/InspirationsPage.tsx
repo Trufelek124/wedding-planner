@@ -1,11 +1,13 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { ApiError } from '../api/client.ts'
 import { newId } from '../api/ids.ts'
 import { listEntries } from '../planning/planningApi.ts'
 import { useLoaded } from '../planning/useLoaded.ts'
 import { PageRetry, PageWaiting } from '../ui/Screen.tsx'
+import { Canvas } from './canvas/Canvas.tsx'
 import { InspirationCard } from './InspirationCard.tsx'
+import { InspirationViews } from './InspirationViews.tsx'
 import {
   addPictures,
   createInspiration,
@@ -15,6 +17,7 @@ import {
   listTags,
   uploadProblem,
   whyNot,
+  type Inspiration,
   type InspirationFilter,
 } from './inspirationsApi.ts'
 import { PictureChooser } from './PictureChooser.tsx'
@@ -24,8 +27,11 @@ import { usePictureDrop } from './usePictureDrop.ts'
 const LOOK_AGAIN_MS = 3000
 const LOOK_AGAIN_TIMES = 10
 
-/** Ideas the couple keeps: a board of links and pictures, narrowed down by board and tag. */
-export function InspirationsPage() {
+/**
+ * Ideas the couple keeps, narrowed down by board and tag: as a grid of cards, or as a canvas where each card
+ * lies where it was put. The head, the quick ways to add and the filters are the same in both.
+ */
+export function InspirationsPage({ view = 'grid' }: { view?: 'grid' | 'canvas' }) {
   const { search } = useLocation()
   const [params, setParams] = useSearchParams()
   const board = params.get('board') ?? ''
@@ -57,6 +63,19 @@ export function InspirationsPage() {
 
   // A link's title and picture arrive a moment after it is saved: look again until they are there.
   const list = inspirations.state
+  // A card moved on the canvas is replaced by what the server answered, without asking for the whole list again.
+  const shown = useRef<Inspiration[]>([])
+  useEffect(() => {
+    if (list.status === 'ready') {
+      shown.current = list.data
+    }
+  })
+  const setList = inspirations.set
+  const placed = useCallback(
+    (moved: Inspiration) => setList(shown.current.map((one) => (one.id === moved.id ? moved : one))),
+    [setList],
+  )
+
   const waiting = list.status === 'ready' && list.data.some((inspiration) => inspiration.previewStatus === 'PENDING')
   const reload = inspirations.reload
   useEffect(() => {
@@ -173,16 +192,18 @@ export function InspirationsPage() {
   const boardNames = new Map(boardList.map((one) => [one.id, one.name]))
   const planItemTitles = new Map(planItems.state.data.map((one) => [one.id, one.title]))
   const narrowed = board !== '' || tag !== ''
-  const back = `/inspirations${search}`
+  const back = `${view === 'canvas' ? '/inspirations/canvas' : '/inspirations'}${search}`
 
   return (
-    <div className="ideas-page" data-dropping={drop.dropping || undefined} {...drop.handlers}>
+    <div className="ideas-page" data-view={view} data-dropping={drop.dropping || undefined} {...drop.handlers}>
       <div className="page-head">
         <h1>Inspirations</h1>
         <Link className="button" to="/inspirations/new" state={{ back, boardId: ontoBoard }}>
           Add an inspiration
         </Link>
       </div>
+
+      <InspirationViews />
 
       <div className="quick-add">
         <form className="field stack-tight" onSubmit={saveLink} noValidate>
@@ -261,7 +282,9 @@ export function InspirationsPage() {
         </p>
       </form>
 
-      {list.data.length === 0 ? (
+      {view === 'canvas' ? (
+        <Canvas inspirations={list.data} back={back} narrowed={narrowed} onPlaced={placed} />
+      ) : list.data.length === 0 ? (
         <p className="empty">
           {narrowed
             ? 'Nothing here matches. Choose another board or tag.'

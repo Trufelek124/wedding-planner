@@ -1,6 +1,7 @@
 # S08 — The inspirations canvas
 
-**Status:** written on 2026-11-24 at the owner's request. **Builds on:** S01 section 4 (inspirations), D-001 (what
+**Status:** written on 2026-11-24 at the owner's request, and built: the server (WP-TS-105) and the view on
+the web (WP-TS-106), tested against stand-ins; not yet tried on a real touch screen. **Builds on:** S01 section 4 (inspirations), D-001 (what
 we draw ourselves), D-015. **Story:** WP-US-26.
 
 ## 1. What this covers
@@ -24,8 +25,8 @@ sizes; several canvases; two people seeing each other move things while they do.
 - Every inspiration has **a place** on it: two whole numbers, `x` and `y`, the upper left corner of its card in
   the canvas's own units — one unit is one pixel when the canvas is shown at its natural size. `x` grows to the
   right, `y` downwards. A place lies between −100,000 and 100,000 either way.
-- A card is 200 units wide; how tall it is follows from its picture and its name, and is the page's business.
-  Where the server has to keep cards apart it reckons with **a slot of 220 by 260 units**.
+- A card is 200 units wide and 240 tall, the same for every idea: its picture fills its frame. Where the server
+  has to keep cards apart it reckons with **a slot of 220 by 260 units**.
 - **A place changes only when an owner moves the card.** Changing an idea's name, board, tags or pictures does
   not move it; removing an idea frees its place.
 - **What is saved newly arrives at the end of the lowest row**: one slot to the right of the card that lies

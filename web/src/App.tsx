@@ -91,6 +91,7 @@ function SignedIn({ user }: { user: Me }) {
                   <Route path="vendors/:id" element={<VendorPage />} />
                   <Route path="vendors/:id/edit" element={<VendorFormPage />} />
                   <Route path="inspirations" element={<InspirationsPage />} />
+                  <Route path="inspirations/canvas" element={<InspirationsPage view="canvas" />} />
                   <Route path="inspirations/boards" element={<BoardsPage />} />
                   <Route path="inspirations/new" element={<InspirationFormPage />} />
                   <Route path="inspirations/:id" element={<InspirationFormPage />} />
