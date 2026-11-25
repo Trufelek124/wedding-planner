@@ -94,6 +94,9 @@ internal fun requestOf(change: ChangeRow): JsonObject = when (change.kind) {
     else -> bodyOf(change)
 }
 
+/** What is sent to make a board: only its name, as the API describes a new board. */
+internal fun newBoardBody(name: String): JsonObject = buildJsonObject { put("name", name) }
+
 /** What is sent for a guest's status: only the status, as the API describes it. */
 internal fun guestStatusBody(change: GuestStatusRow): JsonObject = buildJsonObject { put("status", change.status) }
 

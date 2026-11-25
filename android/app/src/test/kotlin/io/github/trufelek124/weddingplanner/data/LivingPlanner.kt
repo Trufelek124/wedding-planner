@@ -25,11 +25,11 @@ class LivingPlanner(
     entries: List<String>,
     private val categories: List<String> = emptyList(),
     private val vendors: List<String> = emptyList(),
-    private val boards: List<String> = emptyList(),
+    boards: List<String> = emptyList(),
     private val budget: String = StandIn.wholeBudget(),
     guests: List<String> = emptyList(),
     private val households: List<String> = emptyList(),
-    private val inspirations: List<String> = emptyList(),
+    inspirations: List<String> = emptyList(),
     private val suggestions: List<String> = emptyList(),
     private val today: String = "2026-11-18",
 ) {
@@ -43,7 +43,24 @@ class LivingPlanner(
     /** The suggestions the server has, by id, in the order of its list: with their state, which decides whether the list shows them. */
     val suggestionStates: MutableMap<String, JsonObject> = HeldInOrder()
 
+    /** The boards the server has, by id, in the order of its list. */
+    val boards: MutableMap<String, JsonObject> = HeldInOrder()
+
+    /** The inspirations the server has, by id, in the order of its list: the ones it was sent are kept under the id they came with. */
+    val inspirations: MutableMap<String, JsonObject> = HeldInOrder()
+
+    /** Names (as they are compared) that the server does not take for a board, whatever else is true of them. */
+    val boardNamesRefused: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** A route whose next answer is lost: what was sent is taken, and the phone hears nothing. */
+    @Volatile
+    var losingTheAnswerOf: String? = null
+
+    private var boardsMade = 0
+
     init {
+        boards.forEach { board -> Json.parseToJsonElement(board).jsonObject.let { this.boards[it.getValue("id").jsonPrimitive.content] = it } }
+        inspirations.forEach { idea -> Json.parseToJsonElement(idea).jsonObject.let { this.inspirations[it.getValue("id").jsonPrimitive.content] = it } }
         suggestions.forEach { suggestion -> Json.parseToJsonElement(suggestion).jsonObject.let { suggestionStates[it.getValue("id").jsonPrimitive.content] = it } }
         guests.forEach { guest -> Json.parseToJsonElement(guest).jsonObject.let { this.guests[it.getValue("id").jsonPrimitive.content] = it } }
         entries.forEach(::put)
@@ -164,7 +181,24 @@ class LivingPlanner(
     @Volatile
     var holdUp: (suspend (HttpRequestData) -> Unit)? = null
 
+    /** The partner makes a board on another device. */
+    fun makeBoard(name: String): String {
+        val id = "board-made-${++boardsMade}"
+        boards[id] = Json.parseToJsonElement(StandIn.board(id, name)).jsonObject
+        return id
+    }
+
     private suspend fun MockRequestHandleScope.answer(request: HttpRequestData): HttpResponseData? {
+        val answered = answered(request)
+        val route = "${request.method.value} ${request.url.encodedPath}"
+        if (answered != null && losingTheAnswerOf == route) {
+            losingTheAnswerOf = null
+            throw java.io.IOException("Connection reset")
+        }
+        return answered
+    }
+
+    private suspend fun MockRequestHandleScope.answered(request: HttpRequestData): HttpResponseData? {
         holdUp?.invoke(request)
         val path = request.url.encodedPath
         val method = request.method.value
@@ -173,7 +207,33 @@ class LivingPlanner(
             method == "GET" && path == "/api/entries" -> respondJson(list(entries.values))
             method == "GET" && path == "/api/categories" -> respondJson(categories.joinToString(",", "[", "]"))
             method == "GET" && path == "/api/vendors" -> respondJson(vendors.joinToString(",", "[", "]"))
-            method == "GET" && path == "/api/boards" -> respondJson(boards.joinToString(",", "[", "]"))
+            method == "GET" && path == "/api/boards" -> respondJson(boards.values.joinToString(",", "[", "]"))
+            method == "POST" && path == "/api/boards" -> {
+                val name = Json.parseToJsonElement(String(request.body.toByteArray())).jsonObject.getValue("name").jsonPrimitive.content.trim()
+                val key = name.lowercase()
+                fun refused(message: String) = respondProblem(400, "bad-request", ""","fieldProblems":[{"field":"name","message":"$message"}]""")
+                when {
+                    name.isEmpty() || name.length > 60 -> refused("Enter a name of up to 60 characters.")
+                    boards.values.any { it.getValue("name").jsonPrimitive.content.trim().lowercase() == key } -> refused("There is a board of that name already.")
+                    key in boardNamesRefused -> refused("This name cannot be used.")
+                    else -> respondJson(boards.getValue(makeBoard(name)).toString(), 201)
+                }
+            }
+            method == "POST" && path == "/api/inspirations" -> {
+                val sent = Json.parseToJsonElement(String(request.body.toByteArray())).jsonObject
+                val newId = sent.getValue("id").jsonPrimitive.content
+                val boardId = sent.getValue("boardId").let { if (it == JsonNull) null else it.jsonPrimitive.content }
+                if (boardId != null && boardId !in boards) {
+                    respondProblem(400, "bad-request", ""","fieldProblems":[{"field":"boardId","message":"Choose one of your boards."}]""")
+                } else {
+                    // Sent twice, it is added once.
+                    val kept = inspirations.getOrPut(newId) {
+                        val url = sent.getValue("url").let { if (it == JsonNull) null else it.jsonPrimitive.content }
+                        Json.parseToJsonElement(StandIn.inspiration(newId, url = url, boardId = boardId, note = sent.getValue("note").jsonPrimitive.content)).jsonObject
+                    }
+                    respondJson(kept.toString(), 201)
+                }
+            }
             method == "GET" && path == "/api/budget" -> respondJson(budget)
             method == "GET" && path == "/api/guests" -> respondJson(guests.values.joinToString(",", "[", "]"))
             method == "PUT" && path.startsWith("/api/guests/") && path.endsWith("/status") -> {
@@ -213,7 +273,7 @@ class LivingPlanner(
                     }
                 }
             }
-            method == "GET" && path == "/api/inspirations" -> respondJson(inspirations.joinToString(",", "[", "]"))
+            method == "GET" && path == "/api/inspirations" -> respondJson(inspirations.values.joinToString(",", "[", "]"))
             method == "GET" && path == "/api/households" -> respondJson(households.joinToString(",", "[", "]"))
             method == "GET" && path == "/api/guests/counts" -> respondJson(counted())
             method == "GET" && path == "/api/home" -> {

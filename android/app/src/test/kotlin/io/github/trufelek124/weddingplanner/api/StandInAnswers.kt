@@ -13,9 +13,9 @@ fun MockRequestHandleScope.respondJson(body: String, status: Int = 200): HttpRes
 fun MockRequestHandleScope.respondText(body: String, status: Int): HttpResponseData =
     respond(body, HttpStatusCode.fromValue(status), headersOf(HttpHeaders.ContentType, "text/html"))
 
-fun MockRequestHandleScope.respondProblem(status: Int, kind: String): HttpResponseData =
+fun MockRequestHandleScope.respondProblem(status: Int, kind: String, extra: String = ""): HttpResponseData =
     respond(
-        """{"type":"urn:wedding-planner:problem:$kind","title":"Problem","status":$status}""",
+        """{"type":"urn:wedding-planner:problem:$kind","title":"Problem","status":$status$extra}""",
         HttpStatusCode.fromValue(status),
         headersOf(HttpHeaders.ContentType, "application/problem+json"),
     )

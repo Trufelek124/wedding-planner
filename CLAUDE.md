@@ -179,7 +179,10 @@ first uses it, at the version D-005 names.
   only lends them), and closes the screen; `sync()` saves it as an inspiration, the inspiration first under an id
   chosen on the phone, then its pictures unless the server already holds them. What goes on after a screen has
   closed runs in `AppContainer.background`. Someone who is signed out signs in on the same screen and finds the
-  share still there.
+  share still there. The share screen can also name **a new board** (S09): the share keeps the name, and when
+  it is sent the board comes first — the one of that name that the server has, or else it is made; a name taken
+  meanwhile is looked up again, a name the server does not take leaves the idea on no board, and what was found
+  out is kept with the share so that sending again never makes a second board.
 - The screens follow `PlannerRepository.planner`, which reads again after every write the repository itself
   makes. Write to the database only through the repository, or the screens do not hear of it.
 - Signing out removes the waiting changes too, and asks first when there are any. It must always end signed out:
@@ -290,7 +293,9 @@ uses another only through the types in that module's own package, and never in a
   from them it asks through interfaces of its own that they implement: `VendorUse` (what points to each vendor,
   and what its payments come to) and `VendorCategories`. A new kind of record that can point to a vendor implements
   `VendorUse` in its own module.
-- `inspirations` uses `planning` (`PlanItems.exists`).
+- `inspirations` uses `planning` (`PlanItems.exists`). The boards a wedding begins with (`BoardService.STARTER`)
+  are offered once; a board added to that list later reaches the weddings that already have theirs through a
+  migration that adds it once, where there is none of that name (S09, `V25`).
 - Every inspiration has **a place on the wedding's one canvas** (S08, D-015): `x`, `y` and `placed_at`. The
   server places a new one (`CanvasPlacement`, arithmetic without a database: beside the lowest card, six to a
   row, never within a slot of another; the adds of one wedding go one after the other behind an advisory lock);

@@ -377,7 +377,11 @@ class PlannerRepository(
         val kept = withContext(Dispatchers.IO) { shareFiles.keep(id, pictures) }
         if (kept is Kept.Yes) {
             written {
-                dao.putShare(ShareRow(inspirationId = id, url = share.link, boardId = share.boardId, note = share.note, pictures = pictures.size))
+                // A board to be made is only kept beside no board that is known: the share is on one or the other.
+                val newBoard = share.newBoard?.trim()?.takeIf { it.isNotEmpty() && share.boardId == null }
+                dao.putShare(
+                    ShareRow(inspirationId = id, url = share.link, boardId = share.boardId, note = share.note, pictures = pictures.size, newBoard = newBoard),
+                )
             }
         }
         return kept
@@ -401,7 +405,9 @@ class PlannerRepository(
             }
             val files = shareFiles.of(share)
             try {
-                val saved: InspirationWire = api().send(HttpMethod.Post, "/api/inspirations", requestOf(share))
+                // The board comes first: the idea is saved on it, so it has to be there.
+                val onItsBoard = withItsBoard(since, share)
+                val saved: InspirationWire = api().send(HttpMethod.Post, "/api/inspirations", requestOf(onItsBoard))
                 if (files.isNotEmpty() && saved.pictures.count { !it.preview } < files.size) {
                     try {
                         api().sendFiles<InspirationWire>("/api/inspirations/${share.inspirationId}/pictures", "files", files)
@@ -436,6 +442,39 @@ class PlannerRepository(
         }
         return Sending.ALL_SENT
     }
+
+    /**
+     * The share with the board it is to be saved on: one that the server has under the name the person gave
+     * (the phone's copy may be older than the server), or else one made now. A name the server does not take
+     * leaves the idea on no board; nothing of the share is lost. What is found out is kept with the share, so
+     * that a later try after a lost answer does not ask again, and never makes a second board.
+     */
+    private suspend fun withItsBoard(since: Int, share: ShareRow): ShareRow {
+        val name = share.newBoard
+        if (name == null || share.boardId != null) {
+            return share
+        }
+        val id = boardNamed(name) ?: madeBoard(name)
+        val settled = share.copy(boardId = id, newBoard = if (id == null) null else name)
+        written {
+            if (forgotten == since) {
+                dao.putShare(settled)
+            }
+        }
+        return settled
+    }
+
+    private suspend fun boardNamed(name: String): String? =
+        api().get<List<NameWire>>("/api/boards").firstOrNull { sameBoardName(it.name, name) }?.id
+
+    /** Makes the board; null when the server does not take the name. A name taken meanwhile is the one that was meant. */
+    private suspend fun madeBoard(name: String): String? =
+        try {
+            api().send<NameWire>(HttpMethod.Post, "/api/boards", newBoardBody(name)).id
+        } catch (refused: ApiFailure.Problem) {
+            // Taken, since the last look (the answer was lost, or the partner made it) or not acceptable: either way look again.
+            if (refused.status in 400..499 && refused.status != 408 && refused.status != 429) boardNamed(name) else throw refused
+        }
 
     private suspend fun shareSent(since: Int, share: ShareRow) {
         written {
@@ -924,7 +963,7 @@ internal fun plannerOf(stored: Stored): Planner {
         budget = Budget(planner.budgetTotal, planner.budgetPlanned, planner.budgetCommitted, planner.budgetPaid),
         gone = gone,
         boards = stored.boards.map { Board(it.id, it.name) },
-        shares = stored.shares.map { WaitingShare(it.inspirationId, it.url, it.pictures, it.trouble, it.boardId) },
+        shares = stored.shares.map { WaitingShare(it.inspirationId, it.url, it.pictures, it.trouble, it.boardId, it.newBoard) },
         budgetLines = stored.budgetLines.map { BudgetLine(it.categoryId, it.name, it.planned, it.committed, it.paid, it.payments) },
         uncategorised = BudgetRest(planner.uncategorisedCommitted, planner.uncategorisedPaid, planner.uncategorisedPayments),
         vendorList = stored.vendors.map(::vendorOf),

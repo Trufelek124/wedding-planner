@@ -241,6 +241,47 @@ class InspirationWordsTest {
     }
 
     @Test
+    fun `a share waiting for a board of its own is on the board the phone knows by that name, or else on a board to be made`() {
+        val toBeMade = WaitingShare("s1", null, 1, null, null, "First dance")
+        val again = WaitingShare("s2", null, 1, null, null, "  first DANCE")
+        val known = WaitingShare("s3", null, 1, null, null, "flowers ")
+        val made = WaitingShare("s4", null, 1, null, "b9", "First dance")
+
+        assertEquals("new:first dance", shareBoardKey(toBeMade, listOf(dress, flowers)))
+        assertEquals("new:first dance", shareBoardKey(again, listOf(dress, flowers)))
+        assertEquals("b2", shareBoardKey(known, listOf(dress, flowers)))
+        // Once the board is made and known, it is the board's id; before the phone has learnt of it, still the name.
+        assertEquals("b9", shareBoardKey(made, listOf(dress, Board("b9", "First dance"))))
+        assertEquals("new:first dance", shareBoardKey(made, listOf(dress)))
+        assertEquals("b1", shareBoardKey(WaitingShare("s5", null, 1, null, "b1"), listOf(dress)))
+        assertNull(shareBoardKey(WaitingShare("s6", null, 1, null), listOf(dress)))
+    }
+
+    @Test
+    fun `a board to be made is offered once after the boards that exist, with its name as it was typed, and can be chosen`() {
+        val shares = listOf(WaitingShare("s1", null, 1, null, null, "First dance"), WaitingShare("s2", null, 1, null, null, " first dance"))
+        val keys = shares.map { shareBoardKey(it, listOf(dress, flowers)) }
+
+        assertEquals(listOf("b1", "b2", "new:first dance", "none"), boardsOffered(listOf(dress, flowers), keys + null, null))
+        assertEquals(listOf("new:first dance"), boardsOffered(emptyList(), keys, null))
+        assertEquals("First dance", boardChipLabel("new:first dance", listOf(dress, flowers), shares))
+        assertEquals("new:first dance", boardChosen("new:first dance", listOf(dress), shares))
+        // Not one that no share waits for any more.
+        assertNull(boardChosen("new:first dance", listOf(dress), emptyList()))
+
+        assertEquals(listOf("s1", "s2"), sharesShown(shares, "new:first dance", null, listOf(dress, flowers)).map { it.id })
+        assertEquals(emptyList<String>(), sharesShown(shares, "b1", null, listOf(dress, flowers)).map { it.id })
+    }
+
+    @Test
+    fun `a share that waits for a board of its own prints neither its name nor its link`() {
+        val printed = WaitingShare("s1", "https://secret.example/x", 0, null, null, "Surprise honeymoon").toString()
+
+        assertFalse(printed.contains("Surprise"))
+        assertFalse(printed.contains("secret"))
+    }
+
+    @Test
     fun `a picture on an idea's own screen says which of how many it is, and that it is missing`() {
         assertEquals("Picture 1 of 3", pictureInWords(1, 3))
         assertEquals("Picture 3 of 3", pictureInWords(3, 3))

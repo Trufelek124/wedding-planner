@@ -1,6 +1,7 @@
 # S09 — Boards: one for the first dance, and a new one where it is needed
 
-**Status:** written on 2026-11-25 at the owner's request. **Builds on:** S01 sections 4 and 7 (an inspiration
+**Status:** written on 2026-11-25 at the owner's request, and built (WP-TS-108, WP-TS-109), tested against
+stand-ins; the phone's share sheet has not been tried on a real phone. **Builds on:** S01 sections 4 and 7 (an inspiration
 has a board; sharing from the phone asks for one). **Story:** WP-US-15, WP-US-16.
 
 ## 1. What this covers

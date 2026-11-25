@@ -479,6 +479,48 @@ class InspirationsScreenTest : SignedInPhoneTest() {
     }
 
     @Test
+    fun `a share that waits for a board of its own stands under that board's name, as one on a known board does`() {
+        runBlocking { phone.container.planner.sync() }
+        server.down = true
+        shared(Share("https://vm.tiktok.com/ZMabc/", null, "", newBoard = "First dance"))
+        shared(Share(null, "b1", ""), pictures = 2)
+        shared(Share("https://www.instagram.com/p/Cabc123/", null, "", newBoard = " FIRST dance "))
+        open()
+
+        openInspirations()
+        waitFor("2 pictures")
+
+        // The name is offered beside the boards that exist, once, as it was typed first.
+        chip("First dance").assertExists()
+        compose.onAllNodes(hasText("First dance") and isSelectable()).assertCountEquals(1)
+        compose.onNode(line("Waiting to be sent", "From TikTok")).assertExists()
+
+        pressChip("First dance")
+        compose.onNode(line("Waiting to be sent", "From TikTok")).assertExists()
+        compose.onNode(line("Waiting to be sent", "From Instagram")).assertExists()
+        compose.onNode(line("Waiting to be sent", "Pictures")).assertDoesNotExist()
+        compose.picture("inspirations-waiting-new-board")
+
+        pressChip("Dress")
+        compose.onNode(line("Waiting to be sent", "From TikTok")).assertDoesNotExist()
+        compose.onNode(line("Waiting to be sent", "Pictures")).assertExists()
+    }
+
+    @Test
+    fun `a share that waits for a board of its own offers that board even where the phone knows no board`() {
+        server.planner()
+        runBlocking { phone.container.planner.sync() }
+        server.down = true
+        shared(Share("https://vm.tiktok.com/ZMabc/", null, "", newBoard = "First dance"))
+        open()
+
+        openInspirations()
+
+        chip("First dance").assertExists()
+        compose.onNode(line("Waiting to be sent", "From TikTok")).assertExists()
+    }
+
+    @Test
     fun `a share the server did not take keeps its notice on the board, and is no card`() {
         server.problem("POST /api/inspirations", 400, "bad-request", ""","fieldProblems":[{"field":"boardId","message":"Choose one of your boards."}]""")
         shared(Share("https://www.instagram.com/p/Cabc123/", "b9", ""))

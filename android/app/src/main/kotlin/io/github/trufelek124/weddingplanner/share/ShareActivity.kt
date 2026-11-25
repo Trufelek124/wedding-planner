@@ -106,9 +106,9 @@ fun ShareRoot(container: AppContainer, shared: Shared, onDone: () -> Unit, debug
             ShareScreen(
                 shared = shared,
                 ui = ui,
-                onSave = { boardId, note ->
+                onSave = { boardId, newBoard, note ->
                     model.save(
-                        Share(link = shared.link, boardId = boardId, note = note),
+                        Share(link = shared.link, boardId = boardId, note = note, newBoard = newBoard),
                         shared.pictures.map { picture -> { context.contentResolver.openInputStream(picture) } },
                     )
                 },

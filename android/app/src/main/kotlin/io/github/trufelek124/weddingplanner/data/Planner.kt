@@ -332,9 +332,10 @@ class SuggestionTrouble(
  * @param pictures how many pictures were shared
  * @param trouble in words, why the server did not take it; null while it waits to be sent
  * @param boardId the board it was shared to; null for none
+ * @param newBoard the name of a board that is to be made for it, as it was typed; null for none
  */
-data class WaitingShare(val id: String, val link: String?, val pictures: Int, val trouble: String?, val boardId: String? = null) {
-    /** A link is the couple's own: nothing of it gets printed. */
+data class WaitingShare(val id: String, val link: String?, val pictures: Int, val trouble: String?, val boardId: String? = null, val newBoard: String? = null) {
+    /** A link and a board's name are the couple's own: nothing of them gets printed. */
     override fun toString(): String = "WaitingShare[id=$id]"
 }
 

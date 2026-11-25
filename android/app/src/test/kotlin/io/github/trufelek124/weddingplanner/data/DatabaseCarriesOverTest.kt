@@ -576,4 +576,43 @@ class DatabaseCarriesOverTest {
             database.close()
         }
     }
+    @Test
+    fun `what version 10 held is still there, a share in it makes no new board, and one that names a board can be written and read`() = runBlocking {
+        val file = folder.root.resolve("planner.db")
+        aDatabaseOfVersion(10, file) { old ->
+            old.execSQL(
+                """INSERT INTO planner (id, loadedAt, weddingDate, currency, timeZone, daysLeft, today, budgetTotal, budgetPlanned, budgetCommitted,
+                   budgetPaid, overdueIds, nextIds, nextPaymentIds)
+                   VALUES (1, 1795093500000, '2027-06-19', 'PLN', 'Europe/Warsaw', 213, '2026-11-18', NULL, 0, 0, 0, '', '', '')""",
+            )
+            old.execSQL("INSERT INTO board (id, position, name) VALUES ('b1', 0, 'Dress')")
+            old.execSQL("INSERT INTO waiting_share (inspirationId, url, boardId, note, pictures, trouble) VALUES ('i1', 'https://www.instagram.com/p/Cabc123/', 'b1', 'Soft', 0, NULL)")
+            old.execSQL("INSERT INTO waiting_share (inspirationId, url, boardId, note, pictures, trouble) VALUES ('i2', NULL, NULL, '', 2, 'Too large.')")
+        }
+
+        val database = Room.databaseBuilder(context, PlannerDatabase::class.java, file.path).build()
+        try {
+            val stored = database.planner().stored()!!
+            val shown = plannerOf(stored)
+
+            // What waited, waits as it did, and wants no board made.
+            assertEquals(listOf("i1", "i2"), shown.shares.map { it.id })
+            assertEquals("b1", shown.shares.first().boardId)
+            assertEquals("Too large.", shown.shares.last().trouble)
+            assertEquals(listOf(null, null), shown.shares.map { it.newBoard })
+            assertEquals(listOf(null, null), stored.shares.map { it.newBoard })
+            assertEquals(2, shown.unsent)
+
+            // The new column can be written and read, and a sign-out takes the share and its name away.
+            database.planner().putShare(ShareRow(inspirationId = "i3", url = null, boardId = null, note = "", pictures = 1, newBoard = "First dance"))
+            val after = plannerOf(database.planner().stored()!!)
+            assertEquals("First dance", after.shares.first { it.id == "i3" }.newBoard)
+            assertEquals(null, after.shares.first { it.id == "i1" }.newBoard)
+
+            database.planner().forget()
+            assertTrue(database.planner().shares().isEmpty())
+        } finally {
+            database.close()
+        }
+    }
 }

@@ -67,13 +67,13 @@ fun InspirationsContent(
     // The choices are kept across turning the phone; "" is none.
     var boardKept by rememberSaveable { mutableStateOf("") }
     var tagKept by rememberSaveable { mutableStateOf("") }
-    val board = boardChosen(boardKept, planner.boards)
+    val board = boardChosen(boardKept, planner.boards, waiting)
     val tag = tagKept.takeIf { it.isNotEmpty() }
     val nothingKept = ideas.isEmpty() && waiting.isEmpty()
-    val boards = boardsOffered(planner.boards, ideas.map { it.boardId } + waiting.map { it.boardId }, board)
+    val boards = boardsOffered(planner.boards, ideas.map { it.boardId } + waiting.map { shareBoardKey(it, planner.boards) }, board)
     val tags = tagsOffered(ideas, tag)
     val shownIdeas = ideasShown(ideas, board, tag)
-    val shownShares = sharesShown(waiting, board, tag)
+    val shownShares = sharesShown(waiting, board, tag, planner.boards)
     val boardNames = planner.boards.associate { it.id to it.name }
 
     LazyColumn(
@@ -84,11 +84,11 @@ fun InspirationsContent(
         if (nothingKept) {
             item(key = "empty") { NothingHere(stringResource(R.string.inspirations_empty)) }
         } else {
-            // With no board at all there is nothing to choose between.
-            if (planner.boards.isNotEmpty()) {
+            // With no board at all, and none to be made, there is nothing to choose between.
+            if (planner.boards.isNotEmpty() || boards.any { it.startsWith(NEW_BOARD) }) {
                 item(key = "boards") {
                     StatusChips(
-                        stringResource(R.string.inspirations_all_boards), boards, board, label = { boardChipLabel(it, planner.boards) },
+                        stringResource(R.string.inspirations_all_boards), boards, board, label = { boardChipLabel(it, planner.boards, waiting) },
                         onChoose = { boardKept = it.orEmpty() },
                     )
                 }

@@ -2,6 +2,7 @@ package io.github.trufelek124.weddingplanner.data
 
 import io.github.trufelek124.weddingplanner.api.model.EntryChange
 import io.github.trufelek124.weddingplanner.api.model.EntryStatusChange
+import io.github.trufelek124.weddingplanner.api.model.BoardName
 import io.github.trufelek124.weddingplanner.api.model.GuestStatusChange
 import io.github.trufelek124.weddingplanner.api.model.NewEntry
 import io.github.trufelek124.weddingplanner.api.model.NewInspiration
@@ -138,6 +139,16 @@ class ChangesAgreeWithTheContractTest {
         val pictures = strict.decodeFromJsonElement<NewInspiration>(requestOf(link.copy(url = null, boardId = null, pictures = 3)))
         assertNull(pictures.url)
         assertNull(pictures.boardId)
+    }
+
+    @Test
+    fun `a new board is a BoardName of the contract`() {
+        val read = strict.decodeFromJsonElement<BoardName>(newBoardBody("First dance"))
+
+        assertEquals("First dance", read.name)
+        // The longest name the contract allows is one the phone offers; one more is not.
+        assertEquals(60, MOST_BOARD_NAME)
+        assertEquals(60, strict.decodeFromJsonElement<BoardName>(newBoardBody("x".repeat(MOST_BOARD_NAME))).name.length)
     }
 
     @Test

@@ -194,8 +194,13 @@ data class ShareRow(
     val pictures: Int,
     /** In words for the person, why the server did not take it; null while it waits to be sent. */
     val trouble: String? = null,
+    /**
+     * The name of a board that does not exist yet and is to be made before the idea is saved on it (S09 section 4);
+     * null for none. [boardId] is filled in once the board is known. A name is the couple's own: nothing prints it.
+     */
+    val newBoard: String? = null,
 ) {
-    /** A link and a note are the couple's own: nothing of them gets printed. */
+    /** A link, a note and a board's name are the couple's own: nothing of them gets printed. */
     override fun toString(): String = "ShareRow[inspirationId=$inspirationId]"
 }
 

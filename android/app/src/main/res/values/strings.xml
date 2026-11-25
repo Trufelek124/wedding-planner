@@ -237,6 +237,10 @@
     <string name="share_a_note">A note</string>
     <string name="share_board">Board</string>
     <string name="share_no_board">No board</string>
+    <string name="share_new_board">New board</string>
+    <string name="share_new_board_name">Name of the new board</string>
+    <string name="share_new_board_blank">Give the new board a name.</string>
+    <string name="share_new_board_too_long">A board\'s name has at most 60 characters.</string>
     <string name="share_note">Note</string>
     <string name="share_saving">Saving…</string>
     <string name="share_saved">Saved to the planner</string>

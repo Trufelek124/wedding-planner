@@ -3,6 +3,7 @@ package io.github.trufelek124.weddingplanner.data
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.util.Locale
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -16,9 +17,12 @@ import kotlinx.serialization.json.put
  * said at once and not after a wait.
  */
 
-/** @param link the link that was shared; null when pictures were */
-data class Share(val link: String?, val boardId: String?, val note: String) {
-    /** A link and a note are the couple's own: nothing of them gets printed. */
+/**
+ * @param link the link that was shared; null when pictures were
+ * @param newBoard the name of a board to be made for it, already trimmed; null for none. Never together with a [boardId].
+ */
+data class Share(val link: String?, val boardId: String?, val note: String, val newBoard: String? = null) {
+    /** A link, a note and a board's name are the couple's own: nothing of them gets printed. */
     override fun toString(): String = "Share"
 }
 
@@ -35,6 +39,15 @@ sealed interface Kept {
     /** A picture could not be read from the app that shared it. */
     data object Unreadable : Kept
 }
+
+/** The longest name a board has. */
+const val MOST_BOARD_NAME = 60
+
+/** A board's name as it is compared: without capital letters and without spaces around it, as the server does. */
+fun boardNameKey(name: String): String = name.trim().lowercase(Locale.ROOT)
+
+/** Whether two names are one board's name. */
+fun sameBoardName(a: String, b: String): Boolean = boardNameKey(a) == boardNameKey(b)
 
 internal object ShareLimits {
     /** One inspiration holds at most this many pictures. */

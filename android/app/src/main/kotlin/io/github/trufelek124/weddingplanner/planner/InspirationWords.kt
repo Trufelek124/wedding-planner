@@ -6,6 +6,8 @@ import io.github.trufelek124.weddingplanner.data.Inspiration
 import io.github.trufelek124.weddingplanner.data.InspirationSource
 import io.github.trufelek124.weddingplanner.data.Waiting
 import io.github.trufelek124.weddingplanner.data.WaitingShare
+import io.github.trufelek124.weddingplanner.data.boardNameKey
+import io.github.trufelek124.weddingplanner.data.sameBoardName
 import java.util.Locale
 
 /*
@@ -184,22 +186,41 @@ fun inspirationsSummary(ideas: List<Inspiration>, waiting: Int): String {
 
 // ---------------------------------------------------------------- narrowing the board down
 
-/**
- * The boards to offer: each that exists, in the server's order, and "no board" where an idea or a waiting share is
- * on none, or that was chosen. Each as the key that is kept when it is chosen: the board's id, or [ON_NO_BOARD].
- */
-fun boardsOffered(boards: List<Board>, boardIdsOfTheThings: List<String?>, chosen: String?): List<String> =
-    boards.map { it.id } + listOfNotNull(ON_NO_BOARD.takeIf { chosen == ON_NO_BOARD || boardIdsOfTheThings.any { it == null } })
-
-/** What a board's chip says. */
-fun boardChipLabel(key: String, boards: List<Board>): String =
-    if (key == ON_NO_BOARD) "On no board" else boards.firstOrNull { it.id == key }?.name.orEmpty()
+/** The start of the key of a board that does not exist yet and a waiting share is to make; the rest is its name as [boardNameKey] has it. */
+const val NEW_BOARD = "new:"
 
 /**
- * The board that was kept as chosen, as long as it is one the phone knows or "no board"; null (all boards) for
- * nothing chosen and for a board that is gone since.
+ * The key of the board a waiting share is on: the board's id; the id of the board that has the name the share is to
+ * make, where the phone has learnt of it since; a key of its own for a board that is still to be made; null for none.
  */
-fun boardChosen(kept: String, boards: List<Board>): String? = kept.takeIf { it == ON_NO_BOARD || boards.any { board -> board.id == it } }
+fun shareBoardKey(share: WaitingShare, boards: List<Board>): String? =
+    share.boardId?.takeIf { id -> boards.any { it.id == id } }
+        ?: share.newBoard?.let { name -> boards.firstOrNull { sameBoardName(it.name, name) }?.id ?: (NEW_BOARD + boardNameKey(name)) }
+        ?: share.boardId
+
+/**
+ * The boards to offer: each that exists, in the server's order, then those that are still to be made for a waiting
+ * share, and "no board" where an idea or a waiting share is on none, or that was chosen. Each as the key that is kept
+ * when it is chosen: the board's id, a key from [shareBoardKey], or [ON_NO_BOARD].
+ */
+fun boardsOffered(boards: List<Board>, boardKeysOfTheThings: List<String?>, chosen: String?): List<String> =
+    boards.map { it.id } +
+        (boardKeysOfTheThings + chosen).filterNotNull().filter { it.startsWith(NEW_BOARD) }.distinct() +
+        listOfNotNull(ON_NO_BOARD.takeIf { chosen == ON_NO_BOARD || boardKeysOfTheThings.any { it == null } })
+
+/** What a board's chip says: for a board still to be made, the name as it was typed. */
+fun boardChipLabel(key: String, boards: List<Board>, shares: List<WaitingShare> = emptyList()): String = when {
+    key == ON_NO_BOARD -> "On no board"
+    key.startsWith(NEW_BOARD) -> shares.firstOrNull { shareBoardKey(it, boards) == key }?.newBoard.orEmpty()
+    else -> boards.firstOrNull { it.id == key }?.name.orEmpty()
+}
+
+/**
+ * The board that was kept as chosen, as long as it is one the phone knows, one a waiting share is to make, or "no
+ * board"; null (all boards) for nothing chosen and for a board that is gone since.
+ */
+fun boardChosen(kept: String, boards: List<Board>, shares: List<WaitingShare> = emptyList()): String? =
+    kept.takeIf { it == ON_NO_BOARD || boards.any { board -> board.id == it } || shares.any { share -> shareBoardKey(share, boards) == it } }
 
 /**
  * The tags to offer: those that occur, the most used first and then by name. The one that is chosen stays offered
@@ -219,5 +240,5 @@ fun ideasShown(ideas: List<Inspiration>, board: String?, tag: String?): List<Ins
     ideas.filter { onBoard(it.boardId, board) && (tag == null || tag in it.tags) }
 
 /** What waits to be sent and belongs to what is shown: a waiting share has no tags, so a tag leaves it out. */
-fun sharesShown(shares: List<WaitingShare>, board: String?, tag: String?): List<WaitingShare> =
-    if (tag != null) emptyList() else shares.filter { onBoard(it.boardId, board) }
+fun sharesShown(shares: List<WaitingShare>, board: String?, tag: String?, boards: List<Board> = emptyList()): List<WaitingShare> =
+    if (tag != null) emptyList() else shares.filter { onBoard(shareBoardKey(it, boards), board) }
