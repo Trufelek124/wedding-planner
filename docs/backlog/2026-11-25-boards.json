@@ -1,0 +1,56 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP5-S1-T5",
+   "story": "EP5-S1",
+   "title": "Spec: a board for the first dance, and naming a new board where it is needed",
+   "description": "The owner asked for another category of inspirations, First dance, and for a way to add categories of one's own. The planner calls them boards; they can be added, renamed and removed on the web behind a link that is easy to miss, and not at all on the phone, where most ideas are shared. S09 says that the boards a wedding begins with include First dance, that a wedding which already has its boards gets it once, what the web's link says, and that the phone's share screen can name a new board. Done when the document is committed and mirrored.",
+   "dependsOn": [],
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "documentation"
+   ]
+  },
+  {
+   "key": "EP5-S1-T6",
+   "story": "EP5-S1",
+   "title": "Backend and web: First dance among the boards, and a link that says what it does",
+   "description": "As S09 says. The boards a wedding begins with include First dance; a migration adds it once, at the end, to a wedding that was already offered its boards and has none of that name. On the web the way to the boards is called by what it does. Done when the backend's tests cover the list and the migration (already there in another spelling, never offered yet), the web's tests the link, and the gate passes.",
+   "dependsOn": [
+    "EP5-S1-T5"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "java",
+    "react"
+   ]
+  },
+  {
+   "key": "EP5-S2-T3",
+   "story": "EP5-S2",
+   "title": "Android: a new board can be named while sharing",
+   "description": "As S09 says. The share screen offers, beside the boards the phone knows, to name a new one. The share keeps the name while it waits; when it is sent the board is made first - or the one of that name that is already there is used - and the idea is saved on it. Without a connection it waits like every share, a request sent twice makes no second board, and a name the server refuses loses nothing of the share. Done when the screen's and the repository's tests cover it, the database carries over from the older layout, the picture of the screen was looked at, and the gate passes.",
+   "dependsOn": [
+    "EP5-S1-T5"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  }
+ ]
+}

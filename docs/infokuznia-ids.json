@@ -834,6 +834,24 @@
    "publicId": "WP-TS-106",
    "id": "e73ef635-9397-41d3-9cf1-118f5729730b",
    "title": "Web: the canvas view of the inspirations"
+  },
+  "EP5-S1-T5": {
+   "type": "task",
+   "publicId": "WP-TS-107",
+   "id": "d851a82b-c95a-4404-838e-19fb275daa98",
+   "title": "Spec: a board for the first dance, and naming a new board where it is needed"
+  },
+  "EP5-S1-T6": {
+   "type": "task",
+   "publicId": "WP-TS-108",
+   "id": "2d2481dc-1846-493c-98e4-4a33c259301c",
+   "title": "Backend and web: First dance among the boards, and a link that says what it does"
+  },
+  "EP5-S2-T3": {
+   "type": "task",
+   "publicId": "WP-TS-109",
+   "id": "ac74626d-bc35-4504-8796-1ac6bdaae57e",
+   "title": "Android: a new board can be named while sharing"
   }
  }
 }
