@@ -215,8 +215,8 @@
   "docs/specs/S09-boards.md": {
    "publicId": "WP-DOC-26",
    "id": "7adeaa5e-6811-47ad-b8fb-408805b16ed4",
-   "sha256": "350755e86ed0ea4b640eb7419536ce2d43dff151441f12a421bfa59bd24688b6",
-   "commit": "41ded0b"
+   "sha256": "738ae2a2d7ba12f8e4fb89b3a6c6f98e178787ad467923a091c778bb237c4a53",
+   "commit": "b8525c7"
   }
  }
 }
