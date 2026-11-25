@@ -743,7 +743,7 @@ describe('the boards', () => {
     inspirationsServer([])
     open(`/inspirations?board=${DRESS.id}`)
 
-    await userEvent.click(await screen.findByRole('link', { name: 'Edit the boards' }))
+    await userEvent.click(await screen.findByRole('link', { name: 'Add or change boards' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Boards' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: 'Back to the inspirations' }))
 

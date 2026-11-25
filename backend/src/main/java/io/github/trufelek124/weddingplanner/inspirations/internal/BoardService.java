@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 class BoardService {
 
     static final List<String> STARTER =
-            List.of("Dress", "Suit", "Hair and make-up", "Flowers", "Decor", "Venue", "Cake", "Invitations");
+            List.of("Dress", "Suit", "Hair and make-up", "Flowers", "Decor", "Venue", "Cake", "Invitations", "First dance");
 
     private static final String NAME_TAKEN = "There is a board of that name already.";
 

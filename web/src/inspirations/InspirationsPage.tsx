@@ -277,7 +277,7 @@ export function InspirationsPage({ view = 'grid' }: { view?: 'grid' | 'canvas' }
         </div>
         <p className="filter-link">
           <Link to="/inspirations/boards" state={{ back }}>
-            Edit the boards
+            Add or change boards
           </Link>
         </p>
       </form>

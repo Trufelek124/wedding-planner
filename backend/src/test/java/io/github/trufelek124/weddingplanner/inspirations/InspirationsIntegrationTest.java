@@ -43,11 +43,11 @@ class InspirationsIntegrationTest extends PostgresIntegrationTest {
     // ------------------------------------------------------------ boards
 
     @Test
-    void aNewWeddingStartsWithTheUsualBoardsOnce() throws Exception {
+    void aNewWeddingStartsWithTheUsualBoardsOnceFirstDanceLast() throws Exception {
         List<String> first = boardNames(anna);
         List<String> second = boardNames(piotr);
 
-        assertThat(first).containsExactly("Dress", "Suit", "Hair and make-up", "Flowers", "Decor", "Venue", "Cake", "Invitations");
+        assertThat(first).containsExactly("Dress", "Suit", "Hair and make-up", "Flowers", "Decor", "Venue", "Cake", "Invitations", "First dance");
         assertThat(second).as("asking again adds nothing").isEqualTo(first);
     }
 
@@ -68,14 +68,14 @@ class InspirationsIntegrationTest extends PostgresIntegrationTest {
         assertThat(added.statusCode()).as(added.body()).isEqualTo(201);
         assertThat(TestHttp.json(added)).containsEntry("name", "Table settings").containsEntry("inspirationCount", 0);
         String id = (String) TestHttp.json(added).get("id");
-        assertThat(boardNames(piotr)).as("new ones go to the end").endsWith("Invitations", "Table settings");
+        assertThat(boardNames(piotr)).as("new ones go to the end").endsWith("Invitations", "First dance", "Table settings");
 
         HttpResponse<String> renamed = http.putJsonAs(piotr, "/api/boards/" + id, "{\"name\":\"Tables\"}");
         assertThat(renamed.statusCode()).as(renamed.body()).isEqualTo(200);
         assertThat(boardNames(anna)).contains("Tables").doesNotContain("Table settings");
 
         assertThat(http.deleteAs(anna, "/api/boards/" + id).statusCode()).isEqualTo(204);
-        assertThat(boardNames(anna)).doesNotContain("Tables").hasSize(8);
+        assertThat(boardNames(anna)).doesNotContain("Tables").hasSize(9);
         assertThat(http.deleteAs(anna, "/api/boards/" + id).statusCode()).as("it is gone").isEqualTo(404);
         assertThat(http.putJsonAs(anna, "/api/boards/" + id, "{\"name\":\"Again\"}").statusCode()).isEqualTo(404);
     }

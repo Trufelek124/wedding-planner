@@ -109,7 +109,7 @@ describe('the two views', () => {
     expect(within(views).getByRole('link', { name: 'Canvas' })).toHaveAttribute('aria-current', 'page')
     // The head is the same: the button that adds an idea and the way to the boards.
     expect(screen.getByRole('link', { name: 'Add an inspiration' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Edit the boards' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Add or change boards' })).toBeInTheDocument()
 
     await userEvent.click(within(views).getByRole('link', { name: 'Grid' }))
     expect(await screen.findByRole('article', { name: 'Lace sleeves' })).toBeInTheDocument()
