@@ -46,6 +46,11 @@
    "link": "EP5-S1"
   },
   {
+   "path": "docs/specs/S10-steps-on-the-phone.md",
+   "type": "REQUIREMENTS",
+   "link": "EP4-S2"
+  },
+  {
    "path": "docs/deployment.md",
    "type": "DEPLOYMENT",
    "link": "EP3-S1"

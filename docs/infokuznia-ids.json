@@ -852,6 +852,18 @@
    "publicId": "WP-TS-109",
    "id": "ac74626d-bc35-4504-8796-1ac6bdaae57e",
    "title": "Android: a new board can be named while sharing"
+  },
+  "EP4-S2-T5": {
+   "type": "task",
+   "publicId": "WP-TS-110",
+   "id": "a048cd83-890f-449a-a056-ee6fd417c0f8",
+   "title": "Spec: steps of the plan are added and changed on the phone, and tasks are added to a step in a row"
+  },
+  "EP4-S2-T6": {
+   "type": "task",
+   "publicId": "WP-TS-111",
+   "id": "f2cf18f3-0a44-473f-a74f-d18e47f70315",
+   "title": "Android: add and change a step of the plan, and add tasks to a step in a row"
   }
  }
 }

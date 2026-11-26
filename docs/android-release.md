@@ -73,6 +73,17 @@ debug key (`keytool -list -v -keystore ~/.android/debug.keystore -alias androidd
 
 ## 4. Build
 
+The build has to know where the Android SDK is. Either the terminal has `ANDROID_HOME` pointing at it, or the
+file `android/local.properties` names it — once, and every later build finds it (the file is the Mac's own and
+is not part of the repository):
+
+```bash
+echo "sdk.dir=$HOME/Library/Android/sdk" > android/local.properties
+```
+
+That is where Android Studio puts the SDK on a Mac; with the SDK somewhere else, write that folder — the one
+that holds `platforms` and `build-tools`. Without either, the build stops with "SDK location not found".
+
 The server's address is part of the app, fixed when it is built, and a release build needs the https one:
 
 ```bash

@@ -1,0 +1,38 @@
+{
+ "projectCode": "WP",
+ "tasks": [
+  {
+   "key": "EP4-S2-T5",
+   "story": "EP4-S2",
+   "title": "Spec: steps of the plan are added and changed on the phone, and tasks are added to a step in a row",
+   "description": "The owner wants to add steps of the plan on the phone and to add points to them there. The phone only shows the plan; a task can be added to a step, one at a time through the whole form. S10 says that a step of the plan can be added and changed on the phone like a task - also without a connection - what its form holds, and that several tasks can be added to a step one after the other. The release guide gains the line it lacked: where the build finds the Android SDK. Done when the documents are committed and mirrored.",
+   "dependsOn": [],
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "documentation"
+   ]
+  },
+  {
+   "key": "EP4-S2-T6",
+   "story": "EP4-S2",
+   "title": "Android: add and change a step of the plan, and add tasks to a step in a row",
+   "description": "As S10 says. The plan's screen offers to add a step; a step opens on a form of its own - its name, its first and last day, its status, its priority, who does it, its category and its vendor - with the planner's own rules and words. Adding and changing a step waits like a task's change and is sent when there is a connection; a new step gets its id on the phone, and an edit is never sent over a newer version. From a step, tasks are added one after the other without leaving the form. Done when the screens' and the repository's tests cover it, the database carries over from the older layout, the pictures of the form and the plan were looked at, and the gate passes.",
+   "dependsOn": [
+    "EP4-S2-T5"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  }
+ ]
+}
