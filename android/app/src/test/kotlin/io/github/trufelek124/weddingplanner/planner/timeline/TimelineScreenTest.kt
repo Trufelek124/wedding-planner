@@ -200,7 +200,7 @@ class TimelineScreenTest : SignedInPhoneTest() {
         server.planner(entries = listOf(music))
         openTheTimeline()
 
-        compose.onNodeWithText("Nothing with dates to show here. A step gets its dates in the web app.").assertIsDisplayed()
+        compose.onNodeWithText("Nothing with dates to show here. Give a step its first and last day in the list, and it comes here.").assertIsDisplayed()
         compose.onNodeWithText("1 step without dates is only in the list.").assertIsDisplayed()
         compose.onNodeWithText("Later").assertDoesNotExist()
     }

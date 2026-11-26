@@ -170,7 +170,12 @@ data class ChangeRow(
     val trouble: String? = null,
     /** For REFUSED: what is wrong with which field, as JSON. */
     val refusals: String? = null,
-)
+    /** What the entry is: TASK, or PLAN_ITEM for a step of the plan. A change made before version 12 is of a task. */
+    @ColumnInfo(defaultValue = "'TASK'") val entryKind: String = "TASK",
+) {
+    /** The title is the couple's own: nothing of it, or of the body, gets printed. */
+    override fun toString(): String = "ChangeRow[seq=$seq, entryId=$entryId, kind=$kind]"
+}
 
 /** A board inspirations are collected on, for choosing one when something is shared to the planner. */
 @Entity(tableName = "board")

@@ -1,6 +1,7 @@
 # S10 — Steps of the plan on the phone
 
-**Status:** written on 2026-11-26 at the owner's request. **Builds on:** S01 section 4 (the plan: steps with
+**Status:** written on 2026-11-26 at the owner's request, and built (WP-TS-111), tested against stand-ins;
+not yet tried on a real phone. **Builds on:** S01 section 4 (the plan: steps with
 tasks) and its part on the phone ("everything visible, quick actions"), D-005. **Story:** WP-US-13.
 
 ## 1. What this covers
@@ -23,7 +24,7 @@ waits for; moving a step on the timeline, which on the phone only shows (S01).
 - A step in the list **opens on its form** when it is pressed, as a task does.
 - **The form of a step** holds: its name; its first day and its last day; its status; its priority — set by the
   planner or chosen by hand, with what the planner works out, as on a task's form; who does it; its category; its
-  vendor. It has no "belongs to" and no amount: those are a task's.
+  vendor; its notes. It has no "belongs to" and no amount: those are a task's.
 - **The planner's own rules hold**, with the words of the web's form: a name is needed; a step has both days or
   none ("Enter the end date too, or leave both dates empty."); the last day is not before the first. What the
   phone can tell by itself it says beside the field before anything is sent; what only the server can tell comes
@@ -43,7 +44,8 @@ waits for; moving a step on the timeline, which on the phone only shows (S01).
 
 - Under a step that is open, **Add a task to this** stays where it is.
 - The form that it opens — and only that one — has, beside "Save", **Save and add another**: the task is kept,
-  the form stays, empty again and still belonging to that step, with the keyboard in the title. So the points of
+  the form stays, empty again and still belonging to that step, with the keyboard in the title, and says how
+  many were kept so far. So the points of
   a step are typed one after the other.
 - Each of them is a task like any other: kept at once, shown under the step, sent when there is a connection.
 - "Save" keeps the last one and leads back to the plan, as before; "Cancel" keeps nothing more and leads back —

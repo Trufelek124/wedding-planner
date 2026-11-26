@@ -42,7 +42,7 @@ internal fun TaskFields.toJson(): JsonObject = buildJsonObject {
     put("notes", notes)
     put("categoryId", text(categoryId))
     // A task has no first day; only a step of the plan has one.
-    put("startDate", JsonNull)
+    put("startDate", text(startDate?.toString()))
     put("dueDate", text(dueDate?.toString()))
     put("status", if (status == Status.OTHER) Status.NOT_STARTED.name else status.name)
     put("assigneeIds", JsonArray(assigneeIds.map(::JsonPrimitive)))
@@ -70,6 +70,7 @@ internal fun fieldsOf(json: JsonObject): TaskFields = TaskFields(
     notes = json.textOf("notes").orEmpty(),
     categoryId = json.textOf("categoryId"),
     dueDate = day(json.textOf("dueDate")),
+    startDate = day(json.textOf("startDate")),
     status = Status.entries.firstOrNull { it.name == json.textOf("status") } ?: Status.NOT_STARTED,
     assigneeIds = (json["assigneeIds"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty(),
     priorityByHand = Priority.entries.firstOrNull { it.name == json.textOf("priority") }.takeIf { json.textOf("priorityMode") == "MANUAL" },
@@ -80,6 +81,9 @@ internal fun fieldsOf(json: JsonObject): TaskFields = TaskFields(
     paidOn = day(json.textOf("paidOn")),
 )
 
+/** What a waiting change adds: a step of the plan, or else a task, as every change was before version 12. */
+internal fun kindOf(change: ChangeRow): Kind = Kind.entries.firstOrNull { it.name == change.entryKind } ?: Kind.TASK
+
 internal fun bodyOf(change: ChangeRow): JsonObject = Json.parseToJsonElement(change.body).jsonObject
 
 internal fun statusBody(status: Status): JsonObject = buildJsonObject { put("status", status.name) }
@@ -89,7 +93,7 @@ internal fun statusBody(status: Status): JsonObject = buildJsonObject { put("sta
  * phone gave it, a changed one with the version the change was made on, or only the new status.
  */
 internal fun requestOf(change: ChangeRow): JsonObject = when (change.kind) {
-    ChangeKind.ADD -> JsonObject(bodyOf(change) + ("id" to JsonPrimitive(change.entryId)) + ("kind" to JsonPrimitive(Kind.TASK.name)))
+    ChangeKind.ADD -> JsonObject(bodyOf(change) + ("id" to JsonPrimitive(change.entryId)) + ("kind" to JsonPrimitive(kindOf(change).name)))
     ChangeKind.EDIT -> JsonObject(bodyOf(change) + ("version" to JsonPrimitive(change.baseVersion)))
     else -> bodyOf(change)
 }
@@ -115,6 +119,7 @@ internal fun fieldsOf(row: EntryRow): TaskFields = TaskFields(
     notes = row.notes,
     categoryId = row.categoryId,
     dueDate = day(row.dueDate),
+    startDate = day(row.startDate),
     status = Status.entries.firstOrNull { it.name == row.status } ?: Status.OTHER,
     assigneeIds = if (row.assigneeIds.isEmpty()) emptyList() else row.assigneeIds.split(","),
     priorityByHand = Priority.entries.firstOrNull { it.name == row.priority }.takeIf { row.priorityMode == "MANUAL" },

@@ -172,7 +172,11 @@ first uses it, at the version D-005 names.
   per task; a further one is folded into it. A new task gets its id on the phone. An edit carries the version it
   was made on and is never sent over a newer one: the task then shows the latest version and says that it has to
   be looked at. What the phone sends is JSON written by hand in `data/Changes.kt`, held against the generated
-  request models by `ChangesAgreeWithTheContractTest`.
+  request models by `ChangesAgreeWithTheContractTest`. **A step of the plan is added and changed the same way**
+  (S10): the change says which kind of entry it is (`ChangeRow.entryKind`; what waited before that is a task),
+  a step is sent before the tasks that were added to it, and `TaskForm` is the one form for both — its `kind`
+  decides the fields (a step has a first and a last day, and no "belongs to" and no payment). Opened by "Add a
+  task to this", the form has "Save and add another", which keeps the task and stays on the step.
 - The planner is in other apps' share sheet for a link (apps hand one over as plain text) and for pictures:
   `share/ShareActivity`, declared in the manifest, reads what was handed over with `sharedOf(intent)`. Saving
   keeps the share in the table `waiting_share`, with its pictures copied into the app's own folder (the other app
@@ -198,7 +202,8 @@ first uses it, at the version D-005 names.
   (`planner/MoreContent.kt`) and an entry in `BEHIND_MORE` in `PlannerScreens.kt`, which gives it its title (the
   name of the vendor, guest or idea it shows), the arrow back at the top, and keeps More chosen below. The budget,
   the vendors, the guests and the inspirations are only shown on the phone and are set on the web; what can be
-  changed there is a guest's status, and an inspiration is added through the share sheet (S01 §4).
+  changed there is a guest's status, and an inspiration is added through the share sheet (S01 §4). Tasks and
+  steps of the plan are added and changed on the phone; removing one, and what a step waits for, stay on the web.
 - The inspirations are part of the copy (`inspiration`, `inspiration_picture`) and stand on a board behind More,
   narrowed down by board and by tag; what was shared on the phone and still waits stands first. A card's face is a
   slot: the picture, in its own shape within bounds, and words where there is none to show. What a waiting share's
@@ -256,7 +261,7 @@ first uses it, at the version D-005 names.
   leaves out what such a copy cannot know and never shows it as nothing (`categoriesKnown` in `BudgetWords.kt`).
 - The plan's timeline (`planner/timeline/`) is drawn by us, like the web's chart (D-001): where a bar lies is
   arithmetic on its dates (`TimelineLayout.kt`), tested without a screen. It only shows: nothing on it can be
-  moved. Time scrolls sideways on a node of its own, around the list that scrolls up and down; putting both on
+  moved (a step's days are changed on its form, and a step that waits to be sent says so there too). Time scrolls sideways on a node of its own, around the list that scrolls up and down; putting both on
   one node takes the list's own scrolling away from a screen reader. What a drag does, buttons do as well.
 - The release build is made small (R8) with names left as they are; `checkReleaseApk` looks into the finished app
   for what is only found by name when it runs. A class that Android or a library makes from its name goes on that
@@ -274,7 +279,10 @@ first uses it, at the version D-005 names.
 - A screen test that changes something uses `LivingPlanner`, a stand-in server that keeps what it is sent, and
   waits for what it then checks (`waitFor` a text, `waitUntil` a state of the server): the app answers a tap on
   threads of its own. The test's phone is switched off by the `SwitchedOffAfterwards` rule, after the screen is
-  gone; closing it earlier closes the database under an app that is still at work.
+  gone; closing it earlier closes the database under an app that is still at work. Two things made such tests
+  fail now and then, and both are waited for: a card that was just decided on is drawn anew, so its words are
+  waited for and not looked at at once; and a change made without a connection is tried at once, so that it is
+  "on its way" until the notice above the list counts it — only then can it be taken back.
 - A character that cannot be seen (a no-break space, a minus sign that is not a hyphen) is written as its escape
   (`\u00a0`), in Kotlin as in TypeScript.
 - A screen has a test that writes its picture: `compose.picture("name")` (`ui/Pictures.kt`), in a test class with

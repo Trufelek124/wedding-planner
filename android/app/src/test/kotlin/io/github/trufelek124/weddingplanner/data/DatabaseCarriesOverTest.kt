@@ -615,4 +615,59 @@ class DatabaseCarriesOverTest {
             database.close()
         }
     }
+
+    @Test
+    fun `what version 11 held is still there, a change that waited in it is of a task, and a step can wait beside it`() = runBlocking {
+        val file = folder.root.resolve("planner.db")
+        aDatabaseOfVersion(11, file) { old ->
+            old.execSQL(
+                """INSERT INTO planner (id, loadedAt, weddingDate, currency, timeZone, daysLeft, today, budgetTotal, budgetPlanned, budgetCommitted,
+                   budgetPaid, overdueIds, nextIds, nextPaymentIds)
+                   VALUES (1, 1795093500000, '2027-06-19', 'PLN', 'Europe/Warsaw', 213, '2026-11-18', NULL, 0, 0, 0, '', '', '')""",
+            )
+            old.execSQL(
+                """INSERT INTO entry (id, position, kind, title, notes, categoryId, startDate, dueDate, status, priorityMode, priority, priorityReason,
+                   parentId, vendorId, amount, paymentKind, paidOn, assigneeIds, taskCount, version)
+                   VALUES ('p1', 0, 'PLAN_ITEM', 'Book the venue', '', NULL, '2026-11-01', '2026-12-15', 'IN_PROGRESS', 'AUTO', 'HIGH', 'DUE_WITHIN_60_DAYS',
+                   NULL, NULL, NULL, NULL, NULL, '', 0, 4)""",
+            )
+            old.execSQL(
+                """INSERT INTO waiting_change (seq, entryId, kind, baseVersion, body, title, revision, trouble, refusals)
+                   VALUES (1, 'n1', 'ADD', 0, '{"title":"Ask about parking","notes":"","categoryId":null,"startDate":null,"dueDate":null,"status":"NOT_STARTED","assigneeIds":[],"priorityMode":"AUTO","priority":null,"parentId":"p1","vendorId":null,"amount":null,"paymentKind":null,"paidOn":null}', 'Ask about parking', 0, NULL, NULL)""",
+            )
+        }
+
+        val database = Room.databaseBuilder(context, PlannerDatabase::class.java, file.path).build()
+        try {
+            val stored = database.planner().stored()!!
+
+            // What waited is still a task: it is shown as one, and is sent as one.
+            val old = stored.changes.single()
+            assertEquals("TASK", old.entryKind)
+            assertEquals(Kind.TASK, kindOf(old))
+            assertEquals("TASK", requestOf(old).getValue("kind").jsonPrimitive.content)
+            val shown = plannerOf(stored)
+            assertEquals(listOf("n1"), shown.tasks.map { it.id })
+            assertEquals(listOf("p1"), shown.planItems.map { it.id })
+            assertEquals(Waiting.TO_BE_SENT, shown.entry("n1")!!.waiting)
+
+            // A step can wait beside it, as a step, and a sign-out takes both away.
+            database.planner().putChange(
+                ChangeRow(
+                    entryId = "n2", kind = ChangeKind.ADD, baseVersion = 0, entryKind = "PLAN_ITEM", title = "Send the invitations",
+                    body = TaskFields(title = "Send the invitations", startDate = java.time.LocalDate.of(2027, 3, 1), dueDate = java.time.LocalDate.of(2027, 4, 15)).toJson().toString(),
+                ),
+            )
+            val after = plannerOf(database.planner().stored()!!)
+            assertEquals(listOf("n2", "p1"), after.planItems.map { it.id })
+            assertEquals(listOf("n1"), after.tasks.map { it.id })
+            assertEquals("PLAN_ITEM", requestOf(database.planner().changes().last()).getValue("kind").jsonPrimitive.content)
+            assertEquals(2, after.unsent)
+
+            database.planner().forget()
+            assertTrue(database.planner().changes().isEmpty())
+        } finally {
+            database.close()
+        }
+    }
 }

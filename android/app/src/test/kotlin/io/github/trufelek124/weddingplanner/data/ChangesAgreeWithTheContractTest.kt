@@ -79,6 +79,55 @@ class ChangesAgreeWithTheContractTest {
         strict.decodeFromJsonElement<EntryChange>(requestOf(change(ChangeKind.EDIT, plain)))
     }
 
+    private val step = TaskFields(
+        title = "Send the invitations", notes = "Printed.", categoryId = "c1", startDate = LocalDate.of(2027, 3, 1), dueDate = LocalDate.of(2027, 4, 15),
+        status = Status.IN_PROGRESS, assigneeIds = listOf(StandIn.ANNA), priorityByHand = Priority.HIGH, vendorId = "v1",
+    )
+
+    private fun stepChange(kind: String, fields: TaskFields, baseVersion: Int = 0) =
+        ChangeRow(entryId = id, kind = kind, baseVersion = baseVersion, body = fields.toJson().toString(), title = fields.title, entryKind = Kind.PLAN_ITEM.name)
+
+    @Test
+    fun `a new step is a NewEntry of the contract of the kind PLAN_ITEM, with its two days and no money`() {
+        val read = strict.decodeFromJsonElement<NewEntry>(requestOf(stepChange(ChangeKind.ADD, step)))
+
+        assertEquals(id, read.id)
+        assertEquals(NewEntry.Kind.PLAN_ITEM, read.kind)
+        assertEquals("Send the invitations", read.title)
+        assertEquals("2027-03-01", read.startDate.toString())
+        assertEquals("2027-04-15", read.dueDate.toString())
+        assertEquals(NewEntry.Status.IN_PROGRESS, read.status)
+        assertEquals(NewEntry.PriorityMode.MANUAL, read.priorityMode)
+        assertEquals(NewEntry.Priority.HIGH, read.priority)
+        assertEquals("c1", read.categoryId)
+        assertEquals("v1", read.vendorId)
+        assertNull(read.parentId)
+        assertNull(read.amount)
+        assertNull(read.paymentKind)
+        assertNull(read.paidOn)
+        strict.decodeFromJsonElement<NewEntry>(requestOf(stepChange(ChangeKind.ADD, TaskFields(title = "Choose the music"))))
+    }
+
+    @Test
+    fun `a changed step is an EntryChange of the contract, with its days and the version it was made on`() {
+        val read = strict.decodeFromJsonElement<EntryChange>(requestOf(stepChange(ChangeKind.EDIT, step, baseVersion = 4)))
+
+        assertEquals(4, read.version)
+        assertEquals("2027-03-01", read.startDate.toString())
+        assertEquals("2027-04-15", read.dueDate.toString())
+        assertEquals(EntryChange.Status.IN_PROGRESS, read.status)
+        assertNull(read.parentId)
+        assertNull(read.amount)
+    }
+
+    @Test
+    fun `a task is still a task, and sends no first day`() {
+        assertEquals(NewEntry.Kind.TASK, strict.decodeFromJsonElement<NewEntry>(requestOf(change(ChangeKind.ADD, full))).kind)
+        assertNull(strict.decodeFromJsonElement<EntryChange>(requestOf(change(ChangeKind.EDIT, full))).startDate)
+        // A change that was made before the kind was kept says nothing of it: it is a task.
+        assertEquals(Kind.TASK, kindOf(ChangeRow(entryId = id, kind = ChangeKind.ADD, baseVersion = 0, body = "{}", title = "x", entryKind = "")))
+    }
+
     @Test
     fun `a tick is an EntryStatusChange of the contract, whichever way it goes`() {
         for (status in listOf(Status.DONE, Status.NOT_STARTED, Status.IN_PROGRESS, Status.DROPPED)) {

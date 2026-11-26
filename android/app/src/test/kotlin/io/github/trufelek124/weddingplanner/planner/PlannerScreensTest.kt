@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.isSelectable
@@ -198,13 +199,14 @@ class PlannerScreensTest : SignedInPhoneTest() {
     }
 
     @Test
-    fun `an empty plan says where the plan is made`() {
+    fun `an empty plan says that a step can be added`() {
         server.planner()
         open()
 
         goTo("Plan")
 
-        compose.onNodeWithText("Nothing in the plan yet. The plan is put together in the web app.").assertIsDisplayed()
+        compose.onNodeWithText("Nothing in the plan yet. Add the first step with the button below.").assertIsDisplayed()
+        compose.onNode(hasText("Add a step") and hasClickAction()).assertIsDisplayed()
     }
 
     // ---------------------------------------------------------------- the tasks

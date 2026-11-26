@@ -127,10 +127,14 @@ private val BEHIND_MORE = listOf(
 private const val TASK = "task"
 private const val TASK_ROUTE = "$TASK?id={id}&parent={parent}"
 
+/** Where a step of the plan is added or changed: "step?id=…" for an existing one, "step" for a new one. */
+private const val STEP = "step"
+private const val STEP_ROUTE = "$STEP?id={id}"
+
 /** What a person can change, handed down from whoever keeps the planner. */
 class Changes(
     val setStatus: (Entry, Boolean) -> Unit,
-    val add: (TaskFields) -> Unit,
+    val add: (TaskFields, Kind) -> Unit,
     val edit: (taskId: String, TaskFields) -> Unit,
     val letGo: (taskId: String) -> Unit,
     val letGoOfShare: (shareId: String) -> Unit = {},
@@ -253,12 +257,13 @@ private fun Places(
     val route = current?.destination?.route
     val behind = BEHIND_MORE.firstOrNull { it.route == route }
     val here = if (behind != null) Place.MORE else Place.entries.firstOrNull { it.route == route } ?: Place.HOME
-    val onTheForm = route == TASK_ROUTE
-    val changingATask = onTheForm && current?.arguments?.getString("id") != null
+    val onTheStepForm = route == STEP_ROUTE
+    val onTheForm = route == TASK_ROUTE || onTheStepForm
+    val changingAnEntry = onTheForm && current?.arguments?.getString("id") != null
     val loadedOn = moment(planner.loadedAt, clock.zone)
     val actions = TaskActions(
         tick = changes.setStatus,
-        open = { task -> navigation.navigate("$TASK?id=${task.id}") },
+        open = { entry -> navigation.navigate(if (entry.kind == Kind.PLAN_ITEM) "$STEP?id=${entry.id}" else "$TASK?id=${entry.id}") },
         add = { parentId -> navigation.navigate(if (parentId == null) TASK else "$TASK?parent=$parentId") },
         source = { suggestionId -> navigation.navigate("$SOURCE?id=${Uri.encode(suggestionId)}") },
     )
@@ -269,7 +274,8 @@ private fun Places(
             TopAppBar(
                 title = {
                     val title = when {
-                        onTheForm -> stringResource(if (changingATask) R.string.task_change else R.string.task_add)
+                        onTheStepForm -> stringResource(if (changingAnEntry) R.string.step_change else R.string.step_add)
+                        onTheForm -> stringResource(if (changingAnEntry) R.string.task_change else R.string.task_add)
                         // One vendor or guest is named by its name; one that is gone has none.
                         behind != null ->
                             current?.arguments?.getString("id")?.let { id -> behind.nameOf?.invoke(planner, id) }
@@ -324,11 +330,11 @@ private fun Places(
             }
         },
         floatingActionButton = {
-            if (here == Place.TASKS && !onTheForm) {
+            if ((here == Place.TASKS || here == Place.PLAN) && !onTheForm) {
                 // Its words are always there: the ready-made button with a label brings them in with an animation,
                 // and until that has run a screen reader finds a button without a name.
                 FloatingActionButton(
-                    onClick = { actions.add(null) },
+                    onClick = { if (here == Place.PLAN) navigation.navigate(STEP) else actions.add(null) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 ) {
@@ -338,7 +344,7 @@ private fun Places(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     ) {
                         Icon(painterResource(R.drawable.ic_add), contentDescription = null)
-                        Text(stringResource(R.string.task_add), style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(if (here == Place.PLAN) R.string.step_add else R.string.task_add), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -384,7 +390,7 @@ private fun Places(
                             }
                         }
                     }
-                    composable(Place.PLAN.route) { PlanContent(planner, today = today, actions = actions, foot = loaded) }
+                    composable(Place.PLAN.route) { PlanContent(planner, today = today, actions = actions, foot = loadedUnderTheButton) }
                     composable(Place.TASKS.route) { TasksContent(planner, actions = actions, foot = loadedUnderTheButton) }
                     composable(Place.MORE.route) {
                         MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }, onVendors = { navigation.navigate(VENDORS) }, onGuests = { navigation.navigate(GUESTS) }, onInspirations = { navigation.navigate(INSPIRATIONS) }, onSuggestions = { navigation.navigate(SUGGESTIONS) }) {
@@ -506,6 +512,7 @@ private fun Places(
                         ),
                     ) { entry ->
                         val id = entry.arguments?.getString("id")
+                        val parent = entry.arguments?.getString("parent")
                         val task = id?.let(planner::entry)?.takeIf { it.kind == Kind.TASK }
                         if (id != null && task == null) {
                             // Deleted elsewhere while the form was open, or on its way here.
@@ -516,16 +523,56 @@ private fun Places(
                         } else {
                             TaskForm(
                                 planner = planner,
+                                kind = Kind.TASK,
                                 task = task,
-                                parentId = entry.arguments?.getString("parent"),
+                                parentId = parent,
                                 today = today,
                                 onSave = { fields ->
-                                    if (task == null) changes.add(fields) else changes.edit(task.id, fields)
+                                    if (task == null) changes.add(fields, Kind.TASK) else changes.edit(task.id, fields)
+                                    navigation.popBackStack()
+                                },
+                                // Only the form that "Add a task to this" opens: one task after the other for the same step.
+                                onSaveAndAddAnother = if (task == null && parent != null) { fields -> changes.add(fields, Kind.TASK) } else null,
+                                onCancel = { navigation.popBackStack() },
+                                onLetGo = {
+                                    task?.let { changes.letGo(it.id) }
+                                    navigation.popBackStack()
+                                },
+                                onSource = actions.source,
+                            )
+                        }
+                    }
+                    composable(
+                        route = STEP_ROUTE,
+                        arguments = listOf(
+                            navArgument("id") {
+                                type = NavType.StringType
+                                nullable = true
+                            },
+                        ),
+                    ) { entry ->
+                        val id = entry.arguments?.getString("id")
+                        val step = id?.let(planner::entry)?.takeIf { it.kind == Kind.PLAN_ITEM }
+                        if (id != null && step == null) {
+                            // Deleted elsewhere while the form was open, or on its way here.
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(stringResource(R.string.step_not_there), style = MaterialTheme.typography.bodyLarge)
+                                QuietButton(stringResource(R.string.back), onClick = { navigation.popBackStack() })
+                            }
+                        } else {
+                            TaskForm(
+                                planner = planner,
+                                kind = Kind.PLAN_ITEM,
+                                task = step,
+                                parentId = null,
+                                today = today,
+                                onSave = { fields ->
+                                    if (step == null) changes.add(fields, Kind.PLAN_ITEM) else changes.edit(step.id, fields)
                                     navigation.popBackStack()
                                 },
                                 onCancel = { navigation.popBackStack() },
                                 onLetGo = {
-                                    task?.let { changes.letGo(it.id) }
+                                    step?.let { changes.letGo(it.id) }
                                     navigation.popBackStack()
                                 },
                                 onSource = actions.source,
@@ -566,7 +613,7 @@ private fun Notice(text: String, action: @Composable () -> Unit = {}) {
 /** A change whose task was deleted on the server meanwhile: it is named, and can only be let go of. */
 @Composable
 private fun NoLongerThere(gone: Gone, onOk: () -> Unit) {
-    Notice(stringResource(R.string.change_gone, gone.title)) {
+    Notice(stringResource(if (gone.step) R.string.change_gone_step else R.string.change_gone, gone.title)) {
         QuietButton(stringResource(R.string.change_gone_ok), onClick = onOk)
     }
 }

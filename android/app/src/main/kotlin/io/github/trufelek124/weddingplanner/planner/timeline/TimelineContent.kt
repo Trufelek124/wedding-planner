@@ -56,6 +56,7 @@ import io.github.trufelek124.weddingplanner.data.Status
 import io.github.trufelek124.weddingplanner.planner.NothingHere
 import io.github.trufelek124.weddingplanner.planner.shortDate
 import io.github.trufelek124.weddingplanner.planner.statusLabel
+import io.github.trufelek124.weddingplanner.planner.waitingInWords
 import io.github.trufelek124.weddingplanner.planner.whenInWords
 import io.github.trufelek124.weddingplanner.ui.QuietButton
 import java.time.LocalDate
@@ -298,7 +299,8 @@ private fun Step(bar: Bar, marks: Marks, moved: () -> Float, modifier: Modifier 
             modifier = Modifier.padding(top = 8.dp),
         )
         Text(
-            text = listOfNotNull(whenInWords(entry), statusLabel(entry.status)).joinToString(" · "),
+            // A step added or changed on this phone and not sent yet says so here too.
+            text = listOfNotNull(waitingInWords(entry.waiting), whenInWords(entry), statusLabel(entry.status)).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
             color = colours.onSurfaceVariant,
         )

@@ -119,7 +119,7 @@ class PlannerRepository(
         when {
             waiting == null -> {
                 if (row != null && row.status != status.name) {
-                    dao.putChange(ChangeRow(entryId = entryId, kind = ChangeKind.STATUS, baseVersion = row.version, body = statusBody(status).toString(), title = row.title))
+                    dao.putChange(ChangeRow(entryId = entryId, kind = ChangeKind.STATUS, baseVersion = row.version, body = statusBody(status).toString(), title = row.title, entryKind = row.kind))
                 }
             }
             // The entry has to be looked at first: see [letGo].
@@ -144,13 +144,15 @@ class PlannerRepository(
     }
 
     /**
-     * Adds a task. It gets its id here, on the phone, so that sending it twice adds it once.
+     * Adds a task, or a step of the plan. It gets its id here, on the phone, so that sending it twice adds it once. The
+     * changes are sent in the order they were made in: a task added to a step that still waits comes after it.
      *
-     * @return the new task's id
+     * @param kind what is added: a task, or a step of the plan ([Kind.PLAN_ITEM])
+     * @return the new entry's id
      */
-    suspend fun add(fields: TaskFields): String = written {
+    suspend fun add(fields: TaskFields, kind: Kind = Kind.TASK): String = written {
         val id = UUID.randomUUID().toString()
-        dao.putChange(ChangeRow(entryId = id, kind = ChangeKind.ADD, baseVersion = 0, body = fields.toJson().toString(), title = fields.title))
+        dao.putChange(ChangeRow(entryId = id, kind = ChangeKind.ADD, baseVersion = 0, body = fields.toJson().toString(), title = fields.title, entryKind = kind.name))
         id
     }
 
@@ -162,7 +164,7 @@ class PlannerRepository(
         when {
             waiting == null -> {
                 if (row != null && fields.copy(assigneeIds = fields.assigneeIds.sorted()) != fieldsOf(row).let { it.copy(assigneeIds = it.assigneeIds.sorted()) }) {
-                    dao.putChange(ChangeRow(entryId = entryId, kind = ChangeKind.EDIT, baseVersion = row.version, body = body, title = fields.title))
+                    dao.putChange(ChangeRow(entryId = entryId, kind = ChangeKind.EDIT, baseVersion = row.version, body = body, title = fields.title, entryKind = row.kind))
                 }
             }
             waiting.kind == ChangeKind.ADD ->
@@ -911,8 +913,8 @@ internal fun plannerOf(stored: Stored): Planner {
         val waiting = if (change.trouble == Trouble.REFUSED) Waiting.REFUSED else Waiting.TO_BE_SENT
         when {
             change.kind == ChangeKind.ADD -> added += added(change, waiting)
-            // The task is no longer on the server: the change can only be let go of.
-            there == null || change.trouble == Trouble.GONE -> gone += Gone(change.entryId, change.title)
+            // The task or the step is no longer on the server: the change can only be let go of.
+            there == null || change.trouble == Trouble.GONE -> gone += Gone(change.entryId, change.title, step = change.entryKind == Kind.PLAN_ITEM.name)
             // What is shown is the latest version; the change stays aside until the person has looked.
             change.trouble == Trouble.CHANGED_MEANWHILE -> entries[there.id] = there.copy(waiting = Waiting.CHANGED_MEANWHILE)
             change.kind == ChangeKind.STATUS -> entries[there.id] = there.copy(status = statusOf(bodyOf(change)), waiting = waiting)
@@ -1059,11 +1061,11 @@ private fun countsOf(stored: String): GuestCounts? {
     return GuestCounts(head(counts.total), statuses(counts.byStatus), counts.bySide.map { SideCount(it.sideMemberId, head(it.count), statuses(it.byStatus)) })
 }
 
-/** A task that so far exists only on the phone. */
+/** A task or a step of the plan that so far exists only on the phone. */
 private fun added(change: ChangeRow, waiting: Waiting): Entry {
     val fields = fieldsOf(bodyOf(change))
     return Entry(
-        id = change.entryId, kind = Kind.TASK, title = fields.title, notes = fields.notes, categoryId = fields.categoryId, startDate = null,
+        id = change.entryId, kind = kindOf(change), title = fields.title, notes = fields.notes, categoryId = fields.categoryId, startDate = fields.startDate,
         dueDate = fields.dueDate, status = fields.status, priority = fields.priorityByHand ?: Priority.NORMAL,
         // How urgent it is the server works out once it has it.
         priorityReason = if (fields.priorityByHand == null) Entry.NOT_WORKED_OUT else "SET_BY_HAND",
@@ -1074,7 +1076,7 @@ private fun added(change: ChangeRow, waiting: Waiting): Entry {
 }
 
 private fun changed(entry: Entry, fields: TaskFields, waiting: Waiting, refusals: Map<String, String>): Entry = entry.copy(
-    title = fields.title, notes = fields.notes, categoryId = fields.categoryId, dueDate = fields.dueDate, status = fields.status,
+    title = fields.title, notes = fields.notes, categoryId = fields.categoryId, startDate = fields.startDate, dueDate = fields.dueDate, status = fields.status,
     assigneeIds = fields.assigneeIds, parentId = fields.parentId, vendorId = fields.vendorId, amount = fields.amount,
     paymentKind = fields.paymentKind, paidOn = fields.paidOn, byHand = fields.priorityByHand != null,
     priority = fields.priorityByHand ?: entry.priority,

@@ -1,5 +1,6 @@
 package io.github.trufelek124.weddingplanner.planner
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
 import io.github.trufelek124.weddingplanner.data.Decision
 import io.github.trufelek124.weddingplanner.data.LivingPlanner
@@ -81,15 +83,25 @@ class SuggestionDecisionsScreenTest : SignedInPhoneTest() {
     }
 
     private fun accept(title: String) {
-        shown("Accept “$title”").performClick()
+        press("Accept “$title”")
     }
 
     private fun reject(title: String) {
-        shown("Reject “$title”").performClick()
+        press("Reject “$title”")
     }
 
     private fun takeBack(title: String) {
-        shown("Take back your decision on “$title”").performClick()
+        press("Take back your decision on “$title”")
+    }
+
+    /**
+     * Presses a card's button through the button's own action, not through a touch at the place it lay a moment
+     * ago: after a decision the notice above the list grows or shrinks by a line ("1 change is waiting to be
+     * sent"), the list moves under it, and a touch aimed before that lands beside the button. That made these
+     * tests fail now and then. That a finger reaches the button is held by its height, which the tests check.
+     */
+    private fun press(description: String) {
+        shown(description).performSemanticsAction(SemanticsActions.OnClick)
     }
 
     private fun shown(description: String): SemanticsNodeInteraction {
@@ -112,6 +124,24 @@ class SuggestionDecisionsScreenTest : SignedInPhoneTest() {
 
     private fun waitUntilLoadedAgain() {
         waitUntil { server.routes("GET /api/suggestions").isNotEmpty() }
+    }
+
+    /**
+     * Waits until the words are on the screen: a card that has just been decided on is drawn anew, and for a
+     * moment its words are in the tree without being shown yet. Looking at once failed now and then.
+     */
+    private fun waitUntilDisplayed(text: String) {
+        waitUntil { runCatching { compose.onNodeWithText(text).performScrollTo().assertIsDisplayed() }.isSuccess }
+    }
+
+    /**
+     * A decision made without a connection is tried at once, and while that try is on its way it can be neither
+     * taken back nor replaced. The notice above the list counts it ("1 change is waiting to be sent.") once the
+     * try is over: a test that takes a decision back waits for that first. Pressing "Take back" at once worked
+     * only when the try happened to be over already, which made these tests fail now and then.
+     */
+    private fun waitUntilItOnlyWaits() {
+        waitUntil { compose.onAllNodes(hasText("waiting to be sent.", substring = true)).fetchSemanticsNodes().isNotEmpty() }
     }
 
     private fun waitUntilCardGone(title: String) {
@@ -184,7 +214,7 @@ class SuggestionDecisionsScreenTest : SignedInPhoneTest() {
         accept("Send the guest list")
 
         waitFor("Waiting to be sent")
-        compose.onNodeWithText("Accepted").assertIsDisplayed()
+        waitUntilDisplayed("Accepted")
         // The two buttons are replaced by the one that takes the decision back.
         compose.onNodeWithContentDescription("Accept “Send the guest list”").assertDoesNotExist()
         compose.onNodeWithContentDescription("Reject “Send the guest list”").assertDoesNotExist()
@@ -212,6 +242,7 @@ class SuggestionDecisionsScreenTest : SignedInPhoneTest() {
         server.down = true
         reject("Send the guest list")
         waitFor("Waiting to be sent")
+        waitUntilItOnlyWaits()
 
         takeBack("Send the guest list")
 
@@ -237,6 +268,7 @@ class SuggestionDecisionsScreenTest : SignedInPhoneTest() {
         server.down = true
         accept("Send the guest list")
         waitFor("Waiting to be sent")
+        waitUntilItOnlyWaits()
         takeBack("Send the guest list")
         waitUntil { compose.onAllNodesWithText("Waiting to be sent").fetchSemanticsNodes().isEmpty() }
 
@@ -267,7 +299,7 @@ class SuggestionDecisionsScreenTest : SignedInPhoneTest() {
         takeBack("Send the guest list")
 
         waitFor("It is being sent and cannot be taken back.")
-        compose.onNodeWithText("Accepted").assertIsDisplayed()
+        waitUntilDisplayed("Accepted")
         compose.onNodeWithContentDescription("Take back your decision on “Send the guest list”").assertExists()
         mayAnswer.complete(Unit)
 
@@ -456,6 +488,7 @@ class SuggestionDecisionsScreenTest : SignedInPhoneTest() {
         server.down = true
         reject("Rehearsal dinner")
         waitFor("Waiting to be sent")
+        waitUntilItOnlyWaits()
         takeBack("Rehearsal dinner")
         waitUntil { compose.onAllNodesWithText("Waiting to be sent").fetchSemanticsNodes().isEmpty() }
         reject("Rehearsal dinner")

@@ -154,7 +154,7 @@
     <string name="filter_payments">Payments only</string>
     <string name="plan_scheduled">Scheduled</string>
     <string name="plan_not_scheduled">Not scheduled</string>
-    <string name="plan_empty">Nothing in the plan yet. The plan is put together in the web app.</string>
+    <string name="plan_empty">Nothing in the plan yet. Add the first step with the button below.</string>
     <string name="plan_nothing_to_do">Nothing in the plan is left to do.</string>
     <string name="tasks_empty">No tasks yet.</string>
     <string name="tasks_nothing_to_do">No tasks to do.</string>
@@ -172,6 +172,23 @@
     <string name="task_add_to_this">Add a task to this</string>
     <string name="task_change">Change the task</string>
     <string name="task_not_there">This task is no longer there.</string>
+    <string name="task_save_and_add_another">Save and add another</string>
+    <plurals name="task_kept_so_far">
+        <item quantity="one">%d task kept so far. Add the next one.</item>
+        <item quantity="other">%d tasks kept so far. Add the next one.</item>
+    </plurals>
+    <string name="step_add">Add a step</string>
+    <string name="step_change">Change the step</string>
+    <string name="step_not_there">This step is no longer there.</string>
+    <string name="step_name">Name</string>
+    <string name="step_name_needed">Enter a name.</string>
+    <string name="step_first_day">First day</string>
+    <string name="step_last_day">Last day</string>
+    <string name="step_end_needed">Enter the end date too, or leave both dates empty.</string>
+    <string name="step_end_before">The end date cannot be before the start date.</string>
+    <string name="step_waiting">A change to this step is waiting to be sent. What you save now takes its place.</string>
+    <string name="step_refused">This was not saved on the server. Put right what is marked, then save again.</string>
+    <string name="step_changed_meanwhile">Your change to this step was not sent: someone changed it on another device in the meantime. This is the latest version. Saving from here changes that version.</string>
     <string name="back">Back</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
@@ -193,6 +210,7 @@
     <string name="task_priority">Priority</string>
     <string name="task_priority_by_planner">Set by the planner</string>
     <string name="task_priority_by_planner_rule">The planner sets it from the due day: critical within 3 days, high within 14, normal within 60, low when later or with no day.</string>
+    <string name="step_priority_by_planner_rule">The planner sets it from the last day: critical within 3 days, high within 14, normal within 60, low when later or with no days.</string>
     <string name="task_priority_now">Now: %1$s.</string>
     <string name="task_priority_by_hand">You set this by hand. It stays until you change it here.</string>
     <string name="task_is_payment">This is a payment</string>
@@ -216,6 +234,7 @@
         <item quantity="other">%d changes are waiting to be sent.</item>
     </plurals>
     <string name="change_gone">Your change to “%1$s” could not be sent: the task no longer exists.</string>
+    <string name="change_gone_step">Your change to “%1$s” could not be sent: the step no longer exists.</string>
     <string name="change_gone_ok">OK</string>
     <string name="sign_out_ask">Sign out?</string>
     <plurals name="sign_out_loses">
@@ -270,7 +289,7 @@
     <string name="timeline_wedding">Wedding day</string>
     <string name="timeline_marks">Today is %1$s. The wedding day is %2$s.</string>
     <string name="timeline_marks_today">Today is %1$s.</string>
-    <string name="timeline_empty">Nothing with dates to show here. A step gets its dates in the web app.</string>
+    <string name="timeline_empty">Nothing with dates to show here. Give a step its first and last day in the list, and it comes here.</string>
     <plurals name="timeline_without_dates">
         <item quantity="one">%d step without dates is only in the list.</item>
         <item quantity="other">%d steps without dates are only in the list.</item>

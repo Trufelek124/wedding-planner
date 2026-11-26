@@ -130,7 +130,12 @@ private fun PlanItem(item: Entry, planner: Planner, actions: TaskActions?) {
     val tasks = planner.tasksOf(item)
     var open by rememberSaveable(item.id) { mutableStateOf(false) }
     Column {
-        EntryLine(item, planner, withSource = false)
+        // A step opens on its form, as a task does; the timeline only shows.
+        val change = stringResource(R.string.task_open)
+        EntryLine(
+            item, planner, withSource = false,
+            modifier = if (actions == null) Modifier else Modifier.clickable(onClickLabel = change, role = Role.Button) { actions.open(item) },
+        )
         item.fromSuggestionId?.let { id ->
             FromEmail(planner.suggestion(id), actions?.let { shown -> { shown.source(id) } })
         }

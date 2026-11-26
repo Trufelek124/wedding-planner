@@ -22,19 +22,25 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -46,6 +52,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.trufelek124.weddingplanner.R
 import io.github.trufelek124.weddingplanner.data.Entry
+import io.github.trufelek124.weddingplanner.data.Kind
 import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.data.Priority
 import io.github.trufelek124.weddingplanner.data.Status
@@ -61,21 +68,27 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /** The fields a refusal of the server is shown beside; what it says about any other field is listed at the top. */
-private val SHOWN_BESIDE = setOf("title", "dueDate", "categoryId", "parentId", "vendorId", "amount", "paidOn")
+private val SHOWN_BESIDE = setOf("title", "startDate", "dueDate", "categoryId", "parentId", "vendorId", "amount", "paidOn")
 
 /**
- * Adds a task or changes one, a payment's money included. What is saved is kept on the phone at
- * once and sent when the server can be reached; the form does not wait for that.
+ * Adds a task or a step of the plan, or changes one; for a task a payment's money included. A task and a step are the
+ * same form that knows which it holds: a step has a first day and a last day where a task has a due day, and has neither
+ * "Belongs to" nor money. What is saved is kept on the phone at once and sent when the server can be reached; the form
+ * does not wait for that.
  *
- * @param task the task to change; null for a new one
+ * @param kind what the form holds: a task, or a step of the plan ([Kind.PLAN_ITEM])
+ * @param task the task or step to change; null for a new one
  * @param parentId for a new task: the step of the plan it is added to
  * @param today the date where the wedding takes place, by the phone's clock
- * @param onLetGo for a task whose change could not be sent: give the change up and keep the latest version
- * @param onSource where a task that a suggestion made leads to its source; null where it does not
+ * @param onLetGo for an entry whose change could not be sent: give the change up and keep the latest version
+ * @param onSource where an entry that a suggestion made leads to its source; null where it does not
+ * @param onSaveAndAddAnother where there is one, "Save and add another" stands beside "Save": it keeps what was filled in, and the
+ *   form stays, empty again and with the same [parentId]; null where the form does not offer it
  */
 @Composable
 fun TaskForm(
     planner: Planner,
+    kind: Kind,
     task: Entry?,
     parentId: String?,
     today: LocalDate,
@@ -84,11 +97,14 @@ fun TaskForm(
     onLetGo: () -> Unit,
     modifier: Modifier = Modifier,
     onSource: ((suggestionId: String) -> Unit)? = null,
+    onSaveAndAddAnother: ((TaskFields) -> Unit)? = null,
 ) {
+    val step = kind == Kind.PLAN_ITEM
     val from = task?.fields ?: TaskFields(title = "", parentId = parentId)
     val refused = task?.refusals.orEmpty()
 
     var title by rememberSaveable { mutableStateOf(from.title) }
+    var start by rememberSaveable { mutableStateOf(from.startDate?.let(::dayToType).orEmpty()) }
     var due by rememberSaveable { mutableStateOf(from.dueDate?.let(::dayToType).orEmpty()) }
     var status by rememberSaveable { mutableStateOf(if (from.status == Status.OTHER) Status.NOT_STARTED else from.status) }
     var who by rememberSaveable { mutableStateOf(from.assigneeIds.joinToString(",")) }
@@ -103,50 +119,108 @@ fun TaskForm(
     var notes by rememberSaveable { mutableStateOf(from.notes) }
     // Said once Save was pressed and something could not be read.
     var tried by rememberSaveable { mutableStateOf(false) }
+    // How many were kept with "Save and add another": said, so that a person sees that the last one was kept.
+    var kept by rememberSaveable { mutableStateOf(0) }
+    val titleField = remember { FocusRequester() }
+    val scroll = rememberScrollState()
 
     val whoIds = who.split(",").filter { it.isNotEmpty() }
-    val titleProblem = if (tried && title.isBlank()) stringResource(R.string.task_title_needed) else refused["title"]
-    val dueProblem = if (tried && due.isNotBlank() && dayTyped(due) == null) stringResource(R.string.task_day_unreadable) else refused["dueDate"]
-    val amountProblem = if (tried && payment && moneyTyped(amount, planner.currency).let { it == null || it == 0L }) {
+    val titleProblem = if (tried && title.isBlank()) stringResource(if (step) R.string.step_name_needed else R.string.task_title_needed) else refused["title"]
+    val startDay = if (step) dayTyped(start) else null
+    val dueDay = dayTyped(due)
+    val startProblem = if (tried && step && start.isNotBlank() && startDay == null) stringResource(R.string.task_day_unreadable) else refused["startDate"]
+    // A step has both days or none, and does not end before it begins: the planner's own rules, as the server words them.
+    val dueProblem = when {
+        tried && due.isNotBlank() && dueDay == null -> stringResource(R.string.task_day_unreadable)
+        tried && step && startDay != null && due.isBlank() -> stringResource(R.string.step_end_needed)
+        tried && step && startDay != null && dueDay != null && dueDay.isBefore(startDay) -> stringResource(R.string.step_end_before)
+        else -> refused["dueDate"]
+    }
+    val amountProblem = if (tried && !step && payment && moneyTyped(amount, planner.currency).let { it == null || it == 0L }) {
         stringResource(R.string.task_amount_unreadable)
     } else {
         refused["amount"]
     }
-    val paidProblem = if (tried && payment && status == Status.DONE && paidOn.isNotBlank() && dayTyped(paidOn) == null) {
+    val paidProblem = if (tried && !step && payment && status == Status.DONE && paidOn.isNotBlank() && dayTyped(paidOn) == null) {
         stringResource(R.string.task_day_unreadable)
     } else {
         refused["paidOn"]
     }
 
-    fun save() {
+    /** What was filled in, or null while something cannot be read: the form then says what, beside its field. */
+    fun filledIn(): TaskFields? {
         tried = true
-        val dueDay = if (due.isBlank()) null else dayTyped(due) ?: return
-        val costs = if (payment) moneyTyped(amount, planner.currency)?.takeIf { it > 0 } ?: return else null
-        val paidDay = if (!payment || status != Status.DONE || paidOn.isBlank()) null else dayTyped(paidOn) ?: return
-        if (title.isBlank()) {
-            return
+        val startedOn = if (!step || start.isBlank()) null else dayTyped(start) ?: return null
+        val dueOn = if (due.isBlank()) null else dayTyped(due) ?: return null
+        if (step && startedOn != null && (dueOn == null || dueOn.isBefore(startedOn))) {
+            return null
         }
-        onSave(
-            TaskFields(
-                title = title.trim(), notes = notes.trim(), categoryId = category, dueDate = dueDay, status = status, assigneeIds = whoIds,
-                priorityByHand = byHand, parentId = parent, vendorId = vendor, amount = costs, paymentKind = part.takeIf { payment }, paidOn = paidDay,
-            ),
+        val costs = if (step || !payment) null else moneyTyped(amount, planner.currency)?.takeIf { it > 0 } ?: return null
+        val paidDay = if (step || !payment || status != Status.DONE || paidOn.isBlank()) null else dayTyped(paidOn) ?: return null
+        if (title.isBlank()) {
+            return null
+        }
+        return TaskFields(
+            title = title.trim(), notes = notes.trim(), categoryId = category, dueDate = dueOn, status = status, assigneeIds = whoIds,
+            priorityByHand = byHand, parentId = if (step) null else parent, vendorId = vendor, amount = costs,
+            paymentKind = part.takeIf { payment && !step }, paidOn = paidDay, startDate = startedOn,
         )
     }
 
+    fun save() {
+        filledIn()?.let(onSave)
+    }
+
+    /** Keeps this one and starts the next: everything is empty again but the step the task belongs to. */
+    fun saveAndAddAnother() {
+        val another = onSaveAndAddAnother ?: return
+        another(filledIn() ?: return)
+        title = ""
+        start = ""
+        due = ""
+        status = Status.NOT_STARTED
+        who = ""
+        category = null
+        vendor = null
+        byHand = null
+        payment = false
+        amount = ""
+        part = null
+        paidOn = ""
+        notes = ""
+        tried = false
+        kept += 1
+    }
+
+    // The next one is typed at once: the keyboard goes into the title, and the form is at its top again.
+    LaunchedEffect(kept) {
+        if (kept > 0) {
+            scroll.scrollTo(0)
+            titleField.requestFocus()
+        }
+    }
+
     Column(
-        modifier = modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = modifier.fillMaxSize().imePadding().verticalScroll(scroll).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         when (task?.waiting) {
-            Waiting.CHANGED_MEANWHILE -> FormNotice(stringResource(R.string.task_changed_meanwhile)) {
+            Waiting.CHANGED_MEANWHILE -> FormNotice(stringResource(if (step) R.string.step_changed_meanwhile else R.string.task_changed_meanwhile)) {
                 QuietButton(stringResource(R.string.task_keep_latest), onClick = onLetGo)
             }
             Waiting.REFUSED -> FormNotice(
-                listOf(stringResource(R.string.task_refused)).plus(refused.filterKeys { it !in SHOWN_BESIDE }.values.filter { it.isNotBlank() }).joinToString(" "),
+                listOf(stringResource(if (step) R.string.step_refused else R.string.task_refused)).plus(refused.filterKeys { it !in SHOWN_BESIDE }.values.filter { it.isNotBlank() }).joinToString(" "),
             )
-            Waiting.TO_BE_SENT -> FormNotice(stringResource(R.string.task_waiting))
+            Waiting.TO_BE_SENT -> FormNotice(stringResource(if (step) R.string.step_waiting else R.string.task_waiting))
             null -> Unit
+        }
+
+        if (kept > 0) {
+            Text(
+                text = pluralStringResource(R.plurals.task_kept_so_far, kept, kept),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
         }
 
         task?.fromSuggestionId?.let { id -> FromEmail(planner.suggestion(id), onSource?.let { go -> { go(id) } }) }
@@ -154,14 +228,19 @@ fun TaskForm(
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
-            label = { Text(stringResource(R.string.task_title)) },
+            label = { Text(stringResource(if (step) R.string.step_name else R.string.task_title)) },
             isError = titleProblem != null,
             supportingText = titleProblem?.let { { Text(it) } },
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().focusRequester(titleField),
         )
 
-        DayField(stringResource(R.string.task_due), due, { due = it }, dueProblem, stringResource(R.string.task_due_hint), today)
+        if (step) {
+            DayField(stringResource(R.string.step_first_day), start, { start = it }, startProblem, stringResource(R.string.task_due_hint), today)
+            DayField(stringResource(R.string.step_last_day), due, { due = it }, dueProblem, stringResource(R.string.task_due_hint), today)
+        } else {
+            DayField(stringResource(R.string.task_due), due, { due = it }, dueProblem, stringResource(R.string.task_due_hint), today)
+        }
 
         Group(stringResource(R.string.task_status)) {
             for (choice in listOf(Status.NOT_STARTED, Status.IN_PROGRESS, Status.DONE, Status.DROPPED)) {
@@ -169,7 +248,7 @@ fun TaskForm(
             }
         }
 
-        PriorityGroup(task, byHand) { byHand = it }
+        PriorityGroup(task, byHand, step) { byHand = it }
 
         Group(stringResource(R.string.task_who)) {
             for (member in planner.members) {
@@ -181,14 +260,16 @@ fun TaskForm(
             }
         }
 
-        Choice(
-            label = stringResource(R.string.task_parent),
-            chosen = parent,
-            options = planner.planItems.map { it.id to it.title },
-            none = stringResource(R.string.task_no_parent),
-            onChoose = { parent = it },
-            problem = refused["parentId"],
-        )
+        if (!step) {
+            Choice(
+                label = stringResource(R.string.task_parent),
+                chosen = parent,
+                options = planner.planItems.map { it.id to it.title },
+                none = stringResource(R.string.task_no_parent),
+                onChoose = { parent = it },
+                problem = refused["parentId"],
+            )
+        }
         Choice(
             label = stringResource(R.string.task_category),
             chosen = category,
@@ -206,30 +287,32 @@ fun TaskForm(
             problem = refused["vendorId"],
         )
 
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text(stringResource(R.string.task_is_payment), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            val says = stringResource(R.string.task_is_payment)
-            Switch(checked = payment, onCheckedChange = { payment = it }, modifier = Modifier.semantics { contentDescription = says })
-        }
-        if (payment) {
-            OutlinedTextField(
-                value = amount,
-                onValueChange = { amount = it },
-                label = { Text(stringResource(R.string.task_amount, currencySign(planner.currency))) },
-                isError = amountProblem != null,
-                supportingText = { Text(amountProblem ?: stringResource(R.string.task_amount_hint)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Group(stringResource(R.string.task_part)) {
-                for ((kind, name) in listOf("DEPOSIT" to R.string.task_part_deposit, "INSTALMENT" to R.string.task_part_instalment, "FINAL" to R.string.task_part_final)) {
-                    // Pressing the chosen one again takes the choice away: saying which part is not required.
-                    FilterChip(selected = part == kind, onClick = { part = if (part == kind) null else kind }, label = { Text(stringResource(name)) })
-                }
+        if (!step) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.task_is_payment), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                val says = stringResource(R.string.task_is_payment)
+                Switch(checked = payment, onCheckedChange = { payment = it }, modifier = Modifier.semantics { contentDescription = says })
             }
-            if (status == Status.DONE) {
-                DayField(stringResource(R.string.task_paid_on), paidOn, { paidOn = it }, paidProblem, stringResource(R.string.task_paid_on_hint), today)
+            if (payment) {
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = { amount = it },
+                    label = { Text(stringResource(R.string.task_amount, currencySign(planner.currency))) },
+                    isError = amountProblem != null,
+                    supportingText = { Text(amountProblem ?: stringResource(R.string.task_amount_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Group(stringResource(R.string.task_part)) {
+                    for ((which, name) in listOf("DEPOSIT" to R.string.task_part_deposit, "INSTALMENT" to R.string.task_part_instalment, "FINAL" to R.string.task_part_final)) {
+                        // Pressing the chosen one again takes the choice away: saying which part is not required.
+                        FilterChip(selected = part == which, onClick = { part = if (part == which) null else which }, label = { Text(stringResource(name)) })
+                    }
+                }
+                if (status == Status.DONE) {
+                    DayField(stringResource(R.string.task_paid_on), paidOn, { paidOn = it }, paidProblem, stringResource(R.string.task_paid_on_hint), today)
+                }
             }
         }
 
@@ -243,7 +326,7 @@ fun TaskForm(
         )
 
         // Said beside the button, where the eye is after pressing it: what is marked may be far up the form.
-        if (tried && (title.isBlank() || dueProblem != null || amountProblem != null || paidProblem != null)) {
+        if (tried && (title.isBlank() || startProblem != null || dueProblem != null || amountProblem != null || paidProblem != null)) {
             Text(
                 text = stringResource(R.string.task_not_saved_yet),
                 style = MaterialTheme.typography.bodyMedium,
@@ -253,6 +336,9 @@ fun TaskForm(
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = ::save, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.save)) }
+            if (onSaveAndAddAnother != null) {
+                OutlinedButton(onClick = ::saveAndAddAnother, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.task_save_and_add_another)) }
+            }
             QuietButton(stringResource(R.string.cancel), onClick = onCancel)
         }
     }
@@ -331,7 +417,7 @@ private fun DayField(label: String, typed: String, onTyped: (String) -> Unit, pr
  * server has already worked out, what that came to and why.
  */
 @Composable
-private fun PriorityGroup(task: Entry?, byHand: Priority?, onChoose: (Priority?) -> Unit) {
+private fun PriorityGroup(task: Entry?, byHand: Priority?, step: Boolean = false, onChoose: (Priority?) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Group(stringResource(R.string.task_priority)) {
             FilterChip(selected = byHand == null, onClick = { onChoose(null) }, label = { Text(stringResource(R.string.task_priority_by_planner)) })
@@ -340,13 +426,15 @@ private fun PriorityGroup(task: Entry?, byHand: Priority?, onChoose: (Priority?)
             }
         }
         val workedOut = task?.takeIf { !it.byHand && it.waiting == null && it.priorityReason != Entry.NOT_WORKED_OUT }
+        // A task is reckoned from its due day, a step from its last day: each says its own.
+        val rule = stringResource(if (step) R.string.step_priority_by_planner_rule else R.string.task_priority_by_planner_rule)
         Text(
             text = if (byHand != null) {
                 stringResource(R.string.task_priority_by_hand)
             } else if (workedOut != null) {
-                stringResource(R.string.task_priority_by_planner_rule) + " " + stringResource(R.string.task_priority_now, priorityInWords(workedOut))
+                rule + " " + stringResource(R.string.task_priority_now, priorityInWords(workedOut))
             } else {
-                stringResource(R.string.task_priority_by_planner_rule)
+                rule
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

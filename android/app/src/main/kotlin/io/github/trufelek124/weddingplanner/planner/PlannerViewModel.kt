@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.github.trufelek124.weddingplanner.data.Decision
 import io.github.trufelek124.weddingplanner.data.Entry
 import io.github.trufelek124.weddingplanner.data.GuestStatus
+import io.github.trufelek124.weddingplanner.data.Kind
 import io.github.trufelek124.weddingplanner.data.Load
 import io.github.trufelek124.weddingplanner.data.Planner
 import io.github.trufelek124.weddingplanner.data.PlannerRepository
@@ -71,7 +72,8 @@ class PlannerViewModel(
     /** Ticks a task off, or takes the tick away. */
     fun setStatus(task: Entry, done: Boolean) = change { repository.setStatus(task.id, if (done) Status.DONE else Status.NOT_STARTED) }
 
-    fun add(fields: TaskFields) = change { repository.add(fields) }
+    /** Adds a task, or a step of the plan. */
+    fun add(fields: TaskFields, kind: Kind) = change { repository.add(fields, kind) }
 
     fun edit(taskId: String, fields: TaskFields) = change { repository.edit(taskId, fields) }
 

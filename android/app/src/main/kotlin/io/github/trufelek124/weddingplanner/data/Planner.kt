@@ -51,10 +51,19 @@ data class TaskFields(
     val amount: Long? = null,
     val paymentKind: String? = null,
     val paidOn: LocalDate? = null,
+    /** A step of the plan's first day; a task has none, and it is never sent for one. */
+    val startDate: LocalDate? = null,
 )
 
-/** A task that was let go of on the server while a change to it was waiting on the phone. */
-data class Gone(val entryId: String, val title: String)
+/**
+ * A task or a step that was let go of on the server while a change to it was waiting on the phone. It holds a title, which
+ * is the couple's own: it prints only the id.
+ *
+ * @param step whether it is a step of the plan: the notice says so
+ */
+data class Gone(val entryId: String, val title: String, val step: Boolean = false) {
+    override fun toString(): String = "Gone[entryId=$entryId]"
+}
 
 /** A category of the budget against its plan, in the smallest unit of the wedding's currency. */
 data class BudgetLine(val categoryId: String, val name: String, val planned: Long?, val committed: Long, val paid: Long, val payments: Int)
@@ -381,7 +390,7 @@ data class Entry(
         get() = TaskFields(
             title = title, notes = notes, categoryId = categoryId, dueDate = dueDate, status = status, assigneeIds = assigneeIds,
             priorityByHand = priority.takeIf { byHand }, parentId = parentId, vendorId = vendorId, amount = amount,
-            paymentKind = paymentKind, paidOn = paidOn,
+            paymentKind = paymentKind, paidOn = paidOn, startDate = startDate,
         )
 
     companion object {
