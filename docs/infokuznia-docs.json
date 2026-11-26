@@ -112,8 +112,8 @@
   "docs/android-release.md": {
    "publicId": "WP-DOC-8",
    "id": "9b11e409-1566-479e-b42c-37091704cb6e",
-   "sha256": "53b4401e5528c07a8b953d41a6623ae009022656b78458f4ea9b01862a7302f0",
-   "commit": "da96205"
+   "sha256": "2247f85a2cdea54c29614c3e99df85283f30e0eeb068fe0d4ad1f0c59be57907",
+   "commit": "ff29921"
   },
   "docs/specs/S02-suggestions.md": {
    "publicId": "WP-DOC-9",
@@ -222,6 +222,12 @@
    "id": "7adeaa5e-6811-47ad-b8fb-408805b16ed4",
    "sha256": "738ae2a2d7ba12f8e4fb89b3a6c6f98e178787ad467923a091c778bb237c4a53",
    "commit": "b8525c7"
+  },
+  "docs/specs/S10-steps-on-the-phone.md": {
+   "publicId": "WP-DOC-27",
+   "id": "f24eed9d-ad0c-4c5e-b8bd-fff38638b21e",
+   "sha256": "559cfb946f90ed9b4b102f398b8bcbd5f35f97fb0dac95db9e5283d4dddfc54c",
+   "commit": "ff29921"
   }
  }
 }
