@@ -46,6 +46,22 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
+
+        <!--
+            The widget on the home screen (S12). The phone's launcher sends it the widget's life as broadcasts, so it has to be
+            exported to the platform's own sender; it takes nothing else from outside: it only asks to be drawn.
+        -->
+        <receiver
+            android:name=".widget.PlannerWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/planner_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

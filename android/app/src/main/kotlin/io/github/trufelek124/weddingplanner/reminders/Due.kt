@@ -55,6 +55,13 @@ private val DAY_OF_ANOTHER_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", Loca
 /** "22 Nov", and "3 Jan 2027" where the year is not the one of [today]: a reminder never leaves a day in doubt. */
 fun dayWords(day: LocalDate, today: LocalDate): String = day.format(if (day.year == today.year) DAY else DAY_OF_ANOTHER_YEAR)
 
+/** Where [due] stands against [today]: what a reminder and the widget both say of a day. */
+fun dayOf(due: LocalDate, today: LocalDate): Day = when (ChronoUnit.DAYS.between(today, due)) {
+    0L -> Day.Today
+    1L -> Day.Tomorrow
+    else -> if (due.isBefore(today)) Day.Overdue(due) else Day.On(due)
+}
+
 /**
  * The open tasks and steps of the plan that are overdue or due within [ahead] days of [today], the overdue
  * first, then by day, then by name. Open is "not done, not dropped"; what waits on the phone to be sent counts as the
@@ -66,12 +73,6 @@ fun dueThings(planner: Planner, today: LocalDate, ahead: Ahead): List<DueThing> 
         .filter { it.status.open && it.dueDate != null && !it.dueDate.isAfter(last) }
         .sortedWith(compareBy<Entry> { it.dueDate!! }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }.thenBy { it.id })
         .map { entry ->
-            val due = entry.dueDate!!
-            val day = when (ChronoUnit.DAYS.between(today, due)) {
-                0L -> Day.Today
-                1L -> Day.Tomorrow
-                else -> if (due.isBefore(today)) Day.Overdue(due) else Day.On(due)
-            }
-            DueThing(entry.id, entry.title, entry.amount?.let { money(it, planner.currency) }, day, today)
+            DueThing(entry.id, entry.title, entry.amount?.let { money(it, planner.currency) }, dayOf(entry.dueDate!!, today), today)
         }
 }

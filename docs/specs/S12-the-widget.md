@@ -1,6 +1,7 @@
 # S12 — The planner's widget on the home screen
 
-**Status:** written on 2026-11-28 at the owner's request. **Builds on:** S01 section 4, S10 (tasks and steps on
+**Status:** written on 2026-11-28 at the owner's request, and built (WP-TS-114), tested against stand-ins and
+the widget library's own drawing; not yet seen on a real home screen. **Builds on:** S01 section 4, S10 (tasks and steps on
 the phone), D-005, D-016. **Story:** WP-US-27.
 
 ## 1. What this covers
@@ -14,7 +15,7 @@ form); the budget, guests or inspirations on a widget.
 
 ## 2. What the widget shows
 
-- Its head: the planner's name, and how many things are listed.
+- Its head: the planner's name, and how many things are listed. Pressing it opens the planner at the tasks.
 - **What is current**: the tasks and the steps of the plan that are still open and
   - are overdue, or
   - are due — a step: end — within the next fourteen days, or
@@ -26,6 +27,8 @@ form); the budget, guests or inspirations on a widget.
 - With nothing current the widget says so, and still offers to add.
 - **When nobody is signed in** the widget says that the planner has to be opened to sign in, and shows nothing
   of anybody's plan. Pressing it opens the app.
+- Signed in on a phone that has not loaded the planner yet, it says that the planner has to be opened to load
+  the plan.
 - It follows the phone's light and dark, and can be made larger and smaller.
 
 ## 3. What can be done on it
@@ -44,7 +47,9 @@ form); the budget, guests or inspirations on a widget.
 - The widget shows the phone's copy: it is drawn anew whenever the copy changes — after a load, after anything
   the app or the widget changed — and when the day changes.
 - The daily piece of background work that reminds (S11) also brings the copy up to date and draws the widget
-  anew, whether or not reminders are on.
+  anew, whether or not reminders are on: it is set for as long as somebody is signed in.
+- A new day reaches the widget with that work, when the planner is opened, and with any change — not at
+  midnight: the widget has no timer of its own.
 - **Signing out empties it at once.**
 - Nothing of a task is written to the log.
 
@@ -56,4 +61,7 @@ form); the budget, guests or inspirations on a widget.
   the rows for a plan, nothing current, signed out, a tick kept and sent, the two buttons and a row opening the
   right form.
 - The small release build is checked to still hold the classes the phone finds by name.
-- Not checkable here: how a real launcher draws it, resizes it and lets it be put on the screen.
+- A test runs the widget's own drawing from the first draw to the last: it changes after a tick and after
+  signing out without being started again, and is not drawn again while nothing changes.
+- Not checkable here: how a real launcher draws it, resizes it and lets it be put on the screen, its list being
+  moved, and a press arriving from a real home screen.

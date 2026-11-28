@@ -23,9 +23,14 @@ import io.github.trufelek124.weddingplanner.session.AesGcmCipher
 import io.github.trufelek124.weddingplanner.session.KeystoreKey
 import io.github.trufelek124.weddingplanner.session.Session
 import io.github.trufelek124.weddingplanner.session.SessionStore
+import io.github.trufelek124.weddingplanner.session.SessionState
 import io.github.trufelek124.weddingplanner.session.TokenCipher
 import io.github.trufelek124.weddingplanner.signin.CredentialManagerGoogleAccounts
 import io.github.trufelek124.weddingplanner.signin.GoogleAccounts
+import io.github.trufelek124.weddingplanner.widget.WidgetActions
+import io.github.trufelek124.weddingplanner.widget.WidgetDrawing
+import io.github.trufelek124.weddingplanner.widget.WidgetModels
+import io.github.trufelek124.weddingplanner.widget.WidgetOnThePhone
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import java.io.File
@@ -33,6 +38,8 @@ import java.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
 
 /**
  * Everything the screens share, made once and handed out by hand (D-005: no dependency-injection
@@ -55,8 +62,10 @@ class AppContainer(
     val notifications: Notifications,
     /** The once-a-day work: the phone's own. */
     reminderWork: ReminderWork,
-    /** For the words of a reminder. */
+    /** For the words of a reminder and of the widget. */
     resources: Resources,
+    /** Drawing the widget on the home screen anew (S12): the phone's own. */
+    val widgetDrawing: WidgetDrawing,
     /** The app's own folder for the pictures of what was shared to the planner and waits to be sent. */
     shareFolder: File,
     /** The app's own folder for the pictures of the inspirations that were fetched; the system may empty it when space is short. */
@@ -79,18 +88,42 @@ class AppContainer(
             pictures.forget()
             planner.forget()
             googleAccounts.forget()
+            // Nothing of the plan is left to draw: the widget is emptied at once, not at the next daily run.
+            widgetDrawing.redraw()
         },
     )
 
     val api: Api = Api(engine, server, session.accessTokens)
 
-    val planner: PlannerRepository = PlannerRepository({ api }, database, clock, shareFolder, afterLoad = { pictures.afterLoad(it.inspirations) })
+    val planner: PlannerRepository = PlannerRepository(
+        { api }, database, clock, shareFolder,
+        afterLoad = { pictures.afterLoad(it.inspirations) },
+        // Every write the repository makes, a load included: the widget shows the copy and follows it.
+        afterWrite = widgetDrawing::redraw,
+    )
 
     /** Reminders of what is due: the settings, and what the daily work does. Signing out removes them. */
-    val reminding: Reminding = Reminding(ReminderSettingsStore(reminderFile), notifications, reminderWork, session, planner, clock, resources)
+    val reminding: Reminding = Reminding(ReminderSettingsStore(reminderFile), notifications, reminderWork, session, planner, clock, resources, widgetDrawing::redraw)
+
+    /** What the widget shows, and the one thing a press on it changes (S12). */
+    val widgetModels: WidgetModels = WidgetModels(session, planner, clock, resources)
+    val widgetActions: WidgetActions = WidgetActions(session, planner, sendLater)
 
     /** The pictures of the inspirations on the phone: fetched with the access token, kept in files, let go of at sign-out. */
     val pictures: PictureStore = PictureStore({ api }, pictureFolder, background)
+
+    init {
+        // A sign-in or a sign-out changes what the widget says; and while somebody is signed in the daily work is set,
+        // reminders or not, because it brings the widget up to date.
+        background.launch {
+            session.state.filter { it !is SessionState.Restoring }.collect { state ->
+                widgetDrawing.redraw()
+                if (state is SessionState.SignedIn) {
+                    reminding.keepDailyWork()
+                }
+            }
+        }
+    }
 
     companion object {
 
@@ -106,6 +139,7 @@ class AppContainer(
             notifications = NotificationsOnThePhone(context.applicationContext),
             reminderWork = RemindWithWorkManager(context.applicationContext),
             resources = context.resources,
+            widgetDrawing = WidgetOnThePhone(context.applicationContext),
             shareFolder = File(context.filesDir, "shares"),
             pictureFolder = File(context.cacheDir, "pictures"),
         )

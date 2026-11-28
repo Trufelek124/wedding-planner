@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 // The planner's colours, the same as the web app's tokens (web/src/index.css), for light and dark.
-private val Light = lightColorScheme(
+internal val PlannerLightColors = lightColorScheme(
     primary = Color(0xFF2F5D50),
     onPrimary = Color(0xFFFFFFFF),
     primaryContainer = Color(0xFFD8E8E2),
@@ -41,7 +41,7 @@ private val Light = lightColorScheme(
     onErrorContainer = Color(0xFFA32920),
 )
 
-private val Dark = darkColorScheme(
+internal val PlannerDarkColors = darkColorScheme(
     primary = Color(0xFF9AD0BD),
     onPrimary = Color(0xFF10231D),
     primaryContainer = Color(0xFF2C4A41),
@@ -74,5 +74,5 @@ private val Dark = darkColorScheme(
 
 @Composable
 fun PlannerTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (dark) Dark else Light, content = content)
+    MaterialTheme(colorScheme = if (dark) PlannerDarkColors else PlannerLightColors, content = content)
 }

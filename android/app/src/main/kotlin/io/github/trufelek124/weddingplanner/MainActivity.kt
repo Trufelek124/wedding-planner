@@ -32,6 +32,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // A new day may have begun since the widget was last drawn, with nothing of the app running to say so.
+        (application as WeddingPlannerApp).container.widgetDrawing.redraw()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

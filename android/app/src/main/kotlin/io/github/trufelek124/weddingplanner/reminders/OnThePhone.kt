@@ -41,13 +41,20 @@ fun untilNext(now: ZonedDateTime, at: LocalTime): Duration {
  */
 class RemindWithWorkManager(private val context: Context, private val clock: Clock = Clock.systemDefaultZone()) : ReminderWork {
 
-    override fun everyDay(at: LocalTime) {
-        val first = untilNext(ZonedDateTime.now(clock), at)
-        val request = PeriodicWorkRequestBuilder<ReminderWorker>(1, TimeUnit.DAYS)
+    override fun keepEveryDay(at: LocalTime) {
+        // Already set: left as it is, so that opening the app does not push the day's run to tomorrow.
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(ReminderWorker.NAME, ExistingPeriodicWorkPolicy.KEEP, requestFor(at))
+    }
+
+    private fun requestFor(at: LocalTime) = untilNext(ZonedDateTime.now(clock), at).let { first ->
+        PeriodicWorkRequestBuilder<ReminderWorker>(1, TimeUnit.DAYS)
             .setInitialDelay(first.toMillis(), TimeUnit.MILLISECONDS)
             .build()
+    }
+
+    override fun everyDay(at: LocalTime) {
         // A new time starts the day over from that time: the old schedule is cancelled, not bent.
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(ReminderWorker.NAME, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, request)
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(ReminderWorker.NAME, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, requestFor(at))
     }
 
     override fun stop() {
@@ -55,7 +62,7 @@ class RemindWithWorkManager(private val context: Context, private val clock: Clo
     }
 }
 
-/** Once a day: brings the copy up to date if it can, and reminds of what is due (see [Reminding.remind]). */
+/** Once a day: brings the copy up to date if it can, draws the widget anew, and reminds of what is due (see [Reminding.remind]). */
 class ReminderWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
 
     override suspend fun doWork(): Result {
@@ -73,6 +80,27 @@ class ReminderWorker(context: Context, parameters: WorkerParameters) : Coroutine
 object OpenAt {
     const val EXTRA = "io.github.trufelek124.weddingplanner.OPEN_AT"
     const val TASKS = "tasks"
+
+    /** The widget's "Add a task": the tasks, and the form for a new one on top of them. */
+    const val ADD_TASK = "add-task"
+
+    /** The widget's "Add a step": the plan, and the form for a new step on top of it. */
+    const val ADD_STEP = "add-step"
+
+    private const val TASK = "task:"
+    private const val STEP = "step:"
+
+    /** The widget's row of a task: the tasks, and that task's form on top of them. */
+    fun task(id: String): String = TASK + id
+
+    /** The widget's row of a step: the plan, and that step's form on top of it. */
+    fun step(id: String): String = STEP + id
+
+    /** The id of the task [opening] names; null for anything else. */
+    fun taskOf(opening: String): String? = opening.takeIf { it.startsWith(TASK) }?.removePrefix(TASK)?.takeIf { it.isNotEmpty() }
+
+    /** The id of the step [opening] names; null for anything else. */
+    fun stepOf(opening: String): String? = opening.takeIf { it.startsWith(STEP) }?.removePrefix(STEP)?.takeIf { it.isNotEmpty() }
 }
 
 /** Notifications as the phone shows them. */

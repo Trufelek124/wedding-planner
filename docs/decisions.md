@@ -841,7 +841,8 @@ the app is put together — no Firebase among it — and says that a task adds a
    for at that moment.
 3. **The widget is drawn with Glance** (`androidx.glance:glance-appwidget`, in the newest stable version that
    fits the app's Compose and Kotlin when it is added; the version is written into the build file and stays
-   until a task changes it on purpose).
+   until a task changes it on purpose). Added as 1.2.0 (WP-TS-114), with `glance-material3` for the app's own
+   colours.
 4. **The widget ticks and opens; it does not edit.** What it changes goes the way the app's changes go: kept on
    the phone, sent later.
 5. Both end at sign-out: no reminder, an empty widget, no settings left.
@@ -852,6 +853,11 @@ the app is put together — no Firebase among it — and says that a task adds a
   an hour late, and a phone that was off gets it when it is on again. If that is not good enough, exact alarms
   are the step, with their permission.
 - What the partner did since the phone last had a connection is not known to a reminder that runs without one.
+- The daily work is set on every phone that is signed in, reminders or not, because the widget is brought up
+  to date by it: one look at the server a day, also on a phone with no widget on its screen.
+- The library draws a widget for about three quarters of a minute at a time and does not ask the app again
+  meanwhile: what it draws has to follow the copy by itself, or a tick and a sign-out shortly after another
+  change would not reach it.
 - A widget library is one more thing that the small release build must not strip: its classes go on the list
   that `checkReleaseApk` holds.
 - How a widget is drawn is the launcher's last word: sizes and corners differ between phones, and none of it can

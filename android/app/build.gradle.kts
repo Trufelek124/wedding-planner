@@ -145,6 +145,9 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.10.2")
     // Sending what was changed without a connection once there is one, also when the app is closed by then.
     implementation("androidx.work:work-runtime-ktx:2.12.0")
+    // The widget on the home screen (D-016, S12): drawn like the screens, with the app's own colours.
+    implementation("androidx.glance:glance-appwidget:1.2.0")
+    implementation("androidx.glance:glance-material3:1.2.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
@@ -155,6 +158,7 @@ dependencies {
     testImplementation("io.ktor:ktor-client-mock:3.6.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("androidx.work:work-testing:2.12.0")
+    testImplementation("androidx.glance:glance-appwidget-testing:1.2.0")
     testImplementation("io.github.takahirom.roborazzi:roborazzi:1.79.0")
     testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.79.0")
 }
@@ -250,6 +254,11 @@ abstract class CheckReleaseApk : DefaultTask() {
             "$APP.data.SendWorker",
             // The same for the daily reminder.
             "$APP.reminders.ReminderWorker",
+            // The widget (S12). The receiver is named in the manifest; the widget class is found by its name, which Glance keeps in
+            // the phone's preferences; a press on a box runs the callback that is made from its name when the press comes.
+            "$APP.widget.PlannerWidgetReceiver",
+            "$APP.widget.PlannerWidget",
+            "$APP.widget.TickCallback",
             // Room looks for the generated code of the database under this name.
             "$APP.data.PlannerDatabase_Impl",
             // What reads the server's answers and writes the phone's requests is looked up for each class.

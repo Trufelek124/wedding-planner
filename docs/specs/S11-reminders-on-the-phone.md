@@ -1,7 +1,7 @@
 # S11 — Reminders on the phone
 
-**Status:** written on 2026-11-28 at the owner's request, and built (WP-TS-113), tested against stand-ins;
-not yet tried on a real phone. **Builds on:** S01 (which left phone notifications out
+**Status:** written on 2026-11-28 at the owner's request, and built (WP-TS-113; the daily work kept for the
+widget, WP-TS-114), tested against stand-ins; not yet tried on a real phone. **Builds on:** S01 (which left phone notifications out
 of the first version), D-005, D-016. **Story:** WP-US-27.
 
 ## 1. What this covers
@@ -46,6 +46,9 @@ from the copy it keeps (D-016).
 
 - **Reminders are off until the owner switches them on.** More has a row **Reminders** that leads to their
   screen: a switch, the time of day, and how far ahead (section 2).
+- **The daily look itself goes on while somebody is signed in, reminders or not**, because it also brings the
+  widget up to date (S12): the phone asks the server once a day, around the time that is set. With reminders
+  off, or not allowed by the phone, it shows nothing.
 - Switching them on **asks the phone for the permission to show notifications** where the phone wants that
   asked (Android 13 and later). Refused — or taken away later in the phone's settings — the screen says that
   the phone does not allow the planner's notifications and leads to the phone's settings for it; no reminder is

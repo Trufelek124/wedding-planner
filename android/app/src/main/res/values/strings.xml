@@ -336,4 +336,27 @@
     <string name="reminder_line">%1$s — %2$s</string>
     <string name="reminder_line_with_amount">%1$s, %2$s — %3$s</string>
     <string name="reminder_more">and %1$d more</string>
+
+    <!-- The widget on the home screen -->
+    <string name="widget_name">Wedding planner: what is current</string>
+    <string name="widget_description">What is overdue, due soon or in progress. Tick a task off, or add a task or a step.</string>
+    <plurals name="widget_count">
+        <item quantity="one">%d thing</item>
+        <item quantity="other">%d things</item>
+    </plurals>
+    <string name="widget_count_none">Nothing current</string>
+    <string name="widget_nothing_current">Nothing is current. What is overdue, due within 14 days or in progress shows here.</string>
+    <string name="widget_signed_out">Open the planner to sign in.</string>
+    <string name="widget_no_copy">Open the planner to load your plan.</string>
+    <string name="widget_day_in_progress">in progress</string>
+    <string name="widget_detail_step">Step — %1$s</string>
+    <string name="widget_detail_payment">%1$s — %2$s</string>
+    <!-- What the widget\'s preview in the phone's list of widgets shows: made up -->
+    <string name="widget_preview_count">3 things</string>
+    <string name="widget_preview_row_1">Book the band</string>
+    <string name="widget_preview_detail_1">overdue since 22 Nov</string>
+    <string name="widget_preview_row_2">Pay the venue\'s deposit</string>
+    <string name="widget_preview_detail_2">2,500.00 zł — today</string>
+    <string name="widget_preview_row_3">Choose the cake</string>
+    <string name="widget_preview_detail_3">on 3 Dec</string>
 </resources>

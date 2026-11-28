@@ -181,11 +181,14 @@ class RemindingTest {
     @Test
     fun `nothing is shown while reminders are off`() {
         runBlocking { reminding.switchOff() }
+        val redrawsBefore = phone.widget.redraws
 
         assertEquals(Reminded.OFF, remind())
 
         assertEquals(0, notifications.shownEver.size)
-        assertTrue(server.calls.isEmpty())
+        // The daily work also keeps the widget up to date, so the copy is still brought up to date, and the widget drawn.
+        assertTrue(server.routes("GET /api/entries").isNotEmpty())
+        assertTrue(phone.widget.redraws > redrawsBefore)
     }
 
     @Test
@@ -210,7 +213,8 @@ class RemindingTest {
         assertEquals(Reminded.NOT_ALLOWED, remind())
 
         assertEquals(0, notifications.shownEver.size)
-        assertTrue(server.calls.isEmpty())
+        // Not allowed to show anything, but the widget still follows the plan.
+        assertTrue(server.routes("GET /api/entries").isNotEmpty())
     }
 
     @Test
@@ -247,14 +251,15 @@ class RemindingTest {
     }
 
     @Test
-    fun `switching on sets the work for the chosen time, and off stops it and takes the reminder away`() {
+    fun `switching on sets the work for the chosen time, and off takes the reminder away but leaves the work for the widget`() {
         assertEquals(listOf(LocalTime.of(9, 0)), phone.reminderWork.setFor)
         assertTrue(phone.reminderWork.running)
         assertEquals(Reminded.SHOWN, remind())
 
         runBlocking { reminding.switchOff() }
 
-        assertFalse(phone.reminderWork.running)
+        assertTrue(phone.reminderWork.running)
+        assertEquals(0, phone.reminderWork.stops)
         assertNull(notifications.shown)
         assertFalse(runBlocking { reminding.settings.first().on })
     }
@@ -297,14 +302,14 @@ class RemindingTest {
     }
 
     @Test
-    fun `a time chosen while reminders are off sets no work`() {
+    fun `a time chosen while reminders are off still sets the work, which keeps the widget up to date`() {
         runBlocking {
             reminding.switchOff()
             reminding.setTime(LocalTime.of(7, 15))
         }
 
-        assertEquals(listOf(LocalTime.of(9, 0)), phone.reminderWork.setFor)
-        assertFalse(phone.reminderWork.running)
+        assertEquals(listOf(LocalTime.of(9, 0), LocalTime.of(7, 15)), phone.reminderWork.setFor)
+        assertTrue(phone.reminderWork.running)
         assertEquals(LocalTime.of(7, 15), runBlocking { reminding.settings.first().at })
     }
 

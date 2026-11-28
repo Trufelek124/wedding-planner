@@ -33,6 +33,12 @@ interface ReminderWork {
     /** Remind once a day from now on, around [at]; the first time at the next [at]. Replaces what was set before. */
     fun everyDay(at: LocalTime)
 
+    /**
+     * Makes sure the daily work is set, around [at]; one that is set already is left as it is. The widget (S12) is brought
+     * up to date by the same work, so it goes on whether or not reminders are switched on.
+     */
+    fun keepEveryDay(at: LocalTime)
+
     /** Stops reminding. */
     fun stop()
 }
@@ -75,6 +81,8 @@ class Reminding(
     private val planner: PlannerRepository,
     private val clock: Clock,
     private val resources: android.content.res.Resources,
+    /** Draws the widget anew: the daily work does it too, so that a new day reaches it whether or not reminders are on. */
+    private val redrawWidget: () -> Unit = {},
 ) {
 
     val settings: Flow<ReminderSettings> = store.settings
@@ -95,18 +103,25 @@ class Reminding(
         return true
     }
 
+    /** No more reminders. The daily work goes on: it also keeps the widget up to date (S12). */
     suspend fun switchOff() {
         store.update { it.copy(on = false) }
-        work.stop()
         notifications.clear()
     }
 
-    /** Holds from the next reminder on: the daily work is set again for the new time. */
+    /** Makes sure the daily work is set while somebody is signed in: reminders or not, it brings the widget up to date. */
+    suspend fun keepDailyWork() {
+        val at = store.read().at
+        // Signing out may have come in between: its sign-out has stopped the work, and it stays stopped.
+        if (session.state.value is SessionState.SignedIn) {
+            work.keepEveryDay(at)
+        }
+    }
+
+    /** Holds from the next run on: the daily work is set again for the new time. */
     suspend fun setTime(at: LocalTime) {
         val now = store.update { it.copy(at = at) }
-        if (now.on) {
-            work.everyDay(now.at)
-        }
+        work.everyDay(now.at)
     }
 
     suspend fun setAhead(ahead: Ahead) {
@@ -114,23 +129,19 @@ class Reminding(
     }
 
     /**
-     * What the daily work does. Nothing without a signed-in person, with reminders off or where the phone does not
-     * allow them. Otherwise the copy is brought up to date (no connection, or no answer, is no reason not to remind),
-     * and one notification is shown if something is due and none was shown for today yet; with nothing due, one that is
-     * still shown is taken away.
+     * What the daily work does. Nothing without a signed-in person. Otherwise the copy is brought up to date (no
+     * connection, or no answer, is no reason not to go on) and the widget is drawn anew — whether or not reminders are
+     * on or allowed, because the widget is brought up to date by this work too. With reminders off or not allowed by the
+     * phone that is all; otherwise one notification is shown if something is due and none was shown for today yet, and
+     * with nothing due one that is still shown is taken away.
      */
     suspend fun remind(): Reminded {
-        if (!store.read().on) {
-            return Reminded.OFF
-        }
+        val on = store.read().on
         if (session.state.value is SessionState.Restoring) {
             session.restore()
         }
         if (session.state.value !is SessionState.SignedIn) {
-            return Reminded.SIGNED_OUT
-        }
-        if (!notifications.allowed()) {
-            return Reminded.NOT_ALLOWED
+            return if (on) Reminded.SIGNED_OUT else Reminded.OFF
         }
         try {
             planner.sync()
@@ -138,7 +149,15 @@ class Reminding(
             throw cancelled
         } catch (failed: Exception) {
             // Only its kind is said: what it carries may be the server's words.
-            Log.i(TAG, "The planner could not be brought up to date before reminding: ${failed.javaClass.simpleName}")
+            Log.i(TAG, "The planner could not be brought up to date: ${failed.javaClass.simpleName}")
+        }
+        // A new day is a reason to draw it even where nothing was loaded.
+        redrawWidget()
+        if (!on) {
+            return Reminded.OFF
+        }
+        if (!notifications.allowed()) {
+            return Reminded.NOT_ALLOWED
         }
         if (session.state.value !is SessionState.SignedIn) {
             return Reminded.SIGNED_OUT

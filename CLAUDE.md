@@ -256,10 +256,26 @@ first uses it, at the version D-005 names.
   under WorkManager (`ReminderWorker`, around the time the owner chose; no exact alarm) brings the copy up to
   date when it can and shows **one notification or none** — what is overdue or due within the chosen days,
   worked out by `dueThings` (`Due.kt`, no Android in it) and worded by `reminderOf`. Off until switched on behind
-  More, which asks the phone for the permission. Showing a notification, whether it is allowed, and scheduling
+  More, which asks the phone for the permission. **The daily work itself is set while somebody is signed in,
+  reminders or not** (`keepDailyWork`, set from the container; a work that is set is left as it is): it also
+  draws the widget, so switching reminders off stops the notification and not the work. Showing a notification, whether it is allowed, and scheduling
   come into the container from outside (`Notifications`, `ReminderWork`), so that `StandInPhone` stands in for
   them. A reminder is shown once for a day (`lastShown`), is private on a lock screen, and opens the app at the
   tasks. `forgetEverything` stops the work, takes the reminder away and removes the settings.
+- **The widget** (`widget/`, S12, D-016) is drawn with Glance and shows what is current: the open tasks and steps
+  that are overdue, due within fourteen days or in progress (`currentThings` in `Current.kt`, no Android in it;
+  a row's words in `WidgetWords.kt`, a day's words shared with the reminders). It changes one thing: a task's
+  box ticks it off through `WidgetActions.tick` — the repository's own way, then `SendLater`. Everything else
+  opens the app: `OpenAt` (`add-task`, `add-step`, `task:<id>`, `step:<id>`) is read by `PlannerScreens`, which
+  puts the form on top of its place. **Glance does not run `provideGlance` again while a widget's composition
+  runs** (about 45 seconds after a draw), so the content collects `WidgetModels.follow()` — remembered, or it is
+  drawn round and round — and `WidgetDrawing.redraw()` only starts a composition where none runs: after every
+  write of the repository, at sign-in and sign-out, when the app comes to the front, and by the daily work.
+  Drawing comes into the container from outside (`StandInPhone` counts it). Nobody signed in: one sentence and
+  nothing of a plan. `PlannerWidget` is kept by name (`proguard-rules.pro`: Glance stores the name). The tests
+  reach Glance's own composition by reflection (`runComposition`) and read presses with matchers of their own,
+  because the library's ignore an intent's extras: look at them when Glance's version changes. A list's rows
+  are not drawn in a picture made on the JVM.
 - A phone number, an e-mail address, an address and a website open in the phone's own apps through
   `planner/Contact.kt`, and only through it. What the server holds was typed by a person: each way builds one fixed
   kind of intent, a number is dialled and never called, and a website opens only as `http` or `https` — anything

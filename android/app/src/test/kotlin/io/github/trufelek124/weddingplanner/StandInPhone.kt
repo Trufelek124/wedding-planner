@@ -18,6 +18,7 @@ import io.github.trufelek124.weddingplanner.api.StandInServer
 import io.github.trufelek124.weddingplanner.session.AesGcmCipher
 import io.github.trufelek124.weddingplanner.signin.GoogleAccounts
 import io.github.trufelek124.weddingplanner.signin.GoogleAnswer
+import io.github.trufelek124.weddingplanner.widget.WidgetDrawing
 import java.io.File
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -91,9 +92,30 @@ class StandInReminderWork : ReminderWork {
         running = true
     }
 
+    /** The times the work was asked to be kept for, in order. */
+    val keptFor = java.util.concurrent.CopyOnWriteArrayList<LocalTime>()
+
+    override fun keepEveryDay(at: LocalTime) {
+        keptFor += at
+        running = true
+    }
+
     override fun stop() {
         stops += 1
         running = false
+    }
+}
+
+/** The widget's drawing as a test wants it: nothing is drawn, and how often the phone was asked to draw it is counted. */
+class StandInWidget : WidgetDrawing {
+
+    private val asked = java.util.concurrent.atomic.AtomicInteger()
+
+    /** How often the widget was asked to be drawn anew. */
+    val redraws: Int get() = asked.get()
+
+    override fun redraw() {
+        asked.incrementAndGet()
     }
 }
 
@@ -117,6 +139,7 @@ class StandInPhone(
     val clock: StandInClock = StandInClock(),
     val notifications: StandInNotifications = StandInNotifications(),
     val reminderWork: StandInReminderWork = StandInReminderWork(),
+    val widget: StandInWidget = StandInWidget(),
 ) {
 
     private val running = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -144,6 +167,7 @@ class StandInPhone(
         notifications = notifications,
         reminderWork = reminderWork,
         resources = ApplicationProvider.getApplicationContext<Context>().resources,
+        widgetDrawing = widget,
         shareFolder = File(folder, "shares"),
         pictureFolder = File(folder, "pictures"),
         clock = clock,
@@ -177,7 +201,7 @@ class StandInPhone(
     /** The same phone, switched on again: the same storage, key, clock and server, nothing in memory. */
     fun restarted(): StandInPhone {
         off()
-        return StandInPhone(folder, server, google, key, clock, notifications, reminderWork)
+        return StandInPhone(folder, server, google, key, clock, notifications, reminderWork, widget)
     }
 }
 

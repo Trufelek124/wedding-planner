@@ -268,12 +268,34 @@ private fun Places(
     onOpened: () -> Unit,
 ) {
     val navigation = rememberNavController()
-    // A notification asked for the tasks: Home is where everything starts, and the tasks are one press from it, as from the bar.
+    // A notification or the widget asked where to go. Home is where everything starts and the place is one press from it,
+    // as from the bar; a form opens on top of its place, so that saving or cancelling leads back to the plan or the tasks.
     LaunchedEffect(opening) {
-        if (opening == OpenAt.TASKS) {
-            navigation.navigate(Place.TASKS.route) {
+        if (opening != null) {
+            fun goTo(place: Place) = navigation.navigate(place.route) {
                 popUpTo(navigation.graph.findStartDestination().id) { saveState = false }
                 launchSingleTop = true
+            }
+            val task = OpenAt.taskOf(opening)
+            val step = OpenAt.stepOf(opening)
+            when {
+                opening == OpenAt.TASKS -> goTo(Place.TASKS)
+                opening == OpenAt.ADD_TASK -> {
+                    goTo(Place.TASKS)
+                    navigation.navigate(TASK)
+                }
+                opening == OpenAt.ADD_STEP -> {
+                    goTo(Place.PLAN)
+                    navigation.navigate(STEP)
+                }
+                task != null -> {
+                    goTo(Place.TASKS)
+                    navigation.navigate("$TASK?id=${Uri.encode(task)}")
+                }
+                step != null -> {
+                    goTo(Place.PLAN)
+                    navigation.navigate("$STEP?id=${Uri.encode(step)}")
+                }
             }
             onOpened()
         }

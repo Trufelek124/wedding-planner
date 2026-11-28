@@ -21,11 +21,14 @@ class Reminder(val title: String, val text: String?, val lines: List<String>, va
 }
 
 /** The day as a reminder says it: "overdue since 22 Nov", "today", "tomorrow", "on 3 Dec". */
-fun dayInWords(thing: DueThing, resources: Resources): String = when (val day = thing.day) {
-    is Day.Overdue -> resources.getString(R.string.reminder_day_overdue, dayWords(day.since, thing.today))
+fun dayInWords(thing: DueThing, resources: Resources): String = dayInWords(thing.day, thing.today, resources)
+
+/** The same for a day and the [today] it is told against: the widget says its days the same way. */
+fun dayInWords(day: Day, today: java.time.LocalDate, resources: Resources): String = when (day) {
+    is Day.Overdue -> resources.getString(R.string.reminder_day_overdue, dayWords(day.since, today))
     Day.Today -> resources.getString(R.string.reminder_day_today)
     Day.Tomorrow -> resources.getString(R.string.reminder_day_tomorrow)
-    is Day.On -> resources.getString(R.string.reminder_day_on, dayWords(day.day, thing.today))
+    is Day.On -> resources.getString(R.string.reminder_day_on, dayWords(day.day, today))
 }
 
 /** One line of the list: "Pay the venue's deposit, 2,500.00 zł — today". */

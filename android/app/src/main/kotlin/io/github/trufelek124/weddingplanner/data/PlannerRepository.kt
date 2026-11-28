@@ -62,6 +62,8 @@ class PlannerRepository(
     shareFolder: File,
     /** Told after every load that was kept, with what the phone then holds: the pictures of the ideas are fetched from it. */
     private val afterLoad: (Planner) -> Unit = {},
+    /** Told after every write: the widget shows the copy and is drawn anew whenever it changes. Nothing is held up for it. */
+    private val afterWrite: () -> Unit = {},
 ) {
 
     private val dao = database.planner()
@@ -506,6 +508,7 @@ class PlannerRepository(
             write()
         } finally {
             writes.update { it + 1 }
+            runCatching { afterWrite() }
         }
     }
 
