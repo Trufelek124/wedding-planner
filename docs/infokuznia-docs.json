@@ -242,8 +242,8 @@
   "docs/specs/S11-reminders-on-the-phone.md": {
    "publicId": "WP-DOC-28",
    "id": "90cff1e8-bab6-4ff6-8fb8-9aee1416f21e",
-   "sha256": "cff2bd60120cd19f1c6aee201ff125cb7731415d4c40d30c0f1b93e856c7842a",
-   "commit": "52ce506"
+   "sha256": "9c8ebf982c9deab6a3413500215a6c51246ab7a66be4692443b1bd35899166c8",
+   "commit": "f238cd7"
   },
   "docs/specs/S12-the-widget.md": {
    "publicId": "WP-DOC-29",
