@@ -2,6 +2,7 @@ package io.github.trufelek124.weddingplanner
 
 import android.app.Application
 import android.content.Context
+import android.content.res.Resources
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -12,6 +13,12 @@ import io.github.trufelek124.weddingplanner.data.PictureStore
 import io.github.trufelek124.weddingplanner.data.PlannerRepository
 import io.github.trufelek124.weddingplanner.data.SendLater
 import io.github.trufelek124.weddingplanner.data.SendWithWorkManager
+import io.github.trufelek124.weddingplanner.reminders.NotificationsOnThePhone
+import io.github.trufelek124.weddingplanner.reminders.Notifications
+import io.github.trufelek124.weddingplanner.reminders.ReminderSettingsStore
+import io.github.trufelek124.weddingplanner.reminders.ReminderWork
+import io.github.trufelek124.weddingplanner.reminders.RemindWithWorkManager
+import io.github.trufelek124.weddingplanner.reminders.Reminding
 import io.github.trufelek124.weddingplanner.session.AesGcmCipher
 import io.github.trufelek124.weddingplanner.session.KeystoreKey
 import io.github.trufelek124.weddingplanner.session.Session
@@ -42,6 +49,14 @@ class AppContainer(
     val googleAccounts: GoogleAccounts,
     database: PlannerDatabase,
     val sendLater: SendLater,
+    /** Where the phone keeps its reminder settings: a file of its own, like the session's. */
+    reminderFile: DataStore<Preferences>,
+    /** Showing a notification, and whether the phone allows them: the phone's own. */
+    val notifications: Notifications,
+    /** The once-a-day work: the phone's own. */
+    reminderWork: ReminderWork,
+    /** For the words of a reminder. */
+    resources: Resources,
     /** The app's own folder for the pictures of what was shared to the planner and waits to be sent. */
     shareFolder: File,
     /** The app's own folder for the pictures of the inspirations that were fetched; the system may empty it when space is short. */
@@ -60,6 +75,7 @@ class AppContainer(
         api = { api },
         store = SessionStore(sessionFile, cipher),
         forgetEverything = {
+            reminding.forget()
             pictures.forget()
             planner.forget()
             googleAccounts.forget()
@@ -69,6 +85,9 @@ class AppContainer(
     val api: Api = Api(engine, server, session.accessTokens)
 
     val planner: PlannerRepository = PlannerRepository({ api }, database, clock, shareFolder, afterLoad = { pictures.afterLoad(it.inspirations) })
+
+    /** Reminders of what is due: the settings, and what the daily work does. Signing out removes them. */
+    val reminding: Reminding = Reminding(ReminderSettingsStore(reminderFile), notifications, reminderWork, session, planner, clock, resources)
 
     /** The pictures of the inspirations on the phone: fetched with the access token, kept in files, let go of at sign-out. */
     val pictures: PictureStore = PictureStore({ api }, pictureFolder, background)
@@ -83,6 +102,10 @@ class AppContainer(
             googleAccounts = CredentialManagerGoogleAccounts(context),
             database = PlannerDatabase.onThePhone(context),
             sendLater = SendWithWorkManager(context.applicationContext),
+            reminderFile = PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("reminders") },
+            notifications = NotificationsOnThePhone(context.applicationContext),
+            reminderWork = RemindWithWorkManager(context.applicationContext),
+            resources = context.resources,
             shareFolder = File(context.filesDir, "shares"),
             pictureFolder = File(context.cacheDir, "pictures"),
         )

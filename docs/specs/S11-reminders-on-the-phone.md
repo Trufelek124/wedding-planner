@@ -1,6 +1,7 @@
 # S11 — Reminders on the phone
 
-**Status:** written on 2026-11-28 at the owner's request. **Builds on:** S01 (which left phone notifications out
+**Status:** written on 2026-11-28 at the owner's request, and built (WP-TS-113), tested against stand-ins;
+not yet tried on a real phone. **Builds on:** S01 (which left phone notifications out
 of the first version), D-005, D-016. **Story:** WP-US-27.
 
 ## 1. What this covers
@@ -33,7 +34,7 @@ from the copy it keeps (D-016).
 - **One notification, or none.** With nothing due there is none. Otherwise one, in the place of yesterday's if
   that is still there:
   - its title says how much there is — "Pay the venue's deposit is due today" for one thing, "4 things are due"
-    for several;
+    for several; on a locked phone that hides private content only the number is shown;
   - its lines name them, the overdue first, then by day, each with its day in words ("overdue since 22 Nov",
     "today", "tomorrow", "on 3 Dec"); as many as fit, then "and 3 more";
   - pressing it opens the planner at the tasks.

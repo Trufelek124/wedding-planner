@@ -6,7 +6,11 @@ import android.os.Looper
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.github.trufelek124.weddingplanner.data.PlannerDatabase
+import io.github.trufelek124.weddingplanner.reminders.Notifications
+import io.github.trufelek124.weddingplanner.reminders.Reminder
+import io.github.trufelek124.weddingplanner.reminders.ReminderWork
 import java.time.Clock
+import java.time.LocalTime
 import java.time.Instant
 import java.time.ZoneId
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -43,6 +47,56 @@ class StandInGoogle(var answer: GoogleAnswer = GoogleAnswer.Cancelled) : GoogleA
     }
 }
 
+/**
+ * The phone's notifications as a test wants them: what was shown stays here, whether the phone allows them is set by hand.
+ * The reminder that is shown is the one in [shown]; showing another takes its place, as on the phone.
+ */
+class StandInNotifications(@Volatile var allowed: Boolean = true) : Notifications {
+
+    /** Every reminder that was shown, the first first. */
+    val shownEver = java.util.concurrent.CopyOnWriteArrayList<Reminder>()
+
+    /** The reminder that is on the screen of the phone now; null when there is none. */
+    @Volatile
+    var shown: Reminder? = null
+        private set
+
+    override fun allowed(): Boolean = allowed
+
+    override fun show(reminder: Reminder) {
+        shownEver += reminder
+        shown = reminder
+    }
+
+    override fun clear() {
+        shown = null
+    }
+}
+
+/** The once-a-day work as a test wants it: what it was asked for is written down. */
+class StandInReminderWork : ReminderWork {
+
+    /** The times it was set for, in order; [stopped] is counted from the last of them. */
+    val setFor = java.util.concurrent.CopyOnWriteArrayList<LocalTime>()
+
+    @Volatile
+    var running = false
+        private set
+
+    var stops = 0
+        private set
+
+    override fun everyDay(at: LocalTime) {
+        setFor += at
+        running = true
+    }
+
+    override fun stop() {
+        stops += 1
+        running = false
+    }
+}
+
 /** A clock a test sets by hand. The phone stands in Warsaw, where it is an hour later than this says in winter. */
 class StandInClock(var now: Instant = Instant.parse("2026-11-18T13:05:00Z")) : Clock() {
     override fun instant(): Instant = now
@@ -61,6 +115,8 @@ class StandInPhone(
     val google: StandInGoogle = StandInGoogle(),
     private val key: SecretKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey(),
     val clock: StandInClock = StandInClock(),
+    val notifications: StandInNotifications = StandInNotifications(),
+    val reminderWork: StandInReminderWork = StandInReminderWork(),
 ) {
 
     private val running = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -70,6 +126,8 @@ class StandInPhone(
         private set
 
     val stored: File = File(folder, "session.preferences_pb")
+
+    val reminderSettings: File = File(folder, "reminders.preferences_pb")
 
     private val database: PlannerDatabase =
         Room.databaseBuilder(ApplicationProvider.getApplicationContext<Context>(), PlannerDatabase::class.java, File(folder, "planner.db").path).build()
@@ -82,6 +140,10 @@ class StandInPhone(
         googleAccounts = google,
         database = database,
         sendLater = { askedToSendLater += 1 },
+        reminderFile = PreferenceDataStoreFactory.create(scope = running) { reminderSettings },
+        notifications = notifications,
+        reminderWork = reminderWork,
+        resources = ApplicationProvider.getApplicationContext<Context>().resources,
         shareFolder = File(folder, "shares"),
         pictureFolder = File(folder, "pictures"),
         clock = clock,
@@ -115,7 +177,7 @@ class StandInPhone(
     /** The same phone, switched on again: the same storage, key, clock and server, nothing in memory. */
     fun restarted(): StandInPhone {
         off()
-        return StandInPhone(folder, server, google, key, clock)
+        return StandInPhone(folder, server, google, key, clock, notifications, reminderWork)
     }
 }
 

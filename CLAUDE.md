@@ -252,6 +252,14 @@ first uses it, at the version D-005 names.
   numbers — how many wait, how many were added — that are never added up, and a suggestion with a decision that
   waits counts in neither. A task or step with a `fromSuggestionId` says "From e-mail" and leads to its source
   (`planner/SuggestionSource.kt`) when the copy has it; the mark is plain words when it has not.
+- **Reminders** (`reminders/`, S11, D-016) are the phone's own work: no push service. One daily piece of work
+  under WorkManager (`ReminderWorker`, around the time the owner chose; no exact alarm) brings the copy up to
+  date when it can and shows **one notification or none** — what is overdue or due within the chosen days,
+  worked out by `dueThings` (`Due.kt`, no Android in it) and worded by `reminderOf`. Off until switched on behind
+  More, which asks the phone for the permission. Showing a notification, whether it is allowed, and scheduling
+  come into the container from outside (`Notifications`, `ReminderWork`), so that `StandInPhone` stands in for
+  them. A reminder is shown once for a day (`lastShown`), is private on a lock screen, and opens the app at the
+  tasks. `forgetEverything` stops the work, takes the reminder away and removes the settings.
 - A phone number, an e-mail address, an address and a website open in the phone's own apps through
   `planner/Contact.kt`, and only through it. What the server holds was typed by a person: each way builds one fixed
   kind of intent, a number is dialled and never called, and a website opens only as `http` or `https` — anything

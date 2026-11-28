@@ -248,6 +248,8 @@ abstract class CheckReleaseApk : DefaultTask() {
             "$APP.WeddingPlannerApp",
             // WorkManager stores the worker's name and makes it from that when its time comes.
             "$APP.data.SendWorker",
+            // The same for the daily reminder.
+            "$APP.reminders.ReminderWorker",
             // Room looks for the generated code of the database under this name.
             "$APP.data.PlannerDatabase_Impl",
             // What reads the server's answers and writes the phone's requests is looked up for each class.

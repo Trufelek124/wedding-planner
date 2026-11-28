@@ -28,6 +28,7 @@ import io.github.trufelek124.weddingplanner.planner.Changes
 import io.github.trufelek124.weddingplanner.planner.PicturesModel
 import io.github.trufelek124.weddingplanner.planner.PlannerScreens
 import io.github.trufelek124.weddingplanner.planner.PlannerViewModel
+import io.github.trufelek124.weddingplanner.planner.RemindersModel
 import io.github.trufelek124.weddingplanner.session.SessionState
 import io.github.trufelek124.weddingplanner.signin.SignInScreen
 import io.github.trufelek124.weddingplanner.signin.SignInViewModel
@@ -37,7 +38,7 @@ import io.github.trufelek124.weddingplanner.signin.SignInViewModel
  * without being signed in.
  */
 @Composable
-fun AppRoot(container: AppContainer, debugBuild: Boolean = BuildConfig.DEBUG) {
+fun AppRoot(container: AppContainer, debugBuild: Boolean = BuildConfig.DEBUG, opening: String? = null, onOpened: () -> Unit = {}) {
     val state by container.session.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { container.session.restore() }
 
@@ -81,6 +82,9 @@ fun AppRoot(container: AppContainer, debugBuild: Boolean = BuildConfig.DEBUG) {
             val pictures: PicturesModel = viewModel(
                 factory = viewModelFactory { initializer { PicturesModel(container.pictures, container.planner::sharePicture) } },
             )
+            val reminders: RemindersModel = viewModel(
+                factory = viewModelFactory { initializer { RemindersModel(container.reminding) } },
+            )
             PlannerScreens(
                 ui = ui,
                 userName = session.user.displayName,
@@ -94,6 +98,9 @@ fun AppRoot(container: AppContainer, debugBuild: Boolean = BuildConfig.DEBUG) {
                 onLoad = model::load,
                 onSignOut = model::signOut,
                 pictures = pictures,
+                reminders = reminders,
+                opening = opening,
+                onOpened = onOpened,
             )
         }
     }

@@ -29,6 +29,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,6 +45,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -51,6 +55,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.trufelek124.weddingplanner.R
+import io.github.trufelek124.weddingplanner.reminders.OpenAt
 import io.github.trufelek124.weddingplanner.data.Decision
 import io.github.trufelek124.weddingplanner.data.Entry
 import io.github.trufelek124.weddingplanner.data.Gone
@@ -111,6 +116,9 @@ private const val ADDED_PART_ARGUMENT = "added"
 private const val SOURCE = "source"
 private const val SOURCE_ROUTE = "$SOURCE?id={id}"
 
+/** The settings of the daily reminder. */
+private const val REMINDERS = "reminders"
+
 private val BEHIND_MORE = listOf(
     BehindMore(BUDGET, R.string.budget_title),
     BehindMore(VENDORS, R.string.vendors_title),
@@ -121,6 +129,7 @@ private val BEHIND_MORE = listOf(
     BehindMore(INSPIRATION_ROUTE, R.string.inspiration_title) { planner, id -> planner.inspiration(id)?.let(::inspirationName) },
     BehindMore(SUGGESTIONS_ROUTE, R.string.suggestions_title),
     BehindMore(SOURCE_ROUTE, R.string.source_title) { planner, id -> planner.suggestion(id)?.let(::suggestionName) },
+    BehindMore(REMINDERS, R.string.reminders_title),
 )
 
 /** Where a task is added or changed: "task?id=…" for an existing one, "task?parent=…" for a new one under a step. */
@@ -160,12 +169,15 @@ fun PlannerScreens(
     onLoad: () -> Unit,
     onSignOut: () -> Unit,
     pictures: PicturesModel? = null,
+    reminders: RemindersModel? = null,
+    opening: String? = null,
+    onOpened: () -> Unit = {},
 ) {
     val planner = ui.planner
     if (planner == null) {
         NothingYet(ui, userName, onLoad, onSignOut)
     } else {
-        Places(planner, ui, userName, clock, changes, onLoad, onSignOut, pictures)
+        Places(planner, ui, userName, clock, changes, onLoad, onSignOut, pictures, reminders, opening, onOpened)
     }
 }
 
@@ -251,8 +263,21 @@ private fun Places(
     onLoad: () -> Unit,
     onSignOut: () -> Unit,
     pictures: PicturesModel?,
+    reminders: RemindersModel?,
+    opening: String?,
+    onOpened: () -> Unit,
 ) {
     val navigation = rememberNavController()
+    // A notification asked for the tasks: Home is where everything starts, and the tasks are one press from it, as from the bar.
+    LaunchedEffect(opening) {
+        if (opening == OpenAt.TASKS) {
+            navigation.navigate(Place.TASKS.route) {
+                popUpTo(navigation.graph.findStartDestination().id) { saveState = false }
+                launchSingleTop = true
+            }
+            onOpened()
+        }
+    }
     val current by navigation.currentBackStackEntryAsState()
     val route = current?.destination?.route
     val behind = BEHIND_MORE.firstOrNull { it.route == route }
@@ -261,6 +286,8 @@ private fun Places(
     val onTheForm = route == TASK_ROUTE || onTheStepForm
     val changingAnEntry = onTheForm && current?.arguments?.getString("id") != null
     val loadedOn = moment(planner.loadedAt, clock.zone)
+    val remindersUi by (reminders?.ui ?: remember { MutableStateFlow(RemindersUi()) }).collectAsStateWithLifecycle()
+    val remindersSummaryNow = remindersSummary(remindersUi)
     val actions = TaskActions(
         tick = changes.setStatus,
         open = { entry -> navigation.navigate(if (entry.kind == Kind.PLAN_ITEM) "$STEP?id=${entry.id}" else "$TASK?id=${entry.id}") },
@@ -393,7 +420,7 @@ private fun Places(
                     composable(Place.PLAN.route) { PlanContent(planner, today = today, actions = actions, foot = loadedUnderTheButton) }
                     composable(Place.TASKS.route) { TasksContent(planner, actions = actions, foot = loadedUnderTheButton) }
                     composable(Place.MORE.route) {
-                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }, onVendors = { navigation.navigate(VENDORS) }, onGuests = { navigation.navigate(GUESTS) }, onInspirations = { navigation.navigate(INSPIRATIONS) }, onSuggestions = { navigation.navigate(SUGGESTIONS) }) {
+                        MoreContent(planner, onBudget = { navigation.navigate(BUDGET) }, onVendors = { navigation.navigate(VENDORS) }, onGuests = { navigation.navigate(GUESTS) }, onInspirations = { navigation.navigate(INSPIRATIONS) }, onSuggestions = { navigation.navigate(SUGGESTIONS) }, onReminders = reminders?.let { { navigation.navigate(REMINDERS) } }, remindersSummary = remindersSummaryNow) {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 loaded()
                                 SignedInAs(userName, unsent = planner.unsent, onSignOut = onSignOut)
@@ -401,6 +428,11 @@ private fun Places(
                         }
                     }
                     composable(BUDGET) { BudgetContent(planner, foot = loaded) }
+                    composable(REMINDERS) {
+                        if (reminders != null) {
+                            RemindersContent(remindersUi, reminders, foot = loaded)
+                        }
+                    }
                     composable(
                         route = SUGGESTIONS_ROUTE,
                         arguments = listOf(

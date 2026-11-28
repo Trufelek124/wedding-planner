@@ -59,6 +59,7 @@
     <string name="more_guests">Guests</string>
     <string name="more_inspirations">Inspirations</string>
     <string name="more_suggestions">Suggestions</string>
+    <string name="more_reminders">Reminders</string>
     <string name="budget_figure_budget">Budget</string>
     <string name="budget_figure_planned">Planned</string>
     <string name="budget_figure_committed">Committed</string>
@@ -294,4 +295,45 @@
         <item quantity="one">%d step without dates is only in the list.</item>
         <item quantity="other">%d steps without dates are only in the list.</item>
     </plurals>
+
+    <!-- Reminders of what is due -->
+    <string name="reminders_title">Reminders</string>
+    <string name="reminders_channel">Reminders</string>
+    <string name="reminders_channel_description">A daily reminder of the tasks and steps that are overdue or due soon.</string>
+    <string name="reminders_summary_off">Off</string>
+    <string name="reminders_summary_on">On — around %1$s every day</string>
+    <string name="reminders_switch">Remind me of what is due</string>
+    <string name="reminders_what">Once a day, around the time you choose, one notification names the tasks and steps that are overdue or due soon. A day with nothing due brings none. The phone decides the exact minute, so it can come some minutes later, and later still while the phone saves its battery.</string>
+    <string name="reminders_time">Time of day</string>
+    <string name="reminders_time_chosen">Around %1$s every day</string>
+    <string name="reminders_time_pick">Change the time</string>
+    <string name="reminders_time_ok">Set the time</string>
+    <string name="reminders_time_dialog">Choose the time of day</string>
+    <string name="reminders_ahead">What to include</string>
+    <string name="reminders_ahead_note">What is overdue is always included.</string>
+    <string name="reminders_ahead_today">Due today</string>
+    <string name="reminders_ahead_tomorrow">Due today or tomorrow</string>
+    <string name="reminders_ahead_three">Due within 3 days</string>
+    <string name="reminders_ahead_seven">Due within 7 days</string>
+    <string name="reminders_not_allowed">The phone does not allow notifications from the planner, so no reminder can be shown. You can allow them in the phone\'s settings.</string>
+    <string name="reminders_open_settings">Open the notification settings</string>
+    <string name="reminders_no_settings">No app on this phone could open its notification settings.</string>
+
+    <!-- What a reminder says -->
+    <string name="reminder_one_overdue">%1$s is overdue</string>
+    <string name="reminder_one_today">%1$s is due today</string>
+    <string name="reminder_one_tomorrow">%1$s is due tomorrow</string>
+    <string name="reminder_one_on">%1$s is due on %2$s</string>
+    <plurals name="reminder_several">
+        <item quantity="one">%d thing is due</item>
+        <item quantity="other">%d things are due</item>
+    </plurals>
+    <string name="reminder_payment_of">Payment of %1$s</string>
+    <string name="reminder_day_overdue">overdue since %1$s</string>
+    <string name="reminder_day_today">today</string>
+    <string name="reminder_day_tomorrow">tomorrow</string>
+    <string name="reminder_day_on">on %1$s</string>
+    <string name="reminder_line">%1$s — %2$s</string>
+    <string name="reminder_line_with_amount">%1$s, %2$s — %3$s</string>
+    <string name="reminder_more">and %1$d more</string>
 </resources>
