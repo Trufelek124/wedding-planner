@@ -490,8 +490,8 @@ function ReadingState({ reading }: { reading: MailReading }) {
     case 'KEY_NOT_ACCEPTED':
       return (
         <p role="status" className="alert">
-          <Warning /> The AI service does not accept the server’s key, so the reading has stopped. It starts again when the server is started with a key
-          that works.
+          <Warning /> The AI service refuses the server’s key or its account, so the reading has stopped. That can be a wrong key, an account with no
+          credit left, or a model the account cannot use. It starts again when that is put right and the server is started again.
         </p>
       )
     case 'MONTHLY_LIMIT':
