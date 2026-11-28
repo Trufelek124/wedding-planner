@@ -864,6 +864,36 @@
    "publicId": "WP-TS-111",
    "id": "f2cf18f3-0a44-473f-a74f-d18e47f70315",
    "title": "Android: add and change a step of the plan, and add tasks to a step in a row"
+  },
+  "EP4-S6": {
+   "type": "story",
+   "publicId": "WP-US-27",
+   "id": "4a2ecd45-aa41-4a29-9115-872e9da2a551",
+   "title": "Android: reminders and a home-screen widget"
+  },
+  "EP4-S6-T1": {
+   "type": "task",
+   "publicId": "WP-TS-112",
+   "id": "ca4b85a6-ae8c-46fa-b30c-8399ef5ea903",
+   "title": "Spec and decision: reminders and a widget on the phone"
+  },
+  "EP4-S6-T2": {
+   "type": "task",
+   "publicId": "WP-TS-113",
+   "id": "e785f878-cb3f-4c1d-93a6-dd7502836897",
+   "title": "Android: a daily reminder of what is due"
+  },
+  "EP4-S6-T3": {
+   "type": "task",
+   "publicId": "WP-TS-114",
+   "id": "fb780584-08fc-476e-8cf7-6de93924f454",
+   "title": "Android: a home-screen widget with what is current"
+  },
+  "EP7-S2-T13": {
+   "type": "task",
+   "publicId": "WP-TS-115",
+   "id": "598fe332-7bc2-46ea-a5f0-1e3baf80f07a",
+   "title": "Web: the e-mail page says what a refused key can mean"
   }
  }
 }

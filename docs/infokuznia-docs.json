@@ -51,6 +51,16 @@
    "link": "EP4-S2"
   },
   {
+   "path": "docs/specs/S11-reminders-on-the-phone.md",
+   "type": "REQUIREMENTS",
+   "link": "EP4-S6"
+  },
+  {
+   "path": "docs/specs/S12-the-widget.md",
+   "type": "REQUIREMENTS",
+   "link": "EP4-S6"
+  },
+  {
    "path": "docs/deployment.md",
    "type": "DEPLOYMENT",
    "link": "EP3-S1"

@@ -1,0 +1,110 @@
+{
+ "projectCode": "WP",
+ "stories": [
+  {
+   "key": "EP4-S6",
+   "epic": "EP4",
+   "title": "Android: reminders and a home-screen widget",
+   "description": "The phone reminds of what is due without the app being open, and what is current stands on the phone's home screen, where a task can be ticked off and a new one begun. Both work from the copy the phone keeps and need nothing new from the server.",
+   "goal": "See and deal with what is due without opening the planner.",
+   "rationale": "A plan that has to be opened to be read is forgotten on the days nothing prompts it. The scope left notifications out of the first version; the owner now uses the planner daily and asks for them, and for a widget.",
+   "expectedBehavior": "Once a day, at a time the owner chooses, the phone shows one notification when something is overdue or due soon, and pressing it opens the tasks. Reminders are switched on and set in the app, and ask for the phone's permission when they are switched on. A widget on the home screen lists the tasks and steps that are current; a task is ticked off there, and a button begins a new task or step in the app. Signed out, neither says anything of the plan.",
+   "priority": "NORMAL",
+   "rank": 64,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ],
+   "acceptanceCriteria": [
+    {
+     "text": "With reminders on, the phone shows at most one notification a day, around the chosen time, naming what is overdue and what is due within the chosen days; with nothing due it shows none.",
+     "source": "S11 sections 2 and 3"
+    },
+    {
+     "text": "Reminders are off until the owner switches them on, and say so when the phone does not allow notifications.",
+     "source": "S11 section 4"
+    },
+    {
+     "text": "The widget lists what is current, ticks a task off as the app does - also without a connection - and begins a new task or step in the app.",
+     "source": "S12 sections 2 and 3"
+    },
+    {
+     "text": "Signing out leaves nothing of the plan in a notification or on the widget, and nothing of it is written to the log.",
+     "source": "S11 section 5, S12 section 4"
+    }
+   ]
+  }
+ ],
+ "tasks": [
+  {
+   "key": "EP4-S6-T1",
+   "story": "EP4-S6",
+   "title": "Spec and decision: reminders and a widget on the phone",
+   "description": "S11 says what the phone reminds of, when, how it is switched on and set, and what a notification shows. S12 says what the widget lists, what can be done on it, and how it stays current. D-016 records how: the phone works both out from its own copy, on a daily piece of background work, with no push service; the widget is drawn with the platform's library for widgets. Done when the documents are committed and mirrored.",
+   "dependsOn": [],
+   "type": "DOCUMENTATION",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "documentation"
+   ]
+  },
+  {
+   "key": "EP4-S6-T2",
+   "story": "EP4-S6",
+   "title": "Android: a daily reminder of what is due",
+   "description": "As S11 and D-016 say. Once a day around the chosen time the phone brings its copy up to date when it can, and shows one notification when something is overdue or due within the chosen days - what and how many, by name as far as there is room - that opens the tasks. Reminders have a screen behind More: on or off, the time, how far ahead; switching them on asks for the phone's permission, and the screen says when the phone does not allow them. Signing out stops them and removes the notification. Done when the tests cover what is shown for which plan, the once-a-day rule, the settings, the permission and signing out, and the gate passes.",
+   "dependsOn": [
+    "EP4-S6-T1"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  },
+  {
+   "key": "EP4-S6-T3",
+   "story": "EP4-S6",
+   "title": "Android: a home-screen widget with what is current",
+   "description": "As S12 and D-016 say. A widget lists the tasks and steps that are current, by day; a task is ticked off on it and the change waits and is sent as in the app; buttons begin a new task or a new step in the app; a row opens what it shows. It is brought up to date whenever the phone's copy changes and when the day changes, says so when nobody is signed in, and survives the small release build. Done when the tests cover what it lists and what its buttons do, the release check knows its classes, and the gate passes.",
+   "dependsOn": [
+    "EP4-S6-T2"
+   ],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "kotlin",
+    "android"
+   ]
+  },
+  {
+   "key": "EP7-S2-T13",
+   "story": "EP7-S2",
+   "title": "Web: the e-mail page says what a refused key can mean",
+   "description": "When the AI service refuses the server, the e-mail page says that it does not accept the server's key. The same state covers an account with no credit left and a model the account cannot use, and the owner could not tell from the page that credit was a possible cause. The sentence names the three and says what to do. Done when the page's test holds the new words and the web's gate passes.",
+   "dependsOn": [],
+   "type": "DEVELOPMENT",
+   "mandatory": true,
+   "requiredRoles": [
+    "DEVELOPER"
+   ],
+   "requiredSkills": [
+    "typescript",
+    "react"
+   ]
+  }
+ ]
+}

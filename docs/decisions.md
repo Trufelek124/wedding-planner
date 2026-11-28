@@ -810,3 +810,49 @@ new things land, and what draws it.
   addition.
 - With some hundreds of ideas the surface holds as many pictures at once; drawing only what is in view is the
   step that would then follow.
+
+## D-016 — Reminders and the widget are the phone's own work: no push service, a daily piece of background work, the platform's library for widgets
+
+**Date:** 2026-11-28 · **Task:** WP-TS-112 · **Decided by:** the owner asked for both; how is ours · **Applies to:** reminders on the phone (S11), the widget (S12) · **Adds to:** D-005
+
+### Context
+
+The owner wants notifications of upcoming tasks on the phone, and a home-screen widget that shows what is
+current, ticks a task off and adds new ones. S01 left notifications out of the first version. D-005 fixed how
+the app is put together — no Firebase among it — and says that a task adds a library when it first uses it.
+
+### What was compared
+
+| Question | Chosen | The alternative, and why not |
+|---|---|---|
+| Who knows that something is due | **The phone, from the copy it keeps** | The server pushing a message: a push service (Firebase) is a third party that learns when the planner speaks to which phone, needs an account, keys on the server and a library D-005 left out — for a fact the phone already has |
+| When the phone looks | **Once a day, by WorkManager**, around the chosen time | An exact alarm per task: a permission of its own on newer Android, and alarms to keep in step with every change of the plan — for reminders that are about days, not minutes |
+| How many notifications | **One a day, naming what is due** | One per task: a plan with twelve open things would fill the shade every morning, and be switched off |
+| Reminders to begin with | **Off, switched on in the app** | On: the phone has to be asked for the permission anyway, and a question nobody expects at start is answered "no" |
+| What draws the widget | **Glance**, the platform's library for widgets written like the app's screens | Remote views and their adapters by hand: more code of a kind nothing else here has, and a list whose rows can be ticked is exactly what the library is for |
+| What the widget can change | **A tick, and nothing else**; adding and changing open the app | A form on the widget: a widget cannot take typing; a small window of its own would be a second form to keep true |
+| How the widget stays current | **Drawn anew when the copy changes**, and by the daily work | Its own timer: Android lets a widget ask for that every half hour at best, and it would ask the server for nothing new |
+
+### Decision
+
+1. **Reminders are worked out on the phone** from its copy, by one daily piece of work under WorkManager, which
+   first brings the copy up to date when it can. There is no push service.
+2. **One notification a day or none**, on a channel of its own; off until switched on; the permission is asked
+   for at that moment.
+3. **The widget is drawn with Glance** (`androidx.glance:glance-appwidget`, in the newest stable version that
+   fits the app's Compose and Kotlin when it is added; the version is written into the build file and stays
+   until a task changes it on purpose).
+4. **The widget ticks and opens; it does not edit.** What it changes goes the way the app's changes go: kept on
+   the phone, sent later.
+5. Both end at sign-out: no reminder, an empty widget, no settings left.
+
+### What it costs, and what would change the decision
+
+- A reminder comes when the phone runs the work, not at the minute: a phone that saves its battery hard can be
+  an hour late, and a phone that was off gets it when it is on again. If that is not good enough, exact alarms
+  are the step, with their permission.
+- What the partner did since the phone last had a connection is not known to a reminder that runs without one.
+- A widget library is one more thing that the small release build must not strip: its classes go on the list
+  that `checkReleaseApk` holds.
+- How a widget is drawn is the launcher's last word: sizes and corners differ between phones, and none of it can
+  be looked at where the app is built.
