@@ -56,10 +56,11 @@ describe('the top bar', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     const suggestions = within(nav).getByRole('link', { name: 'Suggestions' })
-    expect(asked).toContain(suggestions)
+    // The bar asks after it was drawn, which can be a moment after the links are there: waited for, not looked at at once.
+    await waitFor(() => expect(asked).toContain(suggestions))
 
     await userEvent.click(within(nav).getByRole('link', { name: 'Plan' }))
-    expect(asked.at(-1)).toBe(within(nav).getByRole('link', { name: 'Plan' }))
+    await waitFor(() => expect(asked.at(-1)).toBe(within(nav).getByRole('link', { name: 'Plan' })))
   })
 
   it('says for a screen reader how many suggestions wait, and writes the count beside the name', async () => {
