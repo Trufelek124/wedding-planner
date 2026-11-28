@@ -238,6 +238,24 @@
    "id": "f24eed9d-ad0c-4c5e-b8bd-fff38638b21e",
    "sha256": "6a9d9ed77cc7f9e81b7a23a3e2e016549996be16c44e1957f2ce89416babcce2",
    "commit": "77b7947"
+  },
+  "docs/specs/S11-reminders-on-the-phone.md": {
+   "publicId": "WP-DOC-28",
+   "id": "90cff1e8-bab6-4ff6-8fb8-9aee1416f21e",
+   "sha256": "cff2bd60120cd19f1c6aee201ff125cb7731415d4c40d30c0f1b93e856c7842a",
+   "commit": "52ce506"
+  },
+  "docs/specs/S12-the-widget.md": {
+   "publicId": "WP-DOC-29",
+   "id": "c9e2c203-4193-4143-a270-438d47fee267",
+   "sha256": "58be9751f0b595166c80d5a7008c761b74f889ac3428ff72be9184a693358b05",
+   "commit": "52ce506"
+  },
+  "docs/decisions.md#D-016": {
+   "publicId": "WP-DOC-30",
+   "id": "924f7823-57bc-4e7a-8618-541b8261bad4",
+   "sha256": "184687b505fc25d2259eab109d6c07ada4c75420aae058e183f34a6a6c561e18",
+   "commit": "52ce506"
   }
  }
 }
